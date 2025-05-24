@@ -1,0 +1,36 @@
+ /* Tùy chỉnh CSS để đảm bảo chiều cao 100% và căn giữa */
+ html,
+ body {
+     height: 100%;
+     font-family: 'Inter', sans-serif;
+     /* Sử dụng font Inter */
+ }
+
+ .container-fluid {
+     min-height: 100%;
+     /* Đảm bảo container chiếm toàn bộ chiều cao */
+ }
+
+ .login-card {
+     max-width: 450px;
+     /* Giới hạn chiều rộng của card */
+     width: 100%;
+     border-radius: 0.75rem;
+     /* Bo tròn góc card */
+ }
+
+ .btn-primary {
+     padding-top: 0.75rem;
+     padding-bottom: 0.75rem;
+ }
+
+ .form-control {
+     border-radius: 0.5rem;
+     /* Bo tròn góc input */
+ }
+
+ .form-check-input:checked {
+     background-color: #0d6efd;
+     /* Màu nền khi checkbox được chọn */
+     border-color: #0d6efd;
+ }
