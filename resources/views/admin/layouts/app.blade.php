@@ -7,10 +7,9 @@
     <title>@yield('title', 'Trang Quản Trị') - Admin Panel</title>
 
     {{-- LƯU Ý: Tôi sử dụng đúng đường dẫn asset mà bạn đã cung cấp --}}
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- App CSS -->
-    <link href="{{ asset('vendor/bootstrap/css/bootstrap.min.css') }}" rel="stylesheet">
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
     <link rel="stylesheet" href="{{ asset('assets_admin/css/common/base.css') }}">
     <link rel="stylesheet" href="{{ asset('assets_admin/css/common/normalize.css') }}">
     <link rel="stylesheet" href="{{ asset('assets_admin/css/common/reset.css') }}">
@@ -34,11 +33,9 @@
         @yield('content')
     </div>
 
-    {{-- LƯU Ý: Tôi sử dụng đúng đường dẫn asset mà bạn đã cung cấp --}}
-    <script src="{{ asset('vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="{{ asset('assets_admin/js/admin_layout.js') }}"></script>
 
+
+    <script src="{{ asset('assets_admin/js/admin_layout.js') }}"></script>
 
     @yield('scripts')
 </body>
