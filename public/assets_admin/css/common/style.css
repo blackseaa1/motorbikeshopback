@@ -1,12 +1,4 @@
 /* app css */
-body {
-    font-family: 'Inter', sans-serif;
-    background-color: #f0f2f5;
-    /* Lightest gray background for the whole page */
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-}
 
 .sidebar {
     width: 260px;

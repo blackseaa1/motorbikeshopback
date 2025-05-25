@@ -7,7 +7,6 @@
     <title>@yield('title', 'Trang Quản Trị') - Admin Panel</title>
 
     {{-- LƯU Ý: Tôi sử dụng đúng đường dẫn asset mà bạn đã cung cấp --}}
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- App CSS -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <link rel="stylesheet" href="{{ asset('assets_admin/css/common/base.css') }}">
@@ -33,11 +32,9 @@
         @yield('content')
     </div>
 
-
-
-    <script src="{{ asset('assets_admin/js/admin_layout.js') }}"></script>
-
     @yield('scripts')
+    <script defer src="{{ asset('assets_admin/js/admin_layout.js') }}"></script>
+
 </body>
 
 </html>
