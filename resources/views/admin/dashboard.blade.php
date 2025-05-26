@@ -1,8 +1,6 @@
-{{-- <link rel="stylesheet" href="{{ asset('assets_admin/css/dashboard.css') }}"> --}}
-
 @extends('admin.layouts.app')
 
-@section('title', 'Dashboard Chính') @section('content')
+@section('title', 'Dashboard') @section('content')
     <header class="content-header">
         <h1><i class="bi bi-speedometer2 me-2"></i>Dashboard</h1>
     </header>

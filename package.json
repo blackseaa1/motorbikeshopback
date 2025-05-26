@@ -14,9 +14,11 @@
         "vite": "^6.2.4"
     },
     "dependencies": {
+        "@hotwired/turbo": "^8.0.13",
         "@popperjs/core": "^2.11.8",
         "bootstrap": "^5.3.6",
         "bootstrap-icons": "^1.13.1",
-        "chart.js": "^4.4.9"
+        "chart.js": "^4.4.9",
+        "nprogress": "^0.2.0"
     }
 }

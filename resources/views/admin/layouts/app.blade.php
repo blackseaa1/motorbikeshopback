@@ -4,9 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>@yield('title', 'Trang Quản Trị') - Admin Panel</title>
-
-    {{-- LƯU Ý: Tôi sử dụng đúng đường dẫn asset mà bạn đã cung cấp --}}
+    <title>@yield('title') - Admin Panel</title>
     <!-- App CSS -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <link rel="stylesheet" href="{{ asset('assets_admin/css/common/base.css') }}">
@@ -34,6 +32,7 @@
 
     @yield('scripts')
     <script defer src="{{ asset('assets_admin/js/admin_layout.js') }}"></script>
+    @stack('scripts')
 
 </body>
 

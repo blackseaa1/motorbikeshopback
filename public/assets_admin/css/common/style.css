@@ -211,8 +211,6 @@
     }
 }
 
-/* app css */
-
 /*
 |--------------------------------------------------------------------------
 | Dashboard Specific Styles
@@ -299,6 +297,7 @@
 }
 
 .card .card-header {
+    /* This might conflict if you have other .card .card-header styles, review if needed */
     background-color: #f8f9fa;
     font-weight: 600;
     color: #343a40;
@@ -392,3 +391,63 @@
 .btn-action:hover {
     color: #007bff;
 }
+
+/* userManagement */
+
+
+/* === CSS for Sidebar Submenu (Đã cập nhật để mượt hơn) === */
+.sidebar .nav-link .bi-caret-down-fill {
+    transition: transform 0.3s ease-in-out;
+    /* Thời gian chuyển động cho icon mũi tên */
+}
+
+.sidebar .nav-link[aria-expanded="true"] .bi-caret-down-fill {
+    transform: rotate(180deg);
+}
+
+.sidebar .nav-link.active-submenu {
+    color: #fff !important;
+    background-color: #1890ff;
+    border-left: 3px solid #fff;
+    font-weight: 500;
+}
+
+/* Style cho submenu để có chuyển động mượt mà */
+.sidebar ul.collapse {
+    overflow: hidden;
+    transition: height 0.3s ease-out;
+    /* Thêm transition cho thuộc tính height */
+}
+
+/* Style cho các link bên trong submenu */
+.sidebar ul.collapse .nav-link {
+    padding-left: 2.5rem;
+    /* Thụt lề các mục con */
+    font-size: 0.95em;
+    /* Font chữ nhỏ hơn một chút */
+    transition: background-color 0.2s ease, color 0.2s ease, padding-left 0.3s ease-out;
+    /* Thêm padding-left vào transition */
+}
+
+
+
+.avatar-preview {
+    width: 100px;
+    /* Cố định chiều rộng là 100px */
+    height: 100px;
+    /* Cố định chiều cao là 100px */
+
+    /* Thuộc tính quan trọng nhất để ảnh không bị méo: */
+    object-fit: cover;
+    /* Giữ đúng tỷ lệ ảnh, tự động cắt phần thừa để lấp đầy khung 100x100 */
+
+    /* Các thuộc tính tùy chọn để làm đẹp thêm: */
+    border-radius: 50%;
+    /* Bo tròn 4 góc để tạo thành hình tròn (hoàn hảo cho avatar) */
+    border: 2px solid #dee2e6;
+    /* Thêm một đường viền mảnh cho đẹp mắt */
+    background-color: #f8f9fa;
+    /* Thêm màu nền phòng khi ảnh tải lên có phần trong suốt */
+}
+
+/* userManagement */
