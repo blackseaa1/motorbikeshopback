@@ -34,11 +34,12 @@ return [
     | Supported: "session"
     |
     */
-
     'guards' => [
-        'web' => [
+        // ... other guards
+
+        'admin' => [
             'driver' => 'session',
-            'provider' => 'users',
+            'provider' => 'admins', // <<< This name MUST EXACTLY MATCH...
         ],
     ],
 
@@ -58,19 +59,14 @@ return [
     | Supported: "database", "eloquent"
     |
     */
-
     'providers' => [
-        'users' => [
+        // ... other providers
+
+        'admins' => [ // <<< ...the key of an entry here.
             'driver' => 'eloquent',
-            'model' => env('AUTH_MODEL', App\Models\User::class),
+            'model' => App\Models\Admin::class,
         ],
-
-        // 'users' => [
-        //     'driver' => 'database',
-        //     'table' => 'users',
-        // ],
     ],
-
     /*
     |--------------------------------------------------------------------------
     | Resetting Passwords

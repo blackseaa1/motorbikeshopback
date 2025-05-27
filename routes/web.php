@@ -9,6 +9,9 @@ use App\Http\Controllers\Admin\System\DistrictController;
 use App\Http\Controllers\Admin\System\WardController;
 use App\Http\Controllers\Api\GeographyApiController;
 
+// Import the new Admin Login Controller
+use App\Http\Controllers\Admin\Auth\LoginController as AdminLoginController; // Alias to avoid naming conflict if you have other LoginControllers
+
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -20,19 +23,26 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-Route::get('admin/login', function () {
-    return view('admin.login');
-})->name('admin.login');
+// MODIFIED: Admin Login Route - Now uses AdminLoginController
+// The GET route displays the login form
+Route::get('admin/login', [AdminLoginController::class, 'showLoginForm'])->name('admin.login');
+// ADDED: The POST route handles the login attempt (form submission)
+Route::post('admin/login', [AdminLoginController::class, 'login']);
+
 
 // =========================================================================
 // --- CÁC ROUTE CỦA TRANG ADMIN ---
 // =========================================================================
-Route::prefix('admin')->name('admin.')->group(function () {
+Route::prefix('admin')->name('admin.')->middleware('auth:admin')->group(function () { // ADDED: middleware('auth:admin') to protect admin routes
 
     // Dashboard
     Route::get('/dashboard', function () {
         return view('admin.dashboard');
     })->name('dashboard');
+
+    // ADDED: Admin Logout Route
+    Route::post('/logout', [AdminLoginController::class, 'logout'])->name('logout');
+
 
     // --- Quản lý Bán Hàng ---
     Route::prefix('sales')->name('sales.')->group(function () {
@@ -116,3 +126,15 @@ Route::prefix('admin')->name('admin.')->group(function () {
 });
 // --- THÊM ROUTE API VÀO ĐÂY ---
 Route::get('/api/provinces/{province}/districts', [GeographyApiController::class, 'getDistrictsByProvince'])->name('api.provinces.districts');
+// THÊM VÀO CUỐI FILE routes/web.php
+
+Route::get('/api/notifications/unread-count', function () {
+    // GHI CHÚ: Trong một ứng dụng thực tế, bạn sẽ truy vấn cơ sở dữ liệu ở đây.
+    // Ví dụ: $count = App\Models\Notification::where('read_at', null)->count();
+
+    // Để phục vụ hướng dẫn, chúng ta sẽ giả lập bằng một con số ngẫu nhiên.
+    $simulatedCount = rand(1, 15);
+
+    // Trả về dữ liệu dưới dạng JSON
+    return response()->json(['count' => $simulatedCount]);
+})->middleware('auth:admin'); // Quan trọng: Chỉ admin đã đăng nhập mới được truy cập

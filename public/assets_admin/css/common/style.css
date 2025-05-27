@@ -1,5 +1,63 @@
 /* app css */
 
+
+/* --===================CSS CHO LOADING OVERLAY===================-- */
+
+
+#loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.7);
+    z-index: 9999;
+    display: flex !important;
+    /* Mặc định display: flex */
+    justify-content: center !important;
+    align-items: center !important;
+    flex-direction: column;
+    gap: 15px;
+    /* Mặc định ẩn đi bằng cách thêm class 'inactive' hoặc không có 'active' */
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+#loading-overlay.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.spinner {
+    border: 6px solid #f3f3f3;
+    border-top: 6px solid #2563eb;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    animation: spin 1s linear infinite;
+}
+
+.loading-text {
+    color: #2563eb;
+    font-weight: 500;
+    font-size: 1rem;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+
+/* --==============================================================-- */
+
+
 .sidebar {
     width: 260px;
     background-color: #001529;
@@ -397,7 +455,7 @@
 
 /* === CSS for Sidebar Submenu (Đã cập nhật để mượt hơn) === */
 .sidebar .nav-link .bi-caret-down-fill {
-    transition: transform 0.3s ease-in-out;
+    transition: transform 0.6s ease-in-out;
     /* Thời gian chuyển động cho icon mũi tên */
 }
 
@@ -415,7 +473,7 @@
 /* Style cho submenu để có chuyển động mượt mà */
 .sidebar ul.collapse {
     overflow: hidden;
-    transition: height 0.3s ease-out;
+    transition: height 60s ease-out;
     /* Thêm transition cho thuộc tính height */
 }
 
@@ -425,7 +483,7 @@
     /* Thụt lề các mục con */
     font-size: 0.95em;
     /* Font chữ nhỏ hơn một chút */
-    transition: background-color 0.2s ease, color 0.2s ease, padding-left 0.3s ease-out;
+    transition: background-color 0.6s ease, color 0.6s ease, padding-left 1s ease-out;
     /* Thêm padding-left vào transition */
 }
 
