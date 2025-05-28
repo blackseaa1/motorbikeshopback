@@ -186,15 +186,17 @@
 @endsection
 
 @push('scripts')
-    <script>
-        <script src="{{ asset('js/admin/category_manager.js') }}"></script>
+    {{-- 1. Nạp file JS quản lý danh mục từ bên ngoài --}}
+    <script src="{{ asset('assets_admin/js/category_manager.js') }}"></script>
 
-    // Mở lại modal nếu có lỗi validation
-    @if ($errors->any())
-        document.addEventListener('DOMContentLoaded', function () {
-        var createModal = new bootstrap.Modal(document.getElementById('createCategoryModal'));
-        createModal.show();
-        });
-    @endif
+    {{-- 2. Script nội tuyến để xử lý việc mở lại modal khi có lỗi validation --}}
+    <script>
+        // Mở lại modal nếu có lỗi validation từ server trả về
+        @if ($errors->any())
+            document.addEventListener('DOMContentLoaded', function () {
+                var createModal = new bootstrap.Modal(document.getElementById('createCategoryModal'));
+                createModal.show();
+            });
+        @endif
     </script>
 @endpush

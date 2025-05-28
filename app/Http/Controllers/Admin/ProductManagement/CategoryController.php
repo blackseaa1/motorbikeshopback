@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Admin\ProductManagement;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use Illuminate\Http\Request;
-// Bỏ "use Illuminate\Support\Facades\Storage;" vì không còn dùng
 
 class CategoryController extends Controller
 {

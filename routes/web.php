@@ -87,9 +87,11 @@ Route::prefix('admin')->name('admin.')->middleware('auth:admin')->group(function
         // })->name('categories');
         Route::resource('categories', CategoryController::class)->except(['create', 'edit', 'show']);
 
-        Route::get('brands', function () {
-            return view('admin.productManagement.brands');
-        })->name('brands');
+        // Route::get('brands', function () {
+        //     return view('admin.productManagement.brands');
+        // })->name('brands');
+        Route::resource('brands', BrandController::class)->except(['create', 'edit', 'show']);
+
         Route::get('vehicle', function () {
             return view('admin.productManagement.vehicle');
         })->name('vehicle');

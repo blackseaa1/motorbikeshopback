@@ -229,4 +229,6 @@
 @endpush
 
 @push('scripts')
+    {{-- Chỉ tải script biểu đồ ở trang này --}}
+    <script src="{{ asset('assets_admin/js/dashboard_chart.js') }}"></script>
 @endpush

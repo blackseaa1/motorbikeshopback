@@ -1,43 +1,46 @@
-document.addEventListener('DOMContentLoaded', function() {
-    // --- JAVASCRIPT FOR MODALS ---
+function initializeCategoriesPage() {
+    console.log("Khởi tạo JS cho trang Danh mục...");
 
-    // 1. Logic for Update Modal
+    // Logic for Update Modal
     const updateCategoryModal = document.getElementById('updateCategoryModal');
     if (updateCategoryModal) {
-        updateCategoryModal.addEventListener('show.bs.modal', function(event) {
-            const button = event.relatedTarget; // Button that triggered the modal
+        updateCategoryModal.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            if (!button) return;
 
-            // Lấy thông tin từ các thuộc tính data-* của nút bấm
             const name = button.getAttribute('data-name');
             const description = button.getAttribute('data-description');
+            // Thêm data-logo-url cho nút sửa danh mục nếu cần
+            // const logoUrl = button.getAttribute('data-logo-url');
             const updateUrl = button.getAttribute('data-update-url');
 
-            // Cập nhật nội dung của modal
             const modalForm = updateCategoryModal.querySelector('#updateCategoryForm');
-            const modalTitle = updateCategoryModal.querySelector('.modal-title');
             const nameInput = updateCategoryModal.querySelector('#categoryNameUpdate');
             const descriptionInput = updateCategoryModal.querySelector('#categoryDescriptionUpdate');
-            
+            // const logoPreview = updateCategoryModal.querySelector('#categoryLogoPreviewUpdate');
+
             modalForm.action = updateUrl;
-            modalTitle.textContent = 'Cập nhật Danh mục: ' + name;
             nameInput.value = name;
             descriptionInput.value = description;
+            // logoPreview.src = logoUrl;
         });
     }
 
-    // 2. Logic for Delete Modal
+    // Logic for Delete Modal
     const deleteCategoryModal = document.getElementById('deleteCategoryModal');
     if (deleteCategoryModal) {
-        deleteCategoryModal.addEventListener('show.bs.modal', function(event) {
-            const button = event.relatedTarget; // Button that triggered the modal
+        deleteCategoryModal.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            if (!button) return;
+
             const name = button.getAttribute('data-name');
             const deleteUrl = button.getAttribute('data-delete-url');
 
-            const modalForm = deleteCategoryModal.querySelector('#deleteCategoryForm');
+            const modalForm = deleteCategoryModal.querySelector('#deleteForm');
             const categoryNameSpan = deleteCategoryModal.querySelector('#categoryNameToDelete');
 
             modalForm.action = deleteUrl;
             categoryNameSpan.textContent = name;
         });
     }
-});
+}

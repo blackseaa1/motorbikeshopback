@@ -48,12 +48,15 @@
     {{-- 3. NẠP CÁC FILE JAVASCRIPT CỦA ỨNG DỤNG --}}
     {{-- =================================================================== --}}
 
-    {{-- Luôn nạp file layout chung để xử lý sidebar, turbo, notifications... --}}
+
+    {{-- 3.1 "Khe cắm" cho các file JS của trang con --}}
+    {{-- Tất cả các file như brand_manager.js, category_manager.js, dashboard_chart.js sẽ được nạp ở đây --}}
+    @stack('scripts')
+    {{-- 3.2. Nạp file layout chung (Orchestrator) CUỐI CÙNG --}}
     <script src="{{ asset('assets_admin/js/admin_layout.js') }}"></script>
 
     {{-- Nơi để các trang con chèn vào các file JS riêng của mình --}}
     @yield('scripts')
-
 </body>
 
 </html>
