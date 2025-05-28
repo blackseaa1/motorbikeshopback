@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "f8fa40ac7ffc35f2dda8448d38315c42",
+    "content-hash": "987d9d8624278ab575b8bd2513379b81",
     "packages": [
         {
             "name": "brick/math",
@@ -1276,7 +1276,7 @@
             "time": "2025-02-03T10:55:03+00:00"
         },
         {
-            "name": "hotwired/turbo-laravel",
+            "name": "hotwired-laravel/turbo-laravel",
             "version": "2.3.0",
             "source": {
                 "type": "git",
@@ -1344,7 +1344,6 @@
                 "issues": "https://github.com/hotwired-laravel/turbo-laravel/issues",
                 "source": "https://github.com/hotwired-laravel/turbo-laravel/tree/2.3.0"
             },
-            "abandoned": "hotwired-laravel/turbo-laravel",
             "time": "2025-03-02T18:53:50+00:00"
         },
         {
