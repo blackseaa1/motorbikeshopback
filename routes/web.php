@@ -1,6 +1,30 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+// Import the new Admin Login Controller
+use App\Http\Controllers\Admin\Auth\LoginController as AdminLoginController; // Alias to avoid naming conflict if you have other LoginControllers
+// Controller cho Dashboard
+use App\Http\Controllers\Admin\DashboardController;
+
+
+// Controller cho Sales
+use App\Http\Controllers\Admin\Sales\OrderController;
+use App\Http\Controllers\Admin\Sales\PromotionController;
+
+// Controller cho productManagement
+use App\Http\Controllers\Admin\ProductManagement\CategoryController;
+use App\Http\Controllers\Admin\ProductManagement\ProductController;
+use App\Http\Controllers\Admin\ProductManagement\BrandController;
+use App\Http\Controllers\Admin\ProductManagement\VehicleController;
+use App\Http\Controllers\Admin\ProductManagement\InventoryController;
+// Controller cho Content
+use App\Http\Controllers\Admin\Content\PostController;
+use App\Http\Controllers\Admin\Content\ReviewController;
+// Controller cho Reports
+use App\Http\Controllers\Admin\ReportsController;
+// Controller cho User Management
+use App\Http\Controllers\Admin\UserManagement\AdminController;
+
 
 // Controller cho Địa lý
 use App\Http\Controllers\Admin\System\GeographyController;
@@ -9,8 +33,6 @@ use App\Http\Controllers\Admin\System\DistrictController;
 use App\Http\Controllers\Admin\System\WardController;
 use App\Http\Controllers\Api\GeographyApiController;
 
-// Import the new Admin Login Controller
-use App\Http\Controllers\Admin\Auth\LoginController as AdminLoginController; // Alias to avoid naming conflict if you have other LoginControllers
 
 /*
 |--------------------------------------------------------------------------
@@ -20,7 +42,7 @@ use App\Http\Controllers\Admin\Auth\LoginController as AdminLoginController; // 
 
 // --- CÁC ROUTE CÔNG KHAI ---
 Route::get('/', function () {
-    return view('welcome');
+    return view('admin/login');
 });
 
 // MODIFIED: Admin Login Route - Now uses AdminLoginController
@@ -59,9 +81,12 @@ Route::prefix('admin')->name('admin.')->middleware('auth:admin')->group(function
         Route::get('products', function () {
             return view('admin.productManagement.products');
         })->name('products');
-        Route::get('categories', function () {
-            return view('admin.productManagement.categories');
-        })->name('categories');
+
+        // Route::get('categories', function () {
+        //     return view('admin.productManagement.categories');
+        // })->name('categories');
+        Route::resource('categories', CategoryController::class)->except(['create', 'edit', 'show']);
+
         Route::get('brands', function () {
             return view('admin.productManagement.brands');
         })->name('brands');

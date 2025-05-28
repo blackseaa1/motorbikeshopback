@@ -15,7 +15,6 @@ return new class extends Migration
             $table->id(); // INT PRIMARY KEY AUTO_INCREMENT [cite: 49, 94]
             $table->string('name'); // VARCHAR(255) NOT NULL, Tên danh mục sản phẩm [cite: 49, 94]
             $table->text('description')->nullable(); // TEXT, Mô tả danh mục [cite: 49, 94]
-            $table->text('logo_url')->nullable(); // TEXT, Link ảnh/logo danh mục [cite: 49, 94]
             $table->timestamps(); // created_at DATETIME, updated_at DATETIME (auto) [cite: 49, 94]
         });
     }

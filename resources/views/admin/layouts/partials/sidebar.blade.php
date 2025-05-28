@@ -36,7 +36,7 @@
         {{-- Quản lý Sản phẩm (Collapsible) --}}
         @php
             $isProductMenuActive = request()->routeIs('admin.productManagement.products') ||
-                                   request()->routeIs('admin.productManagement.categories') ||
+                                   request()->routeIs('admin.productManagement.categories.index') ||
                                    request()->routeIs('admin.productManagement.brands') ||
                                    request()->routeIs('admin.productManagement.vehicle') ||
                                    request()->routeIs('admin.productManagement.inventory');
@@ -52,8 +52,8 @@
                         href="{{ route('admin.productManagement.products') }}">Danh sách Sản phẩm</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('admin.productManagement.categories') ? 'active-submenu' : '' }}"
-                        href="{{ route('admin.productManagement.categories') }}">Danh mục</a>
+                    <a class="nav-link {{ request()->routeIs('admin.productManagement.categories.index') ? 'active-submenu' : '' }}"
+                        href="{{ route('admin.productManagement.categories.index') }}">Danh mục</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link {{ request()->routeIs('admin.productManagement.brands') ? 'active-submenu' : '' }}"

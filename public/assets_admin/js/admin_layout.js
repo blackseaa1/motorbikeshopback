@@ -1,190 +1,105 @@
-// /*
-// |--------------------------------------------------------------------------
-// | File JavaScript chung cho trang Admin
-// |--------------------------------------------------------------------------
-// |
-// | File này chứa các mã JavaScript được sử dụng trên nhiều trang trong
-// | khu vực quản trị.
-// |
-// */
+/**
+ * ===================================================================
+ * admin_layout.js
+ * Chứa các mã JavaScript chung cho toàn bộ layout admin.
+ * Bao gồm: Sidebar, Thông báo, Loading Overlay, và xử lý Turbo.
+ * ===================================================================
+ */
 
-// document.addEventListener('DOMContentLoaded', function () {
+// Hàm tiện ích: Gỡ bỏ và gắn lại listener để tránh lặp lại do Turbo cache
+function rebindEventListener(element, eventType, handler) {
+    if (!element) return;
+    const newElement = element.cloneNode(true);
+    element.parentNode.replaceChild(newElement, element);
+    newElement.addEventListener(eventType, handler);
+    return newElement;
+}
 
-//     // --- 1. Chức năng bật/tắt Sidebar trên màn hình nhỏ ---
-//     const sidebarToggle = document.getElementById('sidebarToggle');
-//     const sidebar = document.getElementById('sidebar');
+// --- 1. Chức năng bật/tắt Sidebar & Tự động đóng Submenu ---
+function initializeSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    if (!sidebar) return;
 
-//     if (sidebarToggle && sidebar) {
-//         sidebarToggle.addEventListener('click', function () {
-//             sidebar.classList.toggle('active');
-//         });
-//     }
+    const sidebarToggle = document.getElementById('sidebarToggle');
+    rebindEventListener(sidebarToggle, 'click', () => sidebar.classList.toggle('active'));
 
+    const collapsibleLinks = sidebar.querySelectorAll('a.nav-link[data-bs-toggle="collapse"]');
+    collapsibleLinks.forEach(link => {
+        rebindEventListener(link, 'click', function () {
+            const currentTargetId = this.getAttribute('href');
+            collapsibleLinks.forEach(otherLink => {
+                const otherTargetId = otherLink.getAttribute('href');
+                if (otherTargetId !== currentTargetId) {
+                    const otherSubmenu = document.querySelector(otherTargetId);
+                    if (otherSubmenu && otherSubmenu.classList.contains('show')) {
+                        const bsCollapse = window.Collapse.getInstance(otherSubmenu) || new window.Collapse(otherSubmenu);
+                        bsCollapse.hide();
+                    }
+                }
+            });
+        });
+    });
+    console.log("Layout JS: Sidebar đã khởi tạo.");
+}
 
-//     // --- 2. Khởi tạo biểu đồ doanh thu (Chart.js) ---
-//     const ctxRevenue = document.getElementById('revenueChart');
-//     if (ctxRevenue) {
-//         new Chart(ctxRevenue, {
-//             type: 'line',
-//             data: {
-//                 labels: ['Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6'],
-//                 datasets: [{
-//                     label: 'Doanh Thu (Triệu VNĐ)',
-//                     data: [120, 190, 150, 220, 180, 250], // Dữ liệu ví dụ
-//                     borderColor: 'rgba(24, 144, 255, 1)',
-//                     backgroundColor: 'rgba(24, 144, 255, 0.1)',
-//                     tension: 0.3,
-//                     fill: true,
-//                     pointBackgroundColor: 'rgba(24, 144, 255, 1)',
-//                     pointBorderColor: '#fff',
-//                     pointHoverRadius: 7,
-//                     pointHoverBackgroundColor: 'rgba(24, 144, 255, 1)',
-//                     pointRadius: 5,
-//                 }]
-//             },
-//             options: {
-//                 responsive: true,
-//                 maintainAspectRatio: false,
-//                 scales: {
-//                     y: {
-//                         beginAtZero: true,
-//                         ticks: {
-//                             callback: function (value) {
-//                                 return value + ' Tr';
-//                             }
-//                         }
-//                     }
-//                 },
-//                 plugins: {
-//                     legend: {
-//                         display: true,
-//                         position: 'top',
-//                     },
-//                     tooltip: {
-//                         callbacks: {
-//                             label: function (context) {
-//                                 let label = context.dataset.label || '';
-//                                 if (label) {
-//                                     label += ': ';
-//                                 }
-//                                 if (context.parsed.y !== null) {
-//                                     label += context.parsed.y + ' Triệu VNĐ';
-//                                 }
-//                                 return label;
-//                             }
-//                         }
-//                     }
-//                 },
-//                 interaction: {
-//                     mode: 'index',
-//                     intersect: false,
-//                 },
-//             }
-//         });
-//     }
+// --- 2. Lấy số thông báo chưa đọc ---
+let notificationInterval;
+async function fetchNotificationCount() {
+    try {
+        const response = await fetch('/api/notifications/unread-count');
+        if (!response.ok) return;
+        const data = await response.json();
+        const badge = document.getElementById('notification-badge-count');
+        if (badge) {
+            badge.textContent = data.count;
+            badge.classList.toggle('d-none', data.count <= 0);
+        }
+    } catch (error) {
+        console.error('Lỗi API thông báo:', error);
+    }
+}
 
+function initializeNotifications() {
+    fetchNotificationCount();
+    if (notificationInterval) clearInterval(notificationInterval);
+    notificationInterval = setInterval(fetchNotificationCount, 30000);
+    console.log("Layout JS: Thông báo đã khởi tạo.");
+}
 
-//     // --- 3. Chức năng xem trước ảnh (Preview Image) ---
-//     function previewImage(inputId, previewId) {
-//         const input = document.getElementById(inputId);
-//         const preview = document.getElementById(previewId);
-//         if (input && preview) {
-//             input.addEventListener('change', function (event) {
-//                 if (event.target.files && event.target.files[0]) {
-//                     const reader = new FileReader();
-//                     reader.onload = function (e) {
-//                         preview.src = e.target.result;
-//                     }
-//                     reader.readAsDataURL(event.target.files[0]);
-//                 }
-//             });
-//         }
-//     }
+// --- 3. Xử lý Loading Overlay ---
+window.showLoadingOverlay = () => document.getElementById('loading-overlay')?.classList.add('active');
+window.hideLoadingOverlay = () => document.getElementById('loading-overlay')?.classList.remove('active');
 
-//     // --- KÍCH HOẠT CÁC CHỨC NĂNG ---
+// --- HÀM KHỞI TẠO TỔNG ---
+function initializeCommonComponents() {
+    initializeSidebar();
+    initializeNotifications();
+}
 
-//     // Kích hoạt xem trước ảnh cho tất cả các modal
-//     previewImage('adminAvatarCreate', 'adminAvatarPreviewCreate');
-//     previewImage('adminAvatarUpdate', 'adminAvatarPreviewUpdate');
-//     previewImage('customerAvatarCreate', 'customerAvatarPreviewCreate');
-//     previewImage('customerAvatarUpdate', 'customerAvatarPreviewUpdate');
-//     // ĐÃ DI CHUYỂN VÀO TRONG
-//     previewImage('categoryLogoCreate', 'categoryLogoPreviewCreate');
-//     previewImage('categoryLogoUpdate', 'categoryLogoPreviewUpdate');
+// --- ORCHESTRATOR: ĐIỀU PHỐI KHỞI TẠO SCRIPT ---
+function runPageSpecificInitializers() {
+    console.log("Layout JS: Tìm và chạy các hàm khởi tạo của trang...");
+    if (typeof initializeDashboardChart === 'function') initializeDashboardChart();
+    if (typeof initializeImagePreviews === 'function') initializeImagePreviews();
+    if (typeof initializeGeographyPage === 'function') initializeGeographyPage();
+}
 
-//     // (Tùy chọn) Xử lý điền dữ liệu vào modal
-//     // ĐÃ DI CHUYỂN VÀO TRONG
-//     document.querySelectorAll('.btn-action[data-bs-target="#updateCategoryModal"]').forEach(button => {
-//         button.addEventListener('click', function () {
-//             const categoryId = this.dataset.categoryId;
-//             const categoryName = this.dataset.categoryName;
-//             const categoryDescription = this.dataset.categoryDescription;
-//             const categoryLogoUrl = this.dataset.categoryLogoUrl;
+// --- XỬ LÝ SỰ KIỆN TURBO ---
+if (!window.turboEventsAttached) {
+    console.log("Layout JS: Gắn các sự kiện Turbo lần đầu.");
+    document.addEventListener("turbo:visit", window.showLoadingOverlay);
+    document.addEventListener("turbo:render", () => {
+        console.log("Layout JS (turbo:render): Chạy lại các hàm khởi tạo.");
+        initializeCommonComponents();
+        runPageSpecificInitializers();
+    });
+    document.addEventListener("turbo:load", window.hideLoadingOverlay);
+    window.turboEventsAttached = true;
+}
 
-//             document.getElementById('categoryIdUpdate').value = categoryId;
-//             document.getElementById('categoryNameUpdate').value = categoryName;
-//             document.getElementById('categoryDescriptionUpdate').value = categoryDescription;
-//             document.getElementById('categoryLogoPreviewUpdate').src = categoryLogoUrl || 'https://placehold.co/100x100/EFEFEF/AAAAAA&text=Logo';
-//         });
-//     });
-
-//     // ĐÃ DI CHUYỂN VÀO TRONG
-//     document.querySelectorAll('.btn-action[data-bs-target="#deleteCategoryModal"]').forEach(button => {
-//         button.addEventListener('click', function () {
-//             const categoryId = this.dataset.categoryId;
-//             const categoryName = this.dataset.categoryName;
-//             const deleteForm = document.getElementById('deleteCategoryForm');
-//             // Cập nhật action của form xóa, ví dụ: deleteForm.action = `/admin/categories/${categoryId}`;
-//             deleteForm.querySelector('.modal-body strong').textContent = categoryName;
-//         });
-//     });
-
-// }); // <-- DẤU ĐÓNG NGOẶC CỦA DOMContentLoaded. TẤT CẢ PHẢI NẰM TRÊN DÒNG NÀY.
-// /**
-//  * Hàm này gọi đến API để lấy số thông báo chưa đọc và cập nhật giao diện.
-//  */
-// async function fetchNotificationCount() {
-//     // Dùng try...catch để bắt lỗi nếu có sự cố mạng hoặc server
-//     try {
-//         // Gọi API đã tạo ở Bước 1
-//         const response = await fetch('/api/notifications/unread-count');
-
-//         // Nếu response không thành công (ví dụ: bị redirect do chưa đăng nhập, lỗi server)
-//         if (!response.ok) {
-//             console.error('Lỗi khi lấy thông báo. Trạng thái:', response.status);
-//             return;
-//         }
-
-//         // Chuyển đổi kết quả trả về thành đối tượng JSON
-//         const data = await response.json();
-//         const count = data.count;
-
-//         // Tìm đến phần tử hiển thị số trên giao diện bằng ID đã đặt ở Bước 2
-//         const badge = document.getElementById('notification-badge-count');
-
-//         // Luôn kiểm tra xem phần tử có tồn tại không trước khi thao tác
-//         if (badge) {
-//             // Cập nhật con số hiển thị
-//             badge.textContent = count;
-
-//             // Xử lý ẩn/hiện badge
-//             if (count > 0) {
-//                 badge.classList.remove('d-none'); // Hiển thị badge nếu có thông báo
-//             } else {
-//                 badge.classList.add('d-none'); // Ẩn đi nếu không có thông báo
-//             }
-//         }
-//     } catch (error) {
-//         // Ghi lại lỗi ra console để dễ gỡ rối
-//         console.error('Đã xảy ra lỗi không xác định khi gọi API thông báo:', error);
-//     }
-// }
-
-// // Sự kiện 'DOMContentLoaded' đảm bảo code chỉ chạy sau khi toàn bộ cây HTML đã được tải xong.
-// document.addEventListener('DOMContentLoaded', function () {
-//     // Gọi hàm lần đầu tiên ngay khi trang tải xong
-//     fetchNotificationCount();
-
-//     // Tự động gọi lại hàm này sau mỗi 30 giây (30000 milliseconds)
-//     setInterval(fetchNotificationCount, 30000);
-// });
+// --- KHỞI TẠO LẦN ĐẦU KHI TẢI TRANG (KHÔNG QUA TURBO) ---
+document.addEventListener('DOMContentLoaded', () => {
+    console.log("Layout JS (DOMContentLoaded): Khởi tạo lần đầu.");
+    initializeCommonComponents();
+    runPageSpecificInitializers();
+});

@@ -14,7 +14,6 @@ class Category extends Model
     protected $fillable = [
         'name', // [cite: 49]
         'description', // [cite: 49]
-        'logo_url', // [cite: 49]
     ];
 
     /**

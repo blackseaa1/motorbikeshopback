@@ -4,57 +4,56 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>@yield('title', 'Admin Panel') - Admin Panel</title>
+    <title>@yield('title', 'Admin Panel') - Đồ án Web Đồ Chơi Xe</title>
 
-    {{-- TRUYỀN BIẾN LỖI VÀ SESSION TỪ LARAVEL SANG JAVASCRIPT --}}
-    <script>
-        window.laravelErrors = @json($errors->getBags());
-        window.errorUpdateProvinceId = "{{ session('error_update_province_id') }}";
-        window.errorUpdateDistrictId = "{{ session('error_update_district_id') }}";
-        window.errorUpdateWardId = "{{ session('error_update_ward_id') }}";
-        // Bạn có thể thêm các session flash khác nếu cần
-    </script>
+    {{-- =================================================================== --}}
+    {{-- 1. TẠO "KHE CẮM" ĐỂ TRANG CON TRUYỀN BIẾN SANG JAVASCRIPT --}}
+    {{-- Chỉ những trang con nào dùng @push('laravel-js-vars') thì mới có script ở đây. --}}
+    {{-- Các trang khác sẽ không tải script này, giúp tối ưu tốc độ. --}}
+    {{-- =================================================================== --}}
+    @stack('laravel-js-vars')
 
-    {{-- Nạp CSS và JS chính qua Vite --}}
+    {{-- 2. NẠP CSS VÀ JS THƯ VIỆN GỐC QUA VITE --}}
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
-    {{-- Các file CSS tùy chỉnh khác của bạn (nếu có và không được quản lý bởi Vite) --}}
+    {{-- Các file CSS tùy chỉnh khác --}}
     <link rel="stylesheet" href="{{ asset('assets_admin/css/common/base.css') }}">
     <link rel="stylesheet" href="{{ asset('assets_admin/css/common/normalize.css') }}">
     <link rel="stylesheet" href="{{ asset('assets_admin/css/common/reset.css') }}">
     <link rel="stylesheet" href="{{ asset('assets_admin/css/common/style.css') }}">
 
-    @yield('styles') {{-- Dành cho CSS riêng của từng trang (nếu có) --}}
+    @yield('styles') {{-- Dành cho CSS riêng của từng trang --}}
 </head>
 
 <body>
-    {{-- Lớp phủ tải trang --}}
+    {{-- Lớp phủ tải trang (loading overlay) --}}
     <div id="loading-overlay">
         <div class="spinner"></div>
         <span class="loading-text">Đang xử lý...</span>
     </div>
 
-    <div class="wrapper"> {{-- Hoặc class layout chính của bạn --}}
-        {{-- Sidebar --}}
-        @include('admin.layouts.partials.sidebar') {{-- --}}
+    <div class="wrapper">
+        @include('admin.layouts.partials.sidebar')
 
-        <div class="main-panel"> {{-- Hoặc class main content của bạn --}}
-            {{-- Topnav/Header --}}
-            @include('admin.layouts.partials.topnav') {{-- --}}
+        <div class="main-panel">
+            @include('admin.layouts.partials.topnav')
 
-            {{-- Khu vực chứa nội dung chính của từng trang --}}
-            <main class="main-content p-3" id="mainContent"> {{-- --}}
+            <main class="main-content p-3" id="mainContent">
                 @yield('content')
             </main>
-
-            {{-- Footer (nếu có) --}}
-            {{-- @include('admin.layouts.partials.footer') --}}
         </div>
     </div>
 
-    {{-- KHÔNG CÒN @stack('scripts') ở đây nếu tất cả JS đã vào app.js --}}
-    {{-- Nếu bạn có script inline ở đâu đó mà không muốn chuyển vào app.js, có thể giữ lại @stack('scripts') --}}
-    @yield('scripts') {{-- Vẫn giữ @yield('scripts') nếu một số trang đặc biệt cần script inline --}}
+    {{-- =================================================================== --}}
+    {{-- 3. NẠP CÁC FILE JAVASCRIPT CỦA ỨNG DỤNG --}}
+    {{-- =================================================================== --}}
+
+    {{-- Luôn nạp file layout chung để xử lý sidebar, turbo, notifications... --}}
+    <script src="{{ asset('assets_admin/js/admin_layout.js') }}"></script>
+
+    {{-- Nơi để các trang con chèn vào các file JS riêng của mình --}}
+    @yield('scripts')
+
 </body>
 
 </html>
