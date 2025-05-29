@@ -9,16 +9,17 @@ class DeliveryService extends Model
 {
     use HasFactory;
 
-    protected $table = 'delivery_services'; // [cite: 58]
+    protected $table = 'delivery_services';
 
     protected $fillable = [
-        'name', // [cite: 59]
-        'logo_url', // [cite: 59]
-        'shipping_fee', // [cite: 59]
+        'name',
+        'logo_url',
+        'shipping_fee',
+        'status',
     ];
 
     protected $casts = [
-        'shipping_fee' => 'decimal:2', // [cite: 59]
+        'shipping_fee' => 'decimal:2',
     ];
 
     /**

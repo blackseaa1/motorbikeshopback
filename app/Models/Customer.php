@@ -10,18 +10,19 @@ class Customer extends Authenticatable
 {
     use HasFactory, Notifiable;
 
-    protected $table = 'customers'; // [cite: 40]
+    protected $table = 'customers';
 
     protected $fillable = [
-        'name', // [cite: 41]
-        'email', // [cite: 41]
-        'password', // [cite: 41]
-        'phone', // [cite: 41]
-        'img', // [cite: 41]
+        'name',
+        'email',
+        'password',
+        'phone',
+        'img',
+        'status',
     ];
 
     protected $hidden = [
-        'password', // [cite: 41]
+        'password',
     ];
 
     /**
@@ -29,7 +30,7 @@ class Customer extends Authenticatable
      */
     public function orders()
     {
-        return $this->hasMany(Order::class, 'customer_id'); // [cite: 67]
+        return $this->hasMany(Order::class, 'customer_id');
     }
 
     /**
@@ -37,7 +38,7 @@ class Customer extends Authenticatable
      */
     public function reviews()
     {
-        return $this->hasMany(Review::class, 'customer_id'); // [cite: 71]
+        return $this->hasMany(Review::class, 'customer_id');
     }
 
     /**
@@ -45,7 +46,7 @@ class Customer extends Authenticatable
      */
     public function cart()
     {
-        return $this->hasOne(Cart::class, 'customer_id'); // [cite: 73]
+        return $this->hasOne(Cart::class, 'customer_id'); 
     }
 
     /**
@@ -53,7 +54,5 @@ class Customer extends Authenticatable
      */
     public function blogPosts()
     {
-        return $this->hasMany(BlogPost::class, 'author_id'); // [cite: 77]
-    }
-
-}
+        return $this->hasMany(BlogPost::class, 'author_id');
+    }}

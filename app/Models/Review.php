@@ -9,21 +9,22 @@ class Review extends Model // Hoặc Pivot
 {
     use HasFactory;
 
-    protected $table = 'reviews'; // [cite: 70]
+    protected $table = 'reviews'; 
     // protected $primaryKey = ['customer_id', 'product_id']; // Laravel không hỗ trợ array primary key
 
-    public $incrementing = true; // Không có cột id auto-increment đơn lẻ
+    public $incrementing = false; // Không có cột id auto-increment đơn lẻ
 
 
     protected $fillable = [
-        'customer_id', // [cite: 71]
-        'product_id', // [cite: 71]
-        'rating', // [cite: 71]
-        'comment', // [cite: 71]
+        'customer_id',
+        'product_id',
+        'rating',
+        'comment',
+        'status',
     ];
 
     protected $casts = [
-        'rating' => 'integer', // [cite: 71]
+        'rating' => 'integer',
     ];
 
     /**
@@ -31,7 +32,7 @@ class Review extends Model // Hoặc Pivot
      */
     public function customer()
     {
-        return $this->belongsTo(Customer::class, 'customer_id'); // [cite: 71]
+        return $this->belongsTo(Customer::class, 'customer_id');
     }
 
     /**
@@ -39,6 +40,6 @@ class Review extends Model // Hoặc Pivot
      */
     public function product()
     {
-        return $this->belongsTo(Product::class, 'product_id'); // [cite: 71]
+        return $this->belongsTo(Product::class, 'product_id');
     }
 }

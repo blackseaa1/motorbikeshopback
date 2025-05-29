@@ -9,21 +9,22 @@ class Promotion extends Model
 {
     use HasFactory;
 
-    protected $table = 'promotions'; // [cite: 56]
+    protected $table = 'promotions';
 
     protected $fillable = [
-        'code', // [cite: 57]
-        'discount_percentage', // [cite: 57]
-        'start_date', // [cite: 57]
-        'end_date', // [cite: 57]
-        'usage_count', // [cite: 57]
+        'code',
+        'discount_percentage',
+        'start_date',
+        'end_date',
+        'usage_count',
+        'status',
     ];
 
     protected $casts = [
-        'discount_percentage' => 'decimal:2', // [cite: 57]
-        'start_date' => 'datetime', // [cite: 57]
-        'end_date' => 'datetime', // [cite: 57]
-        'usage_count' => 'integer', // [cite: 57]
+        'discount_percentage' => 'decimal:2',
+        'start_date' => 'datetime',
+        'end_date' => 'datetime',
+        'usage_count' => 'integer',
     ];
 
     /**
@@ -31,6 +32,6 @@ class Promotion extends Model
      */
     public function orders()
     {
-        return $this->hasMany(Order::class, 'promotion_id'); // [cite: 67]
+        return $this->hasMany(Order::class, 'promotion_id');
     }
 }

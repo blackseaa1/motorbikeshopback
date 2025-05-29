@@ -10,19 +10,20 @@ class Admin extends Authenticatable
 {
     use HasFactory, Notifiable;
 
-    protected $table = 'admin'; // [cite: 38]
+    protected $table = 'admin';
 
     protected $fillable = [
-        'name', // [cite: 39]
-        'email', // [cite: 39]
-        'phone', // [cite: 39]
-        'role', // [cite: 39]
-        'password', // [cite: 39]
-        'img', // [cite: 39]
+        'name',
+        'email',
+        'phone',
+        'role',
+        'password',
+        'img', 
+        'status',
     ];
 
     protected $hidden = [
-        'password', // [cite: 39]
+        'password',
     ];
 
     /**

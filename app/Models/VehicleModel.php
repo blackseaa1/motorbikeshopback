@@ -9,17 +9,18 @@ class VehicleModel extends Model
 {
     use HasFactory;
 
-    protected $table = 'vehicle_models'; // [cite: 54]
+    protected $table = 'vehicle_models';
 
     protected $fillable = [
-        'vehicle_brand_id', // [cite: 55]
-        'name', // [cite: 55]
-        'year', // [cite: 55]
-        'description', // [cite: 55]
+        'vehicle_brand_id',
+        'name',
+        'year',
+        'description',
+        'status',
     ];
 
     protected $casts = [
-        'year' => 'integer', // [cite: 55]
+        'year' => 'integer',
     ];
 
     /**
@@ -27,7 +28,7 @@ class VehicleModel extends Model
      */
     public function vehicleBrand()
     {
-        return $this->belongsTo(VehicleBrand::class, 'vehicle_brand_id'); // [cite: 55]
+        return $this->belongsTo(VehicleBrand::class, 'vehicle_brand_id');
     }
 
     /**
@@ -36,6 +37,6 @@ class VehicleModel extends Model
     public function products()
     {
         return $this->belongsToMany(Product::class, 'product_vehicle_models', 'vehicle_model_id', 'product_id') // [cite: 65]
-                    ->withTimestamps();
+            ->withTimestamps();
     }
 }

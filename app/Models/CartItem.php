@@ -9,18 +9,18 @@ class CartItem extends Pivot
 {
     use HasFactory;
 
-    protected $table = 'cart_items'; // [cite: 74]
-    public $incrementing = true; // Không có cột id auto-increment đơn lẻ
-    // protected $primaryKey = ['cart_id', 'product_id']; // Laravel không hỗ trợ array primary key
+    protected $table = 'cart_items'; 
+    public $incrementing = false; // Không có cột id auto-increment đơn lẻ
+    
 
     protected $fillable = [
-        'cart_id', // [cite: 75]
-        'product_id', // [cite: 75]
-        'quantity', // [cite: 75]
+        'cart_id', 
+        'product_id', 
+        'quantity',
     ];
 
     protected $casts = [
-        'quantity' => 'integer', // [cite: 75]
+        'quantity' => 'integer', 
     ];
 
     /**
@@ -28,7 +28,7 @@ class CartItem extends Pivot
      */
     public function cart()
     {
-        return $this->belongsTo(Cart::class, 'cart_id'); // [cite: 75]
+        return $this->belongsTo(Cart::class, 'cart_id'); 
     }
 
     /**

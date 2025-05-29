@@ -10,19 +10,15 @@ function initializeCategoriesPage() {
 
             const name = button.getAttribute('data-name');
             const description = button.getAttribute('data-description');
-            // Thêm data-logo-url cho nút sửa danh mục nếu cần
-            // const logoUrl = button.getAttribute('data-logo-url');
             const updateUrl = button.getAttribute('data-update-url');
 
             const modalForm = updateCategoryModal.querySelector('#updateCategoryForm');
             const nameInput = updateCategoryModal.querySelector('#categoryNameUpdate');
             const descriptionInput = updateCategoryModal.querySelector('#categoryDescriptionUpdate');
-            // const logoPreview = updateCategoryModal.querySelector('#categoryLogoPreviewUpdate');
 
-            modalForm.action = updateUrl;
-            nameInput.value = name;
-            descriptionInput.value = description;
-            // logoPreview.src = logoUrl;
+            if (modalForm) modalForm.action = updateUrl; // Thêm kiểm tra null cho an toàn
+            if (nameInput) nameInput.value = name;
+            if (descriptionInput) descriptionInput.value = description;
         });
     }
 
@@ -36,11 +32,21 @@ function initializeCategoriesPage() {
             const name = button.getAttribute('data-name');
             const deleteUrl = button.getAttribute('data-delete-url');
 
-            const modalForm = deleteCategoryModal.querySelector('#deleteForm');
+            // SỬA Ở ĐÂY:
+            const modalForm = deleteCategoryModal.querySelector('#deleteCategoryForm'); // Sửa ID selector
             const categoryNameSpan = deleteCategoryModal.querySelector('#categoryNameToDelete');
 
-            modalForm.action = deleteUrl;
-            categoryNameSpan.textContent = name;
+            if (modalForm) { // Thêm kiểm tra null để tránh lỗi nếu selector vẫn sai
+                modalForm.action = deleteUrl;
+            } else {
+                console.error('Không tìm thấy deleteCategoryForm trong modal!');
+            }
+            if (categoryNameSpan) categoryNameSpan.textContent = name;
         });
     }
 }
+
+// Gọi hàm khởi tạo nếu trang đã tải xong (ví dụ)
+// Hoặc đảm bảo file này được nạp sau khi DOM sẵn sàng
+// document.addEventListener('DOMContentLoaded', initializeCategoriesPage);
+// Nếu bạn dùng admin_layout.js để gọi, thì không cần dòng trên.

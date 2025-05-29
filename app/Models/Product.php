@@ -9,25 +9,23 @@ class Product extends Model
 {
     use HasFactory;
 
-    protected $table = 'products'; // [cite: 60]
-
+    protected $table = 'products'; 
     protected $fillable = [
-        'name', // [cite: 61]
-        'description', // [cite: 61]
-        'category_id', // [cite: 61]
-        'brand_id', // [cite: 61]
-        'price', // [cite: 61]
-        'stock_quantity', // [cite: 61]
-        'material', // [cite: 61]
-        'color', // [cite: 61]
-        'specifications', // [cite: 61]
-        'is_active', // [cite: 61]
+        'name',
+        'description',
+        'category_id',
+        'brand_id',
+        'price',
+        'stock_quantity',
+        'material',
+        'color',
+        'specifications',
+        'status',
     ];
 
     protected $casts = [
-        'price' => 'decimal:2', // [cite: 61]
-        'stock_quantity' => 'integer', // [cite: 61]
-        'is_active' => 'boolean', // [cite: 61]
+        'price' => 'decimal:2',
+        'stock_quantity' => 'integer',
     ];
 
     /**
@@ -35,7 +33,7 @@ class Product extends Model
      */
     public function category()
     {
-        return $this->belongsTo(Category::class, 'category_id'); // [cite: 61]
+        return $this->belongsTo(Category::class, 'category_id');
     }
 
     /**
@@ -43,7 +41,7 @@ class Product extends Model
      */
     public function brand()
     {
-        return $this->belongsTo(Brand::class, 'brand_id'); // [cite: 61]
+        return $this->belongsTo(Brand::class, 'brand_id');
     }
 
     /**
@@ -51,7 +49,7 @@ class Product extends Model
      */
     public function images()
     {
-        return $this->hasMany(ProductImage::class, 'product_id'); // [cite: 63]
+        return $this->hasMany(ProductImage::class, 'product_id'); 
     }
 
     /**
@@ -59,8 +57,8 @@ class Product extends Model
      */
     public function vehicleModels()
     {
-        return $this->belongsToMany(VehicleModel::class, 'product_vehicle_models', 'product_id', 'vehicle_model_id') // [cite: 65]
-                    ->withTimestamps();
+        return $this->belongsToMany(VehicleModel::class, 'product_vehicle_models', 'product_id', 'vehicle_model_id')
+            ->withTimestamps();
     }
 
     /**
@@ -68,7 +66,7 @@ class Product extends Model
      */
     public function orderItems()
     {
-        return $this->hasMany(OrderItem::class, 'product_id'); // [cite: 69]
+        return $this->hasMany(OrderItem::class, 'product_id'); 
     }
 
     /**
@@ -76,7 +74,7 @@ class Product extends Model
      */
     public function reviews()
     {
-        return $this->hasMany(Review::class, 'product_id'); // [cite: 71]
+        return $this->hasMany(Review::class, 'product_id'); 
     }
 
     /**
@@ -84,6 +82,6 @@ class Product extends Model
      */
     public function cartItems()
     {
-        return $this->hasMany(CartItem::class, 'product_id'); // [cite: 75]
+        return $this->hasMany(CartItem::class, 'product_id'); 
     }
 }

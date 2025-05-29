@@ -9,12 +9,13 @@ class VehicleBrand extends Model
 {
     use HasFactory;
 
-    protected $table = 'vehicle_brands'; // [cite: 52]
+    protected $table = 'vehicle_brands'; 
 
     protected $fillable = [
-        'name', // [cite: 53]
-        'description', // [cite: 53]
-        'logo_url', // [cite: 53]
+        'name', 
+        'description', 
+        'logo_url', 
+        'status',
     ];
 
     /**
@@ -22,6 +23,6 @@ class VehicleBrand extends Model
      */
     public function vehicleModels()
     {
-        return $this->hasMany(VehicleModel::class, 'vehicle_brand_id'); // [cite: 55]
+        return $this->hasMany(VehicleModel::class, 'vehicle_brand_id');
     }
 }

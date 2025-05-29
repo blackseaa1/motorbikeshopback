@@ -9,13 +9,14 @@ class BlogPost extends Model
 {
     use HasFactory;
 
-    protected $table = 'blog_posts'; // [cite: 76]
+    protected $table = 'blog_posts'; 
 
     protected $fillable = [
-        'title', // [cite: 77]
-        'content', // [cite: 77]
-        'image_url', // [cite: 77]
-        'author_id', // [cite: 77]
+        'title', 
+        'content', 
+        'image_url', 
+        'author_id', 
+        'status',
     ];
 
     /**
@@ -26,6 +27,6 @@ class BlogPost extends Model
     public function author()
     {
         // Giả sử tác giả luôn là Customer dựa trên FK 'author_id' REFERENCES 'customers(id)'
-        return $this->belongsTo(Customer::class, 'author_id'); // [cite: 77, 110]
+        return $this->belongsTo(Customer::class, 'author_id'); 
     }
 }

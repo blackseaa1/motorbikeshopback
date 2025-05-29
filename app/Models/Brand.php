@@ -9,12 +9,13 @@ class Brand extends Model
 {
     use HasFactory;
 
-    protected $table = 'brands'; // [cite: 50]
+    protected $table = 'brands';
 
     protected $fillable = [
-        'name', // [cite: 51]
-        'description', // [cite: 51]
-        'logo_url', // [cite: 51]
+        'name',
+        'description',
+        'logo_url',
+        'status',
     ];
 
     /**
@@ -22,6 +23,6 @@ class Brand extends Model
      */
     public function products()
     {
-        return $this->hasMany(Product::class, 'brand_id'); // [cite: 61]
+        return $this->hasMany(Product::class, 'brand_id');
     }
 }
