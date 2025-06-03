@@ -1,37 +1,39 @@
 @extends('admin.layouts.app')
 
-@section('title', 'Quản lý Thương hiệu')
-@section('content') <header class="content-header">
-        <h1><i class="bi bi-slack me-2"></i>Thương Hiệu</h1>
+@section('title', 'Quản lý Danh mục')
+
+@section('content')
+    <header class="content-header">
+        <h1><i class="bi bi-shop me-2"></i>Danh Mục sản phẩm</h1>
     </header>
 
     <div class="container-fluid">
-        {{-- Section for displaying messages --}}
+        {{-- Section for displaying session messages and validation errors --}}
         @if (session('success'))
             <div class="alert alert-success alert-dismissible fade show" role="alert">
                 <i class="bi bi-check-circle-fill me-2"></i>{{ session('success') }}
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
         @endif
-        @if (session('error'))
-            <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ session('error') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        @endif
+
         @if ($errors->any())
             <div class="alert alert-danger alert-dismissible fade show" role="alert">
                 <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                <strong>Có lỗi xảy ra! Vui lòng kiểm tra lại dữ liệu.</strong>
+                <strong>Có lỗi xảy ra!</strong>
+                <ul class="mb-0">
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
         @endif
 
         <div class="card mb-4">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h2 class="h5 mb-0"><i class="bi bi-bookmark-star-fill me-2"></i>Quản lý Thương hiệu Sản phẩm</h2>
-                <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#createBrandModal">
-                    <i class="bi bi-plus-circle-fill me-1"></i> Tạo Thương hiệu mới
+                <h2 class="h5 mb-0"><i class="bi bi-tags-fill me-2"></i>Quản lý Danh mục Sản phẩm</h2>
+                <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#createCategoryModal">
+                    <i class="bi bi-plus-circle-fill me-1"></i> Tạo Danh mục mới
                 </button>
             </div>
             <div class="card-body">
@@ -40,35 +42,55 @@
                         <thead class="table-light">
                             <tr>
                                 <th scope="col" style="width: 5%;">ID</th>
-                                <th scope="col" style="width: 10%;">Logo</th>
-                                <th scope="col" style="width: 25%;">Tên Thương hiệu</th>
+                                <th scope="col" style="width: 25%;">Tên Danh mục</th>
+                                <th scope="col" style="width: 15%;" class="text-center">Trạng thái</th>
                                 <th scope="col">Mô tả</th>
-                                <th scope="col" class="text-center" style="width: 15%;">Hành động</th>
+                                <th scope="col" class="text-center" style="width: 20%;">Hành động</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @forelse ($brands as $brand)
+                            @forelse ($categories as $category)
                                 <tr>
-                                    <td>{{ $brand->id }}</td>
-                                    <td>
-                                        <img src="{{ $brand->logo_url ? asset('storage/' . $brand->logo_url) : 'https://placehold.co/100x100/EFEFEF/AAAAAA&text=N/A' }}"
-                                            alt="{{ $brand->name }}" class="img-thumbnail"
-                                            style="width: 50px; height: 50px; object-fit: contain;">
+                                    <td>{{ $category->id }}</td>
+                                    <td>{{ $category->name }}</td>
+                                    <td class="text-center">
+                                        @if ($category->is_visible)
+                                            <span class="badge bg-success">Hiển thị</span>
+                                        @else
+                                            <span class="badge bg-secondary">Đã ẩn</span>
+                                        @endif
                                     </td>
-                                    <td>{{ $brand->name }}</td>
-                                    <td>{{ Str::words($brand->description, 20, '...') ?? 'Không có mô tả' }}</td>
+                                    <td>{{ $category->description ?? 'Không có mô tả' }}</td>
                                     <td class="text-center">
                                         <button class="btn btn-warning btn-sm btn-action" data-bs-toggle="modal"
-                                            data-bs-target="#updateBrandModal" data-id="{{ $brand->id }}"
-                                            data-name="{{ $brand->name }}" data-description="{{ $brand->description }}"
-                                            data-logo-url="{{ $brand->logo_url ? asset('storage/' . $brand->logo_url) : 'https://placehold.co/100x100/EFEFEF/AAAAAA&text=N/A' }}"
-                                            data-update-url="{{ route('admin.productManagement.brands.update', $brand->id) }}"
+                                            data-bs-target="#updateCategoryModal" data-id="{{ $category->id }}"
+                                            data-name="{{ $category->name }}" data-description="{{ $category->description }}"
+                                            data-is-visible="{{ $category->is_visible ? 'true' : 'false' }}" {{-- Thêm data
+                                            attribute --}}
+                                            data-update-url="{{ route('admin.productManagement.categories.update', $category->id) }}"
                                             title="Cập nhật">
                                             <i class="bi bi-pencil-square"></i>
                                         </button>
+
+                                        <form
+                                            action="{{ route('admin.productManagement.categories.toggleVisibility', $category->id) }}"
+                                            method="POST" class="d-inline">
+                                            @csrf
+                                            @method('PATCH')
+                                            <button type="submit"
+                                                class="btn btn-sm btn-action {{ $category->is_visible ? 'btn-outline-secondary' : 'btn-outline-info' }}"
+                                                title="{{ $category->is_visible ? 'Ẩn danh mục' : 'Hiển thị danh mục' }}">
+                                                @if ($category->is_visible)
+                                                    <i class="bi bi-eye-slash-fill"></i>
+                                                @else
+                                                    <i class="bi bi-eye-fill"></i>
+                                                @endif
+                                            </button>
+                                        </form>
+
                                         <button class="btn btn-danger btn-sm btn-action" data-bs-toggle="modal"
-                                            data-bs-target="#deleteBrandModal" data-name="{{ $brand->name }}"
-                                            data-delete-url="{{ route('admin.productManagement.brands.destroy', $brand->id) }}"
+                                            data-bs-target="#deleteCategoryModal" data-name="{{ $category->name }}"
+                                            data-delete-url="{{ route('admin.productManagement.categories.destroy', $category->id) }}"
                                             title="Xóa">
                                             <i class="bi bi-trash-fill"></i>
                                         </button>
@@ -76,7 +98,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="5" class="text-center">Chưa có thương hiệu nào.</td>
+                                    <td colspan="5" class="text-center">Chưa có danh mục nào.</td> {{-- Cập nhật colspan --}}
                                 </tr>
                             @endforelse
                         </tbody>
@@ -86,81 +108,76 @@
         </div>
     </div>
 
-    {{-- Modals for Brand Management --}}
-
-    <div class="modal fade" id="createBrandModal" tabindex="-1" aria-labelledby="createBrandModalLabel" aria-hidden="true">
+    {{-- Create Category Modal --}}
+    <div class="modal fade" id="createCategoryModal" tabindex="-1" aria-labelledby="createCategoryModalLabel"
+        aria-hidden="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
-                <form id="createBrandForm" action="{{ route('admin.productManagement.brands.store') }}" method="POST"
-                    enctype="multipart/form-data">
+                <form id="createCategoryForm" action="{{ route('admin.productManagement.categories.store') }}"
+                    method="POST">
                     @csrf
                     <div class="modal-header">
-                        <h5 class="modal-title" id="createBrandModalLabel"><i class="bi bi-plus-circle-fill me-2"></i>Tạo
-                            Thương
-                            hiệu mới</h5>
+                        <h5 class="modal-title" id="createCategoryModalLabel"><i class="bi bi-plus-circle-fill me-2"></i>Tạo
+                            Danh mục Sản phẩm mới</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
                         <div class="mb-3">
-                            <label for="brandNameCreate" class="form-label">Tên Thương hiệu:<span
+                            <label for="categoryNameCreate" class="form-label">Tên Danh mục <span
                                     class="text-danger">*</span></label>
-                            <input type="text" class="form-control @error('name') is-invalid @enderror" id="brandNameCreate"
-                                name="name" value="{{ old('name') }}" required>
-                            @error('name')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                            <input type="text" class="form-control" id="categoryNameCreate" name="name"
+                                value="{{ old('name') }}" required>
                         </div>
                         <div class="mb-3">
-                            <label for="brandDescriptionCreate" class="form-label">Mô tả:</label>
-                            <textarea class="form-control" id="brandDescriptionCreate" name="description"
+                            <label for="categoryDescriptionCreate" class="form-label">Mô tả</label>
+                            <textarea class="form-control" id="categoryDescriptionCreate" name="description"
                                 rows="3">{{ old('description') }}</textarea>
                         </div>
-                        <div class="mb-3">
-                            <label for="brandLogoCreate" class="form-label">Logo Thương hiệu:</label>
-                            <input type="file" class="form-control" id="brandLogoCreate" name="logo_url" accept="image/*">
-
-                            {{-- THÊM THẺ IMG NÀY VÀO --}}
-                            <img src="https://placehold.co/100x100/EFEFEF/AAAAAA&text=Preview" alt="Xem trước logo"
-                                id="brandLogoPreviewCreate" class="img-thumbnail mt-2"
-                                style="width: 100px; height: 100px; object-fit: contain;">
+                        <div class="mb-3 form-check">
+                            <input type="hidden" name="is_visible" value="0"> {{-- Gửi 0 nếu checkbox không được check --}}
+                            <input type="checkbox" class="form-check-input" id="categoryIsVisibleCreate" name="is_visible"
+                                value="1" {{ old('is_visible', true) ? 'checked' : '' }}>
+                            <label class="form-check-label" for="categoryIsVisibleCreate">Hiển thị danh mục</label>
                         </div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
-                        <button type="submit" class="btn btn-primary">Lưu Thương hiệu</button>
+                        <button type="submit" class="btn btn-primary">Lưu Danh mục</button>
                     </div>
                 </form>
             </div>
         </div>
     </div>
 
-    <div class="modal fade" id="updateBrandModal" tabindex="-1" aria-labelledby="updateBrandModalLabel" aria-hidden="true">
+    {{-- Update Category Modal --}}
+    <div class="modal fade" id="updateCategoryModal" tabindex="-1" aria-labelledby="updateCategoryModalLabel"
+        aria-hidden="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
-                <form id="updateBrandForm" method="POST" enctype="multipart/form-data">
+                <form id="updateCategoryForm" method="POST">
                     @csrf
                     @method('PUT')
                     <div class="modal-header">
-                        <h5 class="modal-title" id="updateBrandModalLabel"><i class="bi bi-pencil-square me-2"></i>Cập
-                            nhật
-                            Thương hiệu</h5>
+                        <h5 class="modal-title" id="updateCategoryModalLabel"><i class="bi bi-pencil-square me-2"></i>Cập
+                            nhật Danh mục Sản phẩm</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
                         <div class="mb-3">
-                            <label for="brandNameUpdate" class="form-label">Tên Thương hiệu:<span
+                            <label for="categoryNameUpdate" class="form-label">Tên Danh mục <span
                                     class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="brandNameUpdate" name="name" required>
+                            <input type="text" class="form-control" id="categoryNameUpdate" name="name" required>
                         </div>
                         <div class="mb-3">
-                            <label for="brandDescriptionUpdate" class="form-label">Mô tả:</label>
-                            <textarea class="form-control" id="brandDescriptionUpdate" name="description"
+                            <label for="categoryDescriptionUpdate" class="form-label">Mô tả</label>
+                            <textarea class="form-control" id="categoryDescriptionUpdate" name="description"
                                 rows="3"></textarea>
                         </div>
-                        <div class="mb-3">
-                            <label for="brandLogoUpdate" class="form-label">Logo Thương hiệu mới (để trống nếu không
-                                đổi):</label>
-                            <input type="file" class="form-control" id="brandLogoUpdate" name="logo_url" accept="image/*">
-                            <img src="" alt="Logo hiện tại" id="brandLogoPreviewUpdate" class="img-thumbnail mt-2"
-                                style="width: 100px; height: 100px; object-fit: contain;">
+                        <div class="mb-3 form-check">
+                            <input type="hidden" name="is_visible" value="0"> {{-- Gửi 0 nếu checkbox không được check --}}
+                            <input type="checkbox" class="form-check-input" id="categoryIsVisibleUpdate" name="is_visible"
+                                value="1">
+                            <label class="form-check-label" for="categoryIsVisibleUpdate">Hiển thị danh mục</label>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -172,26 +189,29 @@
         </div>
     </div>
 
-    <div class="modal fade" id="deleteBrandModal" tabindex="-1" aria-labelledby="deleteBrandModalLabel" aria-hidden="true">
+    {{-- Delete Category Modal --}}
+    <div class="modal fade" id="deleteCategoryModal" tabindex="-1" aria-labelledby="deleteCategoryModalLabel"
+        aria-hidden="true">
+        {{-- Nội dung modal xóa giữ nguyên --}}
         <div class="modal-dialog">
             <div class="modal-content">
-                <form id="deleteBrandForm" method="POST">
+                <form id="deleteCategoryForm" method="POST"> {{-- Action được JS đặt --}}
                     @csrf
                     @method('DELETE')
                     <div class="modal-header bg-danger text-white">
-                        <h5 class="modal-title" id="deleteBrandModalLabel"><i class="bi bi-trash-fill me-2"></i>Xác nhận
-                            Xóa
-                            Thương hiệu</h5>
+                        <h5 class="modal-title" id="deleteCategoryModalLabel"><i class="bi bi-trash-fill me-2"></i>Xác nhận
+                            Xóa Danh mục</h5>
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
                             aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
-                        <p>Bạn có chắc chắn muốn xóa thương hiệu "<strong id="brandNameToDelete"></strong>"?</p>
-                        <p class="text-danger"><strong>Lưu ý:</strong> Hành động này không thể hoàn tác.</p>
+                        <p>Bạn có chắc chắn muốn xóa danh mục "<strong id="categoryNameToDelete"></strong>"?</p>
+                        <p class="text-danger"><strong>Lưu ý:</strong> Hành động này không thể hoàn tác và sẽ xóa vĩnh viễn
+                            danh mục.</p>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-                        <button type="submit" class="btn btn-danger">Xóa Thương hiệu</button>
+                        <button type="submit" class="btn btn-danger">Xóa Vĩnh Viễn</button>
                     </div>
                 </form>
             </div>
@@ -200,19 +220,32 @@
 @endsection
 
 @push('scripts')
-    {{-- Bạn có thể tạo một file brand-manager.js tương tự như category-manager.js --}}
-
-    <script src="{{ asset('assets_admin/js/brand_manager.js') }}"></script>
-
+    <script src="{{ asset('assets_admin/js/category_manager.js') }}"></script>
     <script>
-        // Mở lại modal nếu có lỗi validation
         @if ($errors->any())
-            @if (old('form_type') !== 'update') // Giả sử bạn thêm một input hidden để phân biệt form
-                document.addEventListener('DOMContentLoaded', function () {
-                    var createModal = new bootstrap.Modal(document.getElementById('createBrandModal'));
+            document.addEventListener('DOMContentLoaded', function () {
+                // Xác định modal nào cần mở lại dựa trên lỗi
+                // Ví dụ: Nếu lỗi liên quan đến 'name' hoặc 'description' (chung cho cả create và update)
+                // và không có ID cụ thể -> có thể là lỗi tạo mới.
+                // Hoặc bạn có thể truyền một biến session cụ thể để biết form nào gây lỗi.
+                // Hiện tại, mở lại modal create nếu có lỗi (hành vi cũ)
+                var createModalErrors = @json($errors->hasAny(['name', 'description']) && !session('update_error_category_id'));
+                var updateModalErrors = @json($errors->hasAny(['name', 'description']) && session('update_error_category_id'));
+
+                if (document.getElementById('createCategoryModal') && createModalErrors) {
+                    var createModal = new bootstrap.Modal(document.getElementById('createCategoryModal'));
                     createModal.show();
-                });
-            @endif
+                }
+                // Nếu bạn muốn mở lại update modal khi có lỗi validation ở update,
+                // bạn cần một cách để xác định đó là lỗi của update (ví dụ: truyền ID qua session flash)
+                // và sau đó trigger modal tương ứng với ID đó.
+                // Ví dụ:
+                // @if (session('update_error_category_id') && $errors->any())
+                    //    var updateModal = new bootstrap.Modal(document.getElementById('updateCategoryModal'));
+                    //    // Cần thêm logic để điền lại dữ liệu cũ và thông tin cho modal update cụ thể
+                    //    updateModal.show();
+                // @endif
+            });
         @endif
     </script>
 @endpush

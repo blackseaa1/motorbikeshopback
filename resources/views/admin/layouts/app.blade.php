@@ -6,57 +6,64 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@yield('title', 'Admin Panel') - Đồ án Web Đồ Chơi Xe</title>
 
-    {{-- =================================================================== --}}
-    {{-- 1. TẠO "KHE CẮM" ĐỂ TRANG CON TRUYỀN BIẾN SANG JAVASCRIPT --}}
-    {{-- Chỉ những trang con nào dùng @push('laravel-js-vars') thì mới có script ở đây. --}}
-    {{-- Các trang khác sẽ không tải script này, giúp tối ưu tốc độ. --}}
-    {{-- =================================================================== --}}
-    @stack('laravel-js-vars')
-
-    {{-- 2. NẠP CSS VÀ JS THƯ VIỆN GỐC QUA VITE --}}
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @stack('laravel-js-vars') {{-- --}}
+    @vite(['resources/css/app.css', 'resources/js/app.js']) {{-- --}}
 
     {{-- Các file CSS tùy chỉnh khác --}}
-    <link rel="stylesheet" href="{{ asset('assets_admin/css/common/base.css') }}">
-    <link rel="stylesheet" href="{{ asset('assets_admin/css/common/normalize.css') }}">
-    <link rel="stylesheet" href="{{ asset('assets_admin/css/common/reset.css') }}">
-    <link rel="stylesheet" href="{{ asset('assets_admin/css/common/style.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets_admin/css/common/base.css') }}"> {{-- --}}
+    <link rel="stylesheet" href="{{ asset('assets_admin/css/common/normalize.css') }}"> {{-- --}}
+    <link rel="stylesheet" href="{{ asset('assets_admin/css/common/reset.css') }}"> {{-- --}}
+    <link rel="stylesheet" href="{{ asset('assets_admin/css/common/style.css') }}"> {{--{{-- --}}
 
-    @yield('styles') {{-- Dành cho CSS riêng của từng trang --}}
+
+    @yield('styles') {{-- Dành cho CSS riêng của từng trang --}} {{-- --}}
 </head>
 
 <body>
-    {{-- Lớp phủ tải trang (loading overlay) --}}
-    <div id="loading-overlay">
-        <div class="spinner"></div>
-        <span class="loading-text">Đang xử lý...</span>
-    </div>
+    {{-- 1. Nhúng loading overlay toàn cục --}}
+    @include('admin.layouts.partials.loading')
 
-    <div class="wrapper">
-        @include('admin.layouts.partials.sidebar')
+    {{-- 2. Xóa bỏ div#loading-overlay cũ đã hardcode ở đây --}}
+    {{-- --}}
 
-        <div class="main-panel">
-            @include('admin.layouts.partials.topnav')
+    <div class="wrapper"> {{-- --}}
+        @include('admin.layouts.partials.sidebar') {{-- --}}
 
-            <main class="main-content p-3" id="mainContent">
-                @yield('content')
+        <div class="main-panel"> {{-- --}}
+            @include('admin.layouts.partials.topnav') {{-- --}}
+
+            <main class="main-content p-3" id="mainContent"> {{-- --}}
+                {{-- 3. Nhúng hệ thống thông báo toàn cục --}}
+                @include('admin.layouts.partials.messages')
+
+                @yield('content') {{-- --}}
             </main>
         </div>
     </div>
+    {{-- File: app.blade.php --}}
+    {{-- ... các nội dung khác ... --}}
 
-    {{-- =================================================================== --}}
-    {{-- 3. NẠP CÁC FILE JAVASCRIPT CỦA ỨNG DỤNG --}}
-    {{-- =================================================================== --}}
+    {{-- Modal chung cho các thông báo từ session và validation --}}
+    <div class="modal fade" id="appInfoModal" tabindex="-1" aria-labelledby="appInfoModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header"> {{-- Class màu nền sẽ được JS thêm vào --}}
+                    <h5 class="modal-title" id="appInfoModalLabel">Thông báo</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="appInfoModalBody">
+                    {{-- Nội dung thông báo sẽ được JS chèn vào đây --}}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Đóng</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
-
-    {{-- 3.1 "Khe cắm" cho các file JS của trang con --}}
-    {{-- Tất cả các file như brand_manager.js, category_manager.js, dashboard_chart.js sẽ được nạp ở đây --}}
-    @stack('scripts')
-    {{-- 3.2. Nạp file layout chung (Orchestrator) CUỐI CÙNG --}}
+    {{-- NẠP CÁC FILE JAVASCRIPT CỦA ỨNG DỤNG --}}
     <script src="{{ asset('assets_admin/js/admin_layout.js') }}"></script>
-
-    {{-- Nơi để các trang con chèn vào các file JS riêng của mình --}}
-    @yield('scripts')
+    @stack('scripts')
 </body>
 
 </html>

@@ -1,3 +1,69 @@
+/* Login css */
+.login-card {
+    max-width: 450px;
+    /* Hoặc kích thước phù hợp với thiết kế của bạn */
+    width: 100%;
+}
+
+/* Login css */
+
+/* register css */
+.register-card {
+    max-width: 550px;
+    width: 100%;
+}
+
+.form-text {
+    font-size: 0.875em;
+}
+
+/* CSS cho kiểm tra yêu cầu mật khẩu */
+.requirement-item {
+    transition: color 0.3s ease, text-decoration 0.3s ease;
+    color: #6c757d;
+    /* Màu xám mặc định */
+    font-size: 0.8em;
+    /* Giảm kích thước chữ một chút */
+    margin-bottom: 0.15rem;
+    /* Khoảng cách nhỏ giữa các dòng */
+}
+
+.requirement-item.valid {
+    color: #198754;
+    /* Màu xanh lá */
+    text-decoration: line-through;
+}
+
+.requirement-item.valid::before {
+    content: "✓ ";
+    /* Dấu tick */
+    font-weight: bold;
+}
+
+.requirement-item.invalid {
+    color: #dc3545;
+    /* Màu đỏ */
+}
+
+.requirement-item.invalid::before {
+    content: "✗ ";
+    /* Dấu X */
+    font-weight: bold;
+}
+
+#passwordConfirmationHelp.valid {
+    color: #198754;
+    font-size: 0.8em;
+}
+
+#passwordConfirmationHelp.invalid {
+    color: #dc3545;
+    font-size: 0.8em;
+}
+
+/* register css */
+
+
 /* app css */
 
 

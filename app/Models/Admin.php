@@ -3,14 +3,18 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Foundation\Auth\User as Authenticatable; // Để có thể sử dụng cho Auth nếu cần
+use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
 class Admin extends Authenticatable
 {
     use HasFactory, Notifiable;
 
-    protected $table = 'admin';
+    protected $table = 'admins';
+
+    // Định nghĩa các hằng số trạng thái bằng tiếng Anh
+    const STATUS_ACTIVE = 'active';
+    const STATUS_SUSPENDED = 'suspended';
 
     protected $fillable = [
         'name',
@@ -18,8 +22,8 @@ class Admin extends Authenticatable
         'phone',
         'role',
         'password',
-        'img', 
-        'status',
+        'img',
+        'status', // Đảm bảo đã có trong $fillable
     ];
 
     protected $hidden = [
@@ -31,6 +35,6 @@ class Admin extends Authenticatable
      */
     public function createdOrders()
     {
-        return $this->hasMany(Order::class, 'created_by_admin_id'); // [cite: 104]
+        return $this->hasMany(Order::class, 'created_by_admin_id');
     }
 }

@@ -3,9 +3,9 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
-use Illuminate\Http\Request;
-use Illuminate\Auth\AuthenticationException;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Http\Request; // Make sure Request is imported
+use Illuminate\Auth\AuthenticationException; // Make sure AuthenticationException is imported
+// use Illuminate\Support\Facades\Log; // Uncomment if you need detailed logging
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -14,43 +14,67 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-        // THÊM DÒNG NÀY VÀO ĐÂY
-        // Chỉ cho Laravel biết nơi chuyển hướng khách chưa đăng nhập
-        $middleware->redirectGuestsTo(fn () => route('admin.login'));
-
-        // Bạn có thể có các cấu hình middleware khác ở đây
-    })
-    ->withExceptions(function (Exceptions $exceptions) {
-        // Đoạn code xử lý AuthenticationException này vẫn hữu ích,
-        // đặc biệt nếu bạn muốn xử lý các guard khác nhau hoặc JSON response.
-        // Nó sẽ được ưu tiên nếu được gọi.
-        $exceptions->render(function (AuthenticationException $e, Request $request) {
-            Log::info("HANDLER_REACHED: AuthenticationException for guard: " . (data_get($e->guards(), 0) ?: 'UNKNOWN_GUARD'));
-
+        // Cấu hình chuyển hướng cho khách (guest) chưa đăng nhập của guard 'admin'
+        // Đảm bảo route 'admin.auth.login' đã được định nghĩa trong web.php
+        $middleware->redirectGuestsTo(function (Request $request) {
+            // Kiểm tra xem request có mong muốn JSON không, nếu có thì không redirect
             if ($request->expectsJson()) {
-                Log::info("HANDLER_JSON_RESPONSE: Sending JSON unauthenticated response.");
-                return response()->json(['message' => 'Unauthenticated.'], 401);
+                return null;
             }
-
-            $guard = data_get($e->guards(), 0);
-            Log::info("HANDLER_GUARD_CHECK: Guard is '{$guard}'");
-
-            // Logic này vẫn đúng để xử lý cụ thể cho guard 'admin'
-            if ($guard === 'admin') {
-                Log::info("HANDLER_REDIRECTING: Redirecting to admin.login for admin guard.");
-                return redirect()->guest(route('admin.login'));
-            }
-
-            // Trường hợp này sẽ ít khi xảy ra nếu redirectGuestsTo đã được cấu hình
-            Log::info("HANDLER_REDIRECTING: Redirecting to admin.login for other/unknown guard (fallback).");
-            return redirect()->guest(route('admin.login'));
+            // Kiểm tra xem có phải là request cho guard 'admin' không (nếu cần thiết)
+            // Đối với nhiều guards, bạn có thể cần logic phức tạp hơn ở đây
+            // hoặc xử lý trong AuthenticationException handler.
+            // Tuy nhiên, với redirectGuestsTo, nó thường áp dụng cho guard mặc định
+            // hoặc guard được chỉ định khi middleware 'auth' được gọi mà không có guard cụ thể.
+            // Nếu bạn chỉ dùng guard 'admin' cho phần admin, thì đây là đủ.
+            return route('admin.auth.login');
         });
 
-        // Bỏ comment hoặc xóa phần log cho OTHER_EXCEPTION nếu bạn muốn,
-        // vì bây giờ chúng ta đã xử lý RouteNotFoundException cho 'login' rồi.
-        // $exceptions->render(function (Throwable $e, Request $request) {
-        //     if (!($e instanceof AuthenticationException)) {
-        //          Log::error("HANDLER_OTHER_EXCEPTION: Type: " . get_class($e) . " Message: " . $e->getMessage(), ['exception' => $e]);
-        //     }
+        // Đăng ký bí danh (alias) cho middleware tùy chỉnh
+        $middleware->alias([
+            'admin.hasrole' => \App\Http\Middleware\CheckAdminHasRole::class,
+            // Thêm các bí danh middleware khác của bạn ở đây nếu cần
+            // ví dụ: 'isAdmin' => \App\Http\Middleware\IsAdminMiddleware::class,
+        ]);
+
+        // Bạn có thể thêm các cấu hình middleware toàn cục hoặc nhóm ở đây nếu cần
+        // Ví dụ:
+        // $middleware->append(\App\Http\Middleware\LogResponseTime::class);
+        // $middleware->prepend(\App\Http\Middleware\SetLocale::class);
+
+        // Cấu hình cho CSRF token, thường được xử lý tự động bởi Laravel
+        // nhưng bạn có thể tùy chỉnh 'except' ở đây nếu cần
+        // $middleware->validateCsrfTokens(except: [
+        //     'stripe/*',
+        //     'http://example.com/foo/bar',
+        // ]);
+    })
+    ->withExceptions(function (Exceptions $exceptions) {
+        // Xử lý khi người dùng chưa được xác thực
+        $exceptions->render(function (AuthenticationException $e, Request $request) {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => $e->getMessage()], 401);
+            }
+
+            // Xác định guard gây ra lỗi xác thực
+            $guard = data_get($e->guards(), 0);
+
+            // Chuyển hướng dựa trên guard
+            switch ($guard) {
+                case 'admin':
+                    return redirect()->guest(route('admin.auth.login'));
+                    // Thêm các case khác cho các guard khác nếu có
+                    // case 'web':
+                    //     return redirect()->guest(route('login'));
+                default:
+                    // Fallback nếu không xác định được guard cụ thể hoặc cho guard mặc định
+                    return redirect()->guest(route('login')); // Hoặc một route login chung
+            }
+        });
+
+        // Bạn có thể thêm các trình xử lý ngoại lệ tùy chỉnh khác ở đây
+        // Ví dụ:
+        // $exceptions->report(function (MyCustomException $e) {
+        //     // Gửi thông báo lỗi đến một dịch vụ bên ngoài
         // });
     })->create();
