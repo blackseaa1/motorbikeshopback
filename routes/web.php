@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\Auth\LoginController as AdminLoginController;
 use App\Http\Controllers\Admin\Auth\RegisterController as AdminRegisterController;
 use App\Http\Controllers\Admin\Auth\PendingAuthorizationController; // Controller cho trang chờ phân quyền
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\Profile\AdminProfileController; // <<< THÊM CONTROLLER HỒ SƠ ADMIN
 
 // Import các controller khác (giữ nguyên từ file của bạn, đảm bảo namespace chính xác)
 use App\Http\Controllers\Admin\Sales\OrderController;
@@ -123,6 +124,14 @@ Route::prefix('admin')->name('admin.')->middleware('auth:admin')->group(function
             Route::get('settings', function () {
                 return view('admin.system.settings'); // Placeholder
             })->name('settings');
+        });
+
+        // --- HỒ SƠ ADMIN ---
+        Route::prefix('profile')->name('profile.')->group(function () {
+            Route::get('/', [AdminProfileController::class, 'showProfileForm'])->name('show');
+            Route::post('/update-info', [AdminProfileController::class, 'updateInfo'])->name('updateInfo');
+            Route::post('/change-password', [AdminProfileController::class, 'changePassword'])->name('changePassword');
+            Route::post('/update-avatar', [AdminProfileController::class, 'updateAvatar'])->name('updateAvatar');
         });
     }); // Kết thúc group middleware 'admin.hasrole'
 }); // Kết thúc group prefix 'admin' và middleware 'auth:admin'

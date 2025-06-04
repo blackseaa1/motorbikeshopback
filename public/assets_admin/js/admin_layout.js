@@ -125,6 +125,7 @@ function initializeImagePreviews() {
         ['categoryLogoUpdate', 'categoryLogoPreviewUpdate'],
         ['productImageCreate', 'productImagePreviewCreate'],
         ['productImageUpdate', 'productImagePreviewUpdate'],
+        ['adminAvatarInput', 'adminAvatarPreview'],
     ];
 
     function setupPreview(inputId, previewId) {

@@ -1,3 +1,5 @@
+/* public/assets_admin/css/common/style.css (Hoặc file CSS chung của bạn) */
+
 @media (max-width: 991.98px) {
     /* ... các style hiện có của bạn cho màn hình nhỏ ... */
 
@@ -433,7 +435,9 @@
     border-left-color: #fff !important;
     /* Và có viền trắng */
 }
+
 .avatar-preview {
+    /* Đây là class chung, sẽ bị ghi đè bởi .profile-avatar-preview cho trang profile */
     width: 100px;
     height: 100px;
     object-fit: cover;
@@ -530,6 +534,7 @@
 /* Charts and Lists Section */
 .card,
 .chart-container {
+    /* Class .card chung, sẽ được ghi đè bởi các class cụ thể hơn nếu cần */
     background-color: #fff;
     border: 1px solid #e9ecef;
     border-radius: 8px;
@@ -547,16 +552,13 @@
     color: #343a40;
 }
 
-.card .card-header {
-    /* This might conflict if you have other .card .card-header styles, review if needed */
-    /* Note: The provided code already has .dashboard-card .card-header */
-    /* This rule from the original file is more generic. */
+/* Ghi đè cho card header chung nếu cần, tuy nhiên nên ưu tiên các class cụ thể hơn */
+/* .card .card-header {
     background-color: #f8f9fa;
     font-weight: 600;
     color: #343a40;
-    /* Different color from .dashboard-card .card-header */
     border-bottom: 1px solid #e9ecef;
-}
+} */
 
 /* Best Selling & Recent Orders Lists */
 .right-sidebar-cards .list-group-item {
@@ -646,45 +648,342 @@
     color: #007bff;
 }
 
-/* userManagement section from original file (only if significantly different or missing) */
-/* Note: The userManagement section for submenu in the provided code is quite detailed. */
-/* The original file had these specific versions for submenu behavior: */
 
-/* .sidebar .nav-link .bi-caret-down-fill { */
-/* transition: transform 0.6s ease-in-out; */
-/* Original had 0.6s, provided code has 0.3s */
-/* } */
+/* ========================================================================== */
+/* === CSS CHO TRANG HỒ SƠ (PROFILE PAGE) === */
+/* ========================================================================== */
 
-/* .sidebar .nav-link.active-submenu { */
-/* color: #fff !important; */
-/* background-color: #1890ff; */
-/* Provided code handles this via a combined rule */
-/* border-left: 3px solid #fff; */
-/* This specific border was in the original direct rule */
-/* font-weight: 500; */
-/* } */
+/* General Card Styling & Profile Specific Cards */
+.card-profile-avatar,
+.card-profile-settings {
+    border-radius: 0.5rem;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, .075);
+    border: 1px solid #e9ecef;
+    margin-bottom: 1.5rem;
+}
 
-/* .sidebar ul.collapse { */
-/* overflow: hidden; */
-/* Already in provided code */
-/* transition: height 60s ease-out; */
-/* Original had this, very long duration. Provided code does not have height transition here. */
-/* background-color: rgba(0,0,0,0.1); */
-/* Provided code has this */
-/* } */
+.card-profile-avatar .card-body {
+    padding: 1.5rem;
+}
 
-/* .sidebar ul.collapse .nav-link { */
-/* padding-left: 2.5rem; */
-/* Already in provided code */
-/* font-size: 0.95em; */
-/* Already in provided code */
-/* transition: background-color 0.6s ease, color 0.6s ease, padding-left 1s ease-out; */
-/* Original had this transition including padding-left. Provided code has different transition and adds border-left reset. */
-/* } */
+.card-profile-settings .card-body {
+    padding: 1.5rem;
+}
 
-/* Considering the request to "add missing parts" and that the provided code seems to be an evolution, */
-/* I've added the distinct blocks like '.dashboard-card .list-group-item' and the entire 'Dashboard Specific Styles'. */
-/* Changes within existing selectors (like submenu transitions) are more nuanced and might override intentional changes in the provided code. */
-/* If you want to revert specific submenu behaviors to the original file, you'd uncomment and adjust the commented-out rules above. */
+.card-profile-settings .card-header {
+    background-color: #fff;
+    /* Nền trắng cho header của card settings */
+    border-bottom: 1px solid #dee2e6;
+}
 
-/* The avatar-preview in the original file is identical to the one in the provided code. */
+
+/* === CẬP NHẬT CSS CHO AVATAR SECTION === */
+.profile-avatar-container {
+    position: relative;
+    width: 130px;
+    height: 130px;
+    margin: 0 auto;
+    /* Giữ nguyên căn giữa */
+    border-radius: 50%;
+    /* Đảm bảo container tròn */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease;
+    overflow: inherit;
+    /* Rất quan trọng: cắt bỏ mọi thứ vượt ra ngoài container tròn */
+    cursor: pointer;
+    /* Di chuyển cursor pointer ra container để bao trùm cả label */
+    box-sizing: border-box;
+    /* Đảm bảo padding và border không làm tăng kích thước container */
+}
+
+/* Thẻ label bao quanh ảnh cần được định dạng để chiếm toàn bộ container */
+.profile-avatar-container>label.cursor-pointer {
+    display: block;
+    /* Quan trọng: label cần là block để có kích thước */
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    /* Label cũng nên tròn để khớp */
+    position: relative;
+    /* Để icon edit định vị theo label nếu cần, hoặc theo container */
+    padding: 0;
+    /* Reset padding mặc định của label nếu có */
+    margin: 0;
+    /* Reset margin mặc định của label nếu có */
+}
+
+.profile-avatar-preview {
+    display: block;
+    /* Giữ nguyên */
+    width: 100%;
+    /* Chiếm toàn bộ chiều rộng của label (đã là 100% của container) */
+    height: 100%;
+    /* Chiếm toàn bộ chiều cao của label (đã là 100% của container) */
+    object-fit: cover;
+    /* Quan trọng: Căn chỉnh và cắt ảnh cho vừa, giữ tỷ lệ */
+    border-radius: 50%;
+    /* Ảnh cũng phải tròn */
+    border: 3px solid #fff;
+    /* Giữ lại border trắng */
+    background-color: #f8f9fa;
+    /* Màu nền nếu ảnh trong suốt */
+    box-sizing: border-box;
+    /* Quan trọng: border sẽ được tính vào kích thước 100% */
+}
+
+.profile-avatar-container:hover {
+    transform: scale(1.05);
+    /* Giữ nguyên hiệu ứng hover */
+}
+
+#adminAvatarInput {
+    display: none;
+    /* Giữ nguyên ẩn input file */
+}
+
+.profile-avatar-edit-icon {
+    position: absolute;
+    bottom: 5px;
+    right: 5px;
+    background-color: #001529;
+    color: white;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    /* cursor: pointer; Đã chuyển cursor lên container */
+    transition: background-color 0.2s, transform 0.2s;
+    border: 2px solid white;
+    z-index: 5;
+    /* Đảm bảo icon nằm trên ảnh preview */
+}
+
+.profile-avatar-edit-icon:hover {
+    background-color: #1890ff;
+    transform: scale(1.1);
+}
+
+#submitAvatarButton {
+    transition: opacity 0.3s ease, transform 0.3s ease, visibility 0.3s ease;
+    opacity: 0;
+    transform: translateY(10px) scale(0.95);
+    width: auto;
+    visibility: hidden;
+}
+
+#submitAvatarButton.visible {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    visibility: visible;
+}
+
+/* === KẾT THÚC CẬP NHẬT CSS CHO AVATAR SECTION === */
+
+
+.profile-username {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #343a40;
+}
+
+.profile-avatar-container+.profile-username {
+    /* Selector cho tên admin */
+    margin-top: 1rem;
+}
+
+/* CSS CHO ADMIN ROLE BADGE */
+.admin-role-badge {
+    display: inline-block;
+    padding: 0.3em 0.65em;
+    /* Điều chỉnh padding cho vừa vặn */
+    font-size: 0.80em;
+    /* Kích thước chữ cho badge */
+    font-weight: 700;
+    line-height: 1;
+    color: #fff;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: baseline;
+    border-radius: 0.375rem;
+    /* Bo tròn */
+    text-transform: capitalize;
+    /* Viết hoa chữ đầu mỗi từ */
+}
+
+.admin-role-badge.role-super-admin {
+    background-color: #c82333;
+    /* Màu đỏ đậm (Bootstrap btn-danger hover) */
+}
+
+.admin-role-badge.role-administrator {
+    background-color: #0069d9;
+    /* Bootstrap btn-primary hover */
+}
+
+/* BỔ SUNG CHO CÁC VAI TRÒ MỚI */
+.admin-role-badge.role-nhan-vien-kho {
+    /* Cho "Nhân viên kho" */
+    background-color: #4CAF50;
+    /* Material Design Green 500 */
+    color: #fff;
+}
+
+.admin-role-badge.role-nhan-vien-ho-tro {
+    /* Cho "Nhân viên hỗ trợ" */
+    background-color: #FF9800;
+    /* Material Design Orange 500 */
+    color: #212529;
+    /* Chữ đậm hơn cho nền cam để dễ đọc */
+}
+
+/* END BỔ SUNG */
+
+
+/* Điều chỉnh p tag chứa badge để không còn class .small và .text-muted nữa */
+p.text-center:has(.admin-role-badge) {
+    margin-bottom: 1rem;
+    /* Giữ khoảng cách dưới */
+}
+
+/* END CSS CHO ADMIN ROLE BADGE */
+
+
+.text-muted.small {
+    /* Dùng cho email */
+    font-size: 0.9rem;
+}
+
+.list-group-unbordered .list-group-item {
+    border-left: 0;
+    border-right: 0;
+    border-top: 1px solid #e9ecef;
+    padding: 0.85rem 0.25rem;
+}
+
+.list-group-unbordered .list-group-item:first-child {
+    border-top: 0;
+}
+
+.list-group-item b {
+    color: #495057;
+    font-weight: 500;
+}
+
+.list-group-item .detail-value {
+    color: #001529;
+    font-weight: 500;
+}
+
+.profile-tabs.nav-tabs {
+    border-bottom: 1px solid #dee2e6;
+    padding-left: 0.75rem;
+}
+
+.profile-tabs .nav-link {
+    color: #495057;
+    border: 0;
+    border-bottom: 3px solid transparent;
+    padding: 0.75rem 1rem;
+    margin-right: 0.25rem;
+    font-weight: 500;
+    transition: color 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+    border-top-left-radius: 0.25rem;
+    border-top-right-radius: 0.25rem;
+}
+
+.profile-tabs .nav-link:hover {
+    color: #001529;
+    border-bottom-color: #adb5bd;
+    background-color: #f8f9fa;
+}
+
+.profile-tabs .nav-link.active {
+    color: #1890ff;
+    background-color: #fff;
+    border-bottom-color: #1890ff;
+    font-weight: 600;
+}
+
+.tab-content {
+    padding-top: 1.5rem;
+}
+
+.form-horizontal .col-form-label {
+    font-weight: 500;
+    color: #495057;
+}
+
+.form-control {
+    border-radius: 0.25rem;
+}
+
+.form-control:focus {
+    border-color: #1890ff;
+    box-shadow: 0 0 0 0.2rem rgba(24, 144, 255, 0.25);
+}
+
+.btn-success,
+.btn-danger,
+.btn-primary {
+    padding: 0.5rem 1rem;
+    font-weight: 500;
+    border-radius: 0.25rem;
+}
+
+.btn i.bi {
+    vertical-align: -0.125em;
+    margin-right: 0.3em;
+}
+
+.password-requirements {
+    font-size: 0.85em;
+    color: #6c757d;
+    list-style-type: none;
+    padding-left: 0;
+    margin-top: 0.5rem;
+}
+
+.password-requirements li {
+    margin-bottom: 0.2rem;
+    transition: color 0.3s ease;
+}
+
+.password-requirements li.valid {
+    color: #28a745;
+}
+
+.password-requirements li.valid::before {
+    content: "✓ ";
+    font-weight: bold;
+}
+
+.password-requirements li.invalid {
+    color: #dc3545;
+}
+
+.password-requirements li.invalid::before {
+    content: "✗ ";
+    font-weight: bold;
+}
+
+@media (max-width: 767.98px) {
+    .profile-tabs.nav-tabs {
+        padding-left: 0.5rem;
+    }
+
+    .profile-tabs .nav-link {
+        padding: 0.75rem 0.5rem;
+    }
+
+    .card-profile-avatar,
+    .card-profile-settings {
+        margin-bottom: 1rem;
+    }
+
+    .form-horizontal .col-form-label {
+        text-align: left !important;
+    }
+}
