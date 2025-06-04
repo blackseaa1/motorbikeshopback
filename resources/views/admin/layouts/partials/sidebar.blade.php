@@ -44,7 +44,7 @@
             $isProductMenuActive = request()->routeIs('admin.productManagement.products') ||
                 request()->routeIs('admin.productManagement.categories.index') ||
                 request()->routeIs('admin.productManagement.brands.index') ||
-                request()->routeIs('admin.productManagement.vehicle') ||
+                request()->routeIs('admin.productManagement.vehicle.index') ||
                 request()->routeIs('admin.productManagement.inventory');
         @endphp
         <li class="nav-item">
@@ -67,8 +67,8 @@
                         href="{{ route('admin.productManagement.brands.index') }}">Thương hiệu</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('admin.productManagement.vehicle') ? 'active-submenu' : '' }}"
-                        href="{{ route('admin.productManagement.vehicle') }}">Hãng xe</a>
+                    <a class="nav-link {{ request()->routeIs('admin.productManagement.vehicle.index') ? 'active-submenu' : '' }}"
+                        href="{{ route('admin.productManagement.vehicle.index') }}">Hãng xe & Dòng xe</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link {{ request()->routeIs('admin.productManagement.inventory') ? 'active-submenu' : '' }}"

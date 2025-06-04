@@ -9,22 +9,22 @@ class VehicleModel extends Model
 {
     use HasFactory;
 
-    protected $table = 'vehicle_models';
+    protected $table = 'vehicle_models'; // Đảm bảo tên bảng đúng
+
+    // Định nghĩa các hằng số cho trạng thái
+    const STATUS_ACTIVE = 'active';
+    const STATUS_INACTIVE = 'inactive';
 
     protected $fillable = [
-        'vehicle_brand_id',
         'name',
+        'vehicle_brand_id',
         'year',
         'description',
         'status',
     ];
 
-    protected $casts = [
-        'year' => 'integer',
-    ];
-
     /**
-     * Hãng xe mà mẫu xe này thuộc về.
+     * Hãng xe của dòng xe này.
      */
     public function vehicleBrand()
     {
@@ -32,11 +32,25 @@ class VehicleModel extends Model
     }
 
     /**
-     * Các sản phẩm tương thích với mẫu xe này.
+     * Các sản phẩm thuộc dòng xe này. (Thêm nếu bạn có model Product)
      */
     public function products()
     {
-        return $this->belongsToMany(Product::class, 'product_vehicle_models', 'vehicle_model_id', 'product_id') // [cite: 65]
-            ->withTimestamps();
+        // return $this->hasMany(Product::class, 'vehicle_model_id');
+        // Giả sử bạn có một model Product và cột vehicle_model_id
+        // Nếu không, bạn có thể comment hoặc xóa dòng này
+        // Trong VehicleModelController, bạn có kiểm tra $vehicleModel->products()->exists()
+        // nên bạn cần định nghĩa relation này hoặc thay đổi logic kiểm tra đó.
+        // Tạm thời, tôi sẽ comment nó đi để tránh lỗi nếu bạn chưa có Product model.
+        return $this->hasMany('App\Models\Product'); // Thay 'App\Models\Product' bằng model Product thực tế
+    }
+
+
+    /**
+     * Kiểm tra xem dòng xe có đang hoạt động không.
+     */
+    public function isActive()
+    {
+        return $this->status === self::STATUS_ACTIVE;
     }
 }

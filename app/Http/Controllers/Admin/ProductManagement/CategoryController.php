@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Category; // Đảm bảo model Category đã được import
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule; // Import Rule để validate status
+use Illuminate\Support\Facades\Config;
 
 class CategoryController extends Controller
 {
@@ -63,15 +64,54 @@ class CategoryController extends Controller
     /**
      * Xóa một danh mục.
      */
-    public function destroy(Category $category)
+    public function destroy(Request $request, Category $category) // Thêm Request $request
     {
+        $request->validate([
+            'deletion_password' => 'required|string',
+        ]);
+
+        // Lấy mật khẩu từ config (đã đọc từ .env)
+        $requiredPassword = config::get('admin.deletion_password');
+        // Hoặc trực tiếp: $requiredPassword = env('ADMIN_DELETION_PASSWORD');
+
+        // Kiểm tra mật khẩu
+        // Lưu ý: Mật khẩu này được lưu dạng plain text trong .env và config.
+        // Nếu bạn muốn một lớp bảo mật cao hơn (ví dụ: hash mật khẩu này khi lưu trữ),
+        // bạn sẽ cần một cơ chế để hash nó ban đầu và dùng Hash::check() ở đây.
+        // Tuy nhiên, với một mật khẩu admin chung cho hành động xóa, plain text từ .env thường chấp nhận được.
+        if (!$requiredPassword || $request->input('deletion_password') !== $requiredPassword) {
+            // Nếu request là AJAX (thường là vậy với modal)
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Mật khẩu xác nhận không đúng.',
+                    'errors' => [ // Trả về lỗi cụ thể cho trường mật khẩu
+                        'deletion_password' => ['Mật khẩu xác nhận không đúng.']
+                    ]
+                ], 422); // 422 Unprocessable Entity
+            }
+            // Fallback nếu không phải AJAX
+            return redirect()->back()
+                ->withErrors(['deletion_password_modal' => 'Mật khẩu xác nhận không đúng.'])
+                ->withInput(); // Giữ lại input nếu có, dù ở đây không có nhiều input
+        }
+
         // Cân nhắc kiểm tra xem danh mục có sản phẩm nào không trước khi xóa
-        // Ví dụ: if ($category->products()->count() > 0) { ... return error ... }
+        // Ví dụ: if ($category->products()->count() > 0) { ... Freturn error ... }
+
         $category->delete(); //
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Xóa danh mục thành công!',
+                'redirect_url' => route('admin.productManagement.categories.index') // URL để JS redirect sau khi xóa
+            ]);
+        }
+
         return redirect()->route('admin.productManagement.categories.index') //
             ->with('success', 'Xóa danh mục thành công!'); //
     }
-
     /**
      * Thay đổi trạng thái (active/inactive) của một danh mục.
      */

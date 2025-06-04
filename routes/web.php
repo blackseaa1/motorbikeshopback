@@ -16,7 +16,9 @@ use App\Http\Controllers\Admin\Sales\PromotionController;
 use App\Http\Controllers\Admin\ProductManagement\CategoryController;
 use App\Http\Controllers\Admin\ProductManagement\ProductController;
 use App\Http\Controllers\Admin\ProductManagement\BrandController;
-use App\Http\Controllers\Admin\ProductManagement\VehicleController;
+use App\Http\Controllers\Admin\ProductManagement\VehicleManagementController; // Controller mới cho trang hợp nhất
+use App\Http\Controllers\Admin\ProductManagement\VehicleBrandController;
+use App\Http\Controllers\Admin\ProductManagement\VehicleModelController; // Giả sử bạn đã đổi tên VehicleController trong file VehicleModel.php
 use App\Http\Controllers\Admin\ProductManagement\InventoryController;
 use App\Http\Controllers\Admin\Content\PostController;
 use App\Http\Controllers\Admin\Content\ReviewController;
@@ -85,10 +87,30 @@ Route::prefix('admin')->name('admin.')->middleware('auth:admin')->group(function
         // --- Quản lý Sản phẩm ---
         Route::prefix('productManagement')->name('productManagement.')->group(function () {
             Route::get('products', [ProductController::class, 'index'])->name('products');
+
             Route::resource('categories', CategoryController::class)->except(['create', 'edit', 'show']);
             Route::post('categories/{category}/toggle-status', [CategoryController::class, 'toggleStatus'])->name('categories.toggleStatus');
+
             Route::resource('brands', BrandController::class)->except(['create', 'edit', 'show']);
-            Route::get('vehicle', [VehicleController::class, 'index'])->name('vehicle');
+            Route::post('brands/{brand}/toggle-status', [BrandController::class, 'toggleStatus'])->name('brands.toggleStatus');
+
+            // TRANG QUẢN LÝ XE HỢP NHẤT (HÃNG XE & DÒNG XE)
+            Route::get('vehicle-management', [VehicleManagementController::class, 'index'])->name('vehicle.index');
+
+            // --- API/Actions cho HÃNG XE (VEHICLE BRAND) ---
+            Route::resource('vehicle-brands', VehicleBrandController::class)
+                ->except(['create', 'edit', 'show']) // Các form sẽ là modal
+                ->names('vehicleBrands'); // Sẽ tạo ra admin.productManagement.vehicleBrands.store, .update, .destroy, .index (nếu cần riêng)
+            Route::post('vehicle-brands/{vehicleBrand}/toggle-status', [VehicleBrandController::class, 'toggleStatus'])
+                ->name('vehicleBrands.toggleStatus');
+
+            // --- API/Actions cho DÒNG XE (VEHICLE MODEL) ---
+            Route::resource('vehicle-models', VehicleModelController::class)
+                ->except(['create', 'edit', 'show'])
+                ->names('vehicleModels');
+            Route::post('vehicle-models/{vehicleModel}/toggle-status', [VehicleModelController::class, 'toggleStatus'])
+                ->name('vehicleModels.toggleStatus');
+
             Route::get('inventory', [InventoryController::class, 'index'])->name('inventory');
         });
 

@@ -8,13 +8,13 @@
  */
 function initializeGeographyPage() {
     const geographyTabsContent = document.getElementById('geographyTabsContent');
-    // Chỉ thực thi mã nếu element đặc trưng của trang này tồn tại.
     if (!geographyTabsContent) {
         return;
     }
     console.log("Geography JS: Trang địa lý được phát hiện. Bắt đầu khởi tạo...");
 
-    // Hàm tiện ích: Gỡ bỏ và gắn lại listener để tránh lặp lại do Turbo cache
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
     function rebindEventListener(element, eventType, handler) {
         if (!element) return;
         const newElement = element.cloneNode(true);
@@ -23,11 +23,14 @@ function initializeGeographyPage() {
         return newElement;
     }
 
-    // Lấy các biến lỗi được truyền từ Laravel (nếu có)
     const allLaravelErrors = window.laravelErrors || {};
     const errorUpdateProvinceId = window.errorUpdateProvinceId || null;
     const errorUpdateDistrictId = window.errorUpdateDistrictId || null;
     const errorUpdateWardId = window.errorUpdateWardId || null;
+
+    const provinceBaseUrl = "/admin/system/geography/provinces";
+    const districtBaseUrl = "/admin/system/geography/districts";
+    const wardBaseUrl = "/admin/system/geography/wards";
 
     // --- Chức năng tải Quận/Huyện theo Tỉnh/Thành ---
     const fetchDistrictsForModal = async (provinceId, districtSelectElement, selectedDistrictId = null, placeholder = '-- Chọn Quận/Huyện --') => {
@@ -36,12 +39,16 @@ function initializeGeographyPage() {
             districtSelectElement.disabled = true;
             return;
         }
+
+        if (typeof window.showAppLoader === 'function') window.showAppLoader(); // HIỂN THỊ LOADER
         districtSelectElement.disabled = true;
         districtSelectElement.innerHTML = `<option value="">Đang tải...</option>`;
+
         try {
             const response = await fetch(`/api/provinces/${provinceId}/districts`);
             if (!response.ok) throw new Error('Lỗi mạng khi fetch districts');
             const data = await response.json();
+
             districtSelectElement.innerHTML = `<option value="">${placeholder}</option>`;
             if (data && data.length > 0) {
                 data.forEach(district => {
@@ -59,10 +66,12 @@ function initializeGeographyPage() {
             districtSelectElement.innerHTML = `<option value="">Lỗi tải Quận/Huyện</option>`;
         } finally {
             districtSelectElement.disabled = false;
+            if (typeof window.hideAppLoader === 'function') window.hideAppLoader(); // ẨN LOADER
         }
     };
 
     // --- Chức năng tự động mở modal nếu có lỗi validation từ server ---
+    // (Giữ nguyên hàm setupModalForErrors của bạn)
     const setupModalForErrors = (options) => {
         const { modalId, errorBagPrefix, errorIdValue, baseUrl } = options;
         const modalEl = document.getElementById(modalId);
@@ -72,8 +81,7 @@ function initializeGeographyPage() {
         if (errorBag && Object.keys(errorBag).length > 0) {
             const isUpdateModal = modalId.startsWith('update');
             if (!isUpdateModal || (isUpdateModal && errorIdValue)) {
-                // Sử dụng `window.Modal` đã được gán từ app.js
-                let modalInstance = window.Modal.getInstance(modalEl) || new window.Modal(modalEl);
+                let modalInstance = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
                 const form = modalEl.querySelector('form');
                 if (form && isUpdateModal && errorIdValue && baseUrl) {
                     form.action = `${baseUrl}/${errorIdValue}`;
@@ -91,7 +99,6 @@ function initializeGeographyPage() {
                         }
                     }
                 }
-                // Xử lý đặc biệt cho modal Phường/Xã để tải lại quận/huyện theo tỉnh đã chọn sai
                 if (modalId.endsWith('WardModal') && form) {
                     const oldProvinceId = form.querySelector('[name="province_id_for_ward"]')?.value;
                     const oldDistrictId = form.querySelector('[name="district_id"]')?.value;
@@ -104,10 +111,6 @@ function initializeGeographyPage() {
         }
     };
 
-    const provinceBaseUrl = "/admin/system/geography/provinces";
-    const districtBaseUrl = "/admin/system/geography/districts";
-    const wardBaseUrl = "/admin/system/geography/wards";
-
     setupModalForErrors({ modalId: 'createProvinceModal', errorBagPrefix: 'storeProvince' });
     setupModalForErrors({ modalId: 'updateProvinceModal', errorBagPrefix: 'updateProvince', errorIdValue: errorUpdateProvinceId, baseUrl: provinceBaseUrl });
     setupModalForErrors({ modalId: 'createDistrictModal', errorBagPrefix: 'storeDistrict' });
@@ -115,7 +118,9 @@ function initializeGeographyPage() {
     setupModalForErrors({ modalId: 'createWardModal', errorBagPrefix: 'storeWard' });
     setupModalForErrors({ modalId: 'updateWardModal', errorBagPrefix: 'updateWard', errorIdValue: errorUpdateWardId, baseUrl: wardBaseUrl });
 
+
     // --- Gắn sự kiện 'change' cho các dropdown Tỉnh/Thành ---
+    // (Giữ nguyên phần này)
     ['provinceForWardCreate', 'provinceForWardUpdate'].forEach(selectId => {
         const provinceSelect = document.getElementById(selectId);
         if (provinceSelect) {
@@ -123,9 +128,8 @@ function initializeGeographyPage() {
             const districtSelect = form.querySelector('[name="district_id"]');
             if (districtSelect) {
                 rebindEventListener(provinceSelect, 'change', (event) => fetchDistrictsForModal(event.target.value, districtSelect));
-                // Nếu dropdown đã có giá trị (trường hợp `old()` của Laravel), gọi fetch luôn
                 if (provinceSelect.value) {
-                    const selectedDistrictId = districtSelect.value;
+                    const selectedDistrictId = districtSelect.value; // Lưu lại giá trị district_id nếu có (old value)
                     fetchDistrictsForModal(provinceSelect.value, districtSelect, selectedDistrictId);
                 }
             }
@@ -133,20 +137,19 @@ function initializeGeographyPage() {
     });
 
     // --- Gắn sự kiện 'show.bs.modal' để điền dữ liệu khi mở modal ---
+    // (Giữ nguyên phần này)
     document.querySelectorAll('[data-bs-toggle="modal"]').forEach(button => {
         const modalId = button.dataset.bsTarget;
         if (!modalId) return;
         const modalEl = document.getElementById(modalId.substring(1));
 
-        // Chỉ gắn listener 1 lần duy nhất cho mỗi modal để tránh lặp
         if (modalEl && !modalEl.hasAttribute('data-modal-listener-setup')) {
             modalEl.addEventListener('show.bs.modal', function (event) {
                 const triggerButton = event.relatedTarget;
-                if (!triggerButton) return; // Thoát nếu modal được mở bằng JS
+                if (!triggerButton) return;
                 const form = modalEl.querySelector('form');
                 if (!form) return;
 
-                // Reset form và xóa các lỗi validation cũ
                 form.reset();
                 form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
                 form.querySelectorAll('.invalid-feedback').forEach(el => el.textContent = '');
@@ -156,22 +159,19 @@ function initializeGeographyPage() {
                 else if (modalId.includes('District')) currentBaseUrl = districtBaseUrl;
                 else if (modalId.includes('Ward')) currentBaseUrl = wardBaseUrl;
 
-                // --- Xử lý cho modal UPDATE ---
                 if (modalId.includes('update')) {
                     modalEl.querySelector('.modal-title').textContent = `Cập nhật: ${triggerButton.dataset.name || ''}`;
                     if (currentBaseUrl && triggerButton.dataset.id) {
                         form.action = `${currentBaseUrl}/${triggerButton.dataset.id}`;
                     }
-                    // Tự động điền dữ liệu từ data-* attributes của nút vào các input có name tương ứng
                     Object.keys(triggerButton.dataset).forEach(key => {
-                        const formKey = key.replace(/([A-Z])/g, '_$1').toLowerCase(); // Chuyển từ camelCase (data-provinceId) sang snake_case (province_id)
+                        const formKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
                         const input = form.querySelector(`[name="${formKey}"]`);
                         if (input) {
                             input.value = triggerButton.dataset[key];
                         }
                     });
 
-                    // Xử lý đặc biệt cho modal cập nhật Phường/Xã
                     if (modalId === '#updateWardModal') {
                         const provinceIdForWard = triggerButton.dataset.province_id_for_ward;
                         const districtIdForWard = triggerButton.dataset.district_id;
@@ -179,12 +179,10 @@ function initializeGeographyPage() {
                         const districtSelect = form.querySelector('[name="district_id"]');
                         if (provinceSelect && districtSelect && provinceIdForWard) {
                             provinceSelect.value = provinceIdForWard;
-                            // Tải danh sách quận huyện tương ứng và chọn đúng quận/huyện cũ
                             fetchDistrictsForModal(provinceIdForWard, districtSelect, districtIdForWard);
                         }
                     }
                 }
-                // --- Xử lý cho modal DELETE ---
                 else if (modalId.includes('delete')) {
                     if (currentBaseUrl && triggerButton.dataset.id) {
                         form.action = `${currentBaseUrl}/${triggerButton.dataset.id}`;
@@ -198,6 +196,91 @@ function initializeGeographyPage() {
             modalEl.setAttribute('data-modal-listener-setup', 'true');
         }
     });
+
+    // --- AJAX Form Submission Handling (Ví dụ cho form tạo Tỉnh/Thành) ---
+    // Bạn cần lặp lại logic này cho các form khác (update/delete, district, ward)
+    const createProvinceForm = document.getElementById('createProvinceForm'); // Giả sử ID của form tạo tỉnh/thành
+    if (createProvinceForm) {
+        createProvinceForm.addEventListener('submit', async function(event) {
+            event.preventDefault();
+            if (typeof window.showAppLoader === 'function') window.showAppLoader();
+
+            const formData = new FormData(this);
+            // const actionUrl = this.action; // Hoặc bạn có thể hardcode URL nếu muốn
+            const actionUrl = provinceBaseUrl; // Ví dụ: /admin/system/geography/provinces
+
+            try {
+                const response = await fetch(actionUrl, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json',
+                    },
+                    body: formData,
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    if (typeof window.hideAppLoader === 'function') window.hideAppLoader();
+                    if (typeof window.showAppInfoModal === 'function') {
+                        window.showAppInfoModal(result.message || 'Tạo mới thành công!', 'success');
+                    } else {
+                        alert(result.message || 'Tạo mới thành công!');
+                    }
+                    const modalEl = this.closest('.modal');
+                    if (modalEl) {
+                        const modalInstance = bootstrap.Modal.getInstance(modalEl);
+                        if (modalInstance) modalInstance.hide();
+                    }
+                    if (result.redirect_url) {
+                        window.location.href = result.redirect_url;
+                    } else {
+                        setTimeout(() => location.reload(), 1500); // Tải lại trang để cập nhật bảng
+                    }
+                } else if (response.status === 422 && result.errors) { // Validation errors
+                    if (typeof window.hideAppLoader === 'function') window.hideAppLoader();
+                     // Hiển thị lỗi validation (bạn có thể có hàm riêng để xử lý việc này)
+                    Object.keys(result.errors).forEach(field => {
+                        const inputField = this.querySelector(`[name="${field}"]`);
+                        if (inputField) {
+                            inputField.classList.add('is-invalid');
+                            let errorElement = inputField.nextElementSibling;
+                            if (errorElement && errorElement.classList.contains('invalid-feedback')) {
+                                errorElement.textContent = result.errors[field][0];
+                            } else { // Tạo nếu chưa có
+                                errorElement = document.createElement('div');
+                                errorElement.className = 'invalid-feedback d-block';
+                                errorElement.textContent = result.errors[field][0];
+                                inputField.parentNode.insertBefore(errorElement, inputField.nextSibling);
+                            }
+                        }
+                    });
+                    if (typeof window.showAppInfoModal === 'function') {
+                         window.showAppInfoModal('Vui lòng kiểm tra lại thông tin nhập.', 'validation_error', 'Lỗi nhập liệu');
+                    } else {
+                        alert('Vui lòng kiểm tra lại thông tin nhập.');
+                    }
+
+                } else {
+                    throw new Error(result.message || 'Có lỗi xảy ra khi tạo mới.');
+                }
+            } catch (error) {
+                console.error('Lỗi khi tạo mới:', error);
+                if (typeof window.hideAppLoader === 'function') window.hideAppLoader();
+                if (typeof window.showAppInfoModal === 'function') {
+                    window.showAppInfoModal(error.message, 'error');
+                } else {
+                    alert(error.message);
+                }
+            }
+        });
+    }
+    // **LƯU Ý:** Bạn cần thêm các event listener tương tự cho các form submit khác:
+    // - updateProvinceForm, deleteProvinceForm
+    // - createDistrictForm, updateDistrictForm, deleteDistrictForm
+    // - createWardForm, updateWardForm, deleteWardForm
+    // Nhớ điều chỉnh `actionUrl`, `method`, và cách xử lý cho phù hợp.
 
     console.log("Geography JS: Khởi tạo HOÀN TẤT.");
 }
