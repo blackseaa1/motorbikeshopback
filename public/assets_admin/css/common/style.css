@@ -1,11 +1,22 @@
-/* Login css */
-.login-card {
-    max-width: 450px;
-    /* Hoặc kích thước phù hợp với thiết kế của bạn */
-    width: 100%;
+@media (max-width: 991.98px) {
+    /* ... các style hiện có của bạn cho màn hình nhỏ ... */
+
+    .sidebar .sidebar-header .logo {
+        display: none;
+        /* Ẩn logo */
+    }
+
+    .sidebar .sidebar-header {
+        justify-content: flex-start;
+        /* Đẩy nút X (item duy nhất còn lại trong header) về bên phải */
+    }
 }
 
 /* Login css */
+.login-card {
+    max-width: 450px;
+    width: 100%;
+}
 
 /* register css */
 .register-card {
@@ -17,37 +28,29 @@
     font-size: 0.875em;
 }
 
-/* CSS cho kiểm tra yêu cầu mật khẩu */
 .requirement-item {
     transition: color 0.3s ease, text-decoration 0.3s ease;
     color: #6c757d;
-    /* Màu xám mặc định */
     font-size: 0.8em;
-    /* Giảm kích thước chữ một chút */
     margin-bottom: 0.15rem;
-    /* Khoảng cách nhỏ giữa các dòng */
 }
 
 .requirement-item.valid {
     color: #198754;
-    /* Màu xanh lá */
     text-decoration: line-through;
 }
 
 .requirement-item.valid::before {
     content: "✓ ";
-    /* Dấu tick */
     font-weight: bold;
 }
 
 .requirement-item.invalid {
     color: #dc3545;
-    /* Màu đỏ */
 }
 
 .requirement-item.invalid::before {
     content: "✗ ";
-    /* Dấu X */
     font-weight: bold;
 }
 
@@ -61,15 +64,7 @@
     font-size: 0.8em;
 }
 
-/* register css */
-
-
 /* app css */
-
-
-/* --===================CSS CHO LOADING OVERLAY===================-- */
-
-
 #loading-overlay {
     position: fixed;
     top: 0;
@@ -79,12 +74,10 @@
     background-color: rgba(255, 255, 255, 0.7);
     z-index: 9999;
     display: flex !important;
-    /* Mặc định display: flex */
     justify-content: center !important;
     align-items: center !important;
     flex-direction: column;
     gap: 15px;
-    /* Mặc định ẩn đi bằng cách thêm class 'inactive' hoặc không có 'active' */
     opacity: 0;
     visibility: hidden;
     transition: opacity 0.3s ease, visibility 0.3s ease;
@@ -120,39 +113,75 @@
     }
 }
 
-
-/* --==============================================================-- */
-
-
 .sidebar {
     width: 260px;
     background-color: #001529;
-    /* Dark blue from image */
     color: #a6adb4;
-    /* Light gray text for sidebar */
     position: fixed;
     top: 0;
     bottom: 0;
     left: 0;
-    padding-top: 1rem;
-    transition: all 0.3s;
+    padding-top: 0;
+    /* Adjusted for .sidebar-header */
+    transition: all 0.3s ease-in-out;
+    /* Smoother transition */
     z-index: 1030;
-    /* Ensure sidebar is above content */
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.5rem;
+    color: #fff;
+    /* border-bottom: 1px solid #002a4e; Optional: a subtle separator */
 }
 
 .sidebar .logo {
     display: flex;
     align-items: center;
-    justify-content: center;
-    padding: 1rem 1.5rem;
-    margin-bottom: 1rem;
     color: #fff;
     font-size: 1.5rem;
     font-weight: 600;
+    text-decoration: none;
+    /* Assuming logo can be a link */
 }
+
+.sidebar .logo:hover {
+    color: #1890ff;
+}
+
 
 .sidebar .logo .bi-shield-lock-fill {
     margin-right: 0.5rem;
+}
+
+.sidebar-close-button {
+    color: #a6adb4;
+    background: transparent;
+    border: none;
+    font-size: 1.25rem;
+    padding: 0.25rem 0.5rem;
+    line-height: 1;
+    border-radius: 0.25rem;
+    /* Added for better click feel */
+}
+
+.sidebar-close-button:hover,
+.sidebar-close-button:focus {
+    color: #fff;
+    background-color: rgba(255, 255, 255, 0.1);
+    /* Subtle background on hover */
+    box-shadow: none;
+}
+
+.sidebar .nav {
+    flex-grow: 1;
+    overflow-y: auto;
+    margin-top: 0.5rem;
+    /* Adjusted margin */
 }
 
 .sidebar .nav-link {
@@ -161,6 +190,8 @@
     display: flex;
     align-items: center;
     border-left: 3px solid transparent;
+    transition: background-color 0.3s ease, color 0.3s ease, border-left-color 0.3s ease;
+    /* Smooth transition */
 }
 
 .sidebar .nav-link .bi {
@@ -171,10 +202,8 @@
 .sidebar .nav-link:hover,
 .sidebar .nav-link.active {
     background-color: #1890ff;
-    /* Blue for active/hover from image */
     color: #fff;
     border-left-color: #fff;
-    /* White accent line */
 }
 
 .sidebar .nav-item+.nav-item {
@@ -182,12 +211,11 @@
 }
 
 .sidebar-footer {
-    position: absolute;
-    bottom: 0;
     width: 100%;
     padding: 1rem;
-    border-top: 1px solid #343a40;
-    /* Darker border */
+    border-top: 1px solid #002a4e;
+    /* Slightly lighter border */
+    margin-top: auto;
 }
 
 .sidebar-footer .user-info {
@@ -204,24 +232,40 @@
     object-fit: cover;
 }
 
-
 .main-content {
     margin-left: 260px;
-    /* Same as sidebar width */
     padding: 1.5rem;
     width: calc(100% - 260px);
-    transition: all 0.3s;
+    transition: margin-left 0.3s ease-in-out, width 0.3s ease-in-out;
+    /* Smooth transition */
     background-color: #f0f2f5;
-    /* Changed to match body for uniform background */
     flex-grow: 1;
+    position: relative;
+    /* For potential overlays */
 }
+
+/* Overlay for content when sidebar is active on mobile */
+.main-content.sidebar-active::before {
+    content: '';
+    position: fixed;
+    /* Changed from absolute to fixed to cover viewport */
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1025;
+    /* Below sidebar (1030), above content */
+    display: none;
+    /* Hidden by default */
+}
+
 
 .content-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 1.5rem;
-    /* Removed padding-bottom and border-bottom for a cleaner look */
 }
 
 .content-header h1 {
@@ -234,11 +278,17 @@
     background-color: #ffffff;
     padding: 0.75rem 1.5rem;
     margin-left: 260px;
-    /* Match sidebar width */
     box-shadow: 0 2px 4px rgba(0, 0, 0, .08);
     display: flex;
-    justify-content: flex-end;
+    justify-content: space-between;
     align-items: center;
+    position: sticky;
+    /* Make topnav sticky */
+    top: 0;
+    /* Stick to the top */
+    z-index: 1020;
+    transition: margin-left 0.3s ease-in-out;
+    /* Smooth transition */
 }
 
 .top-nav .nav-item .nav-link {
@@ -261,42 +311,19 @@
     margin-left: 0.5rem;
 }
 
-
 .dashboard-card {
     border: 1px solid #e9ecef;
-    /* Lighter border for cards */
     border-radius: 0.375rem;
-    /* Bootstrap's default card radius */
     margin-bottom: 1.5rem;
     box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, .075);
-    /* Subtle shadow */
 }
 
 .dashboard-card .card-header {
     background-color: #f8f9fa;
-    /* Light gray header */
     color: #001529;
-    /* Dark blue text */
     font-weight: 600;
     border-bottom: 1px solid #e9ecef;
     padding: 0.75rem 1.25rem;
-}
-
-.dashboard-card .list-group-item {
-    background-color: #fff;
-    border-color: #e9ecef;
-    /* Match card border */
-    padding-left: 1.25rem;
-}
-
-.dashboard-card .list-group-item:first-child {
-    border-top-left-radius: 0;
-    border-top-right-radius: 0;
-}
-
-.dashboard-card .list-group-item:last-child {
-    border-bottom-left-radius: calc(0.375rem - 1px);
-    border-bottom-right-radius: calc(0.375rem - 1px);
 }
 
 /* Responsive adjustments */
@@ -315,18 +342,41 @@
     .sidebar.active {
         left: 0;
         /* Show sidebar when active */
+        box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+        /* Add shadow when open on mobile */
     }
+
+    .main-content.sidebar-active::before {
+        display: block;
+        /* Show overlay when sidebar is active on mobile */
+    }
+
 
     .content-header h1 {
         font-size: 1.5rem;
     }
+
+    /* Nút X trong sidebar (.sidebar-close-button) được hiển thị/ẩn bằng class d-lg-none trong HTML */
 }
 
 .sidebar-toggler {
-    display: none;
-    /* Hidden by default, shown on smaller screens */
     color: #495057;
     font-size: 1.5rem;
+    background: transparent;
+    border: none;
+    padding: 0.25rem 0.5rem;
+    position: relative;
+    z-index: 1031;
+    /* Cao hơn sidebar một chút để không bị che */
+    display: none;
+    /* Mặc định ẩn, chỉ media query ở dưới hiện ra */
+}
+
+.sidebar-toggler i.bi {
+    position: relative;
+    z-index: 1;
+    display: inline-block;
+    vertical-align: middle;
 }
 
 @media (max-width: 991.98px) {
@@ -335,9 +385,86 @@
     }
 }
 
+/* === CSS for Sidebar Submenu (Đã cập nhật để mượt hơn) === */
+.sidebar .nav-link .bi-caret-down-fill {
+    transition: transform 0.3s ease-in-out;
+    /* Nhanh hơn một chút */
+}
+
+.sidebar .nav-link[aria-expanded="true"] .bi-caret-down-fill {
+    transform: rotate(180deg);
+}
+
+.sidebar .nav-link.active-submenu {
+    color: #fff !important;
+    font-weight: 500;
+    /* Giữ lại font-weight nếu muốn */
+}
+
+.sidebar .nav-link.active-submenu,
+.sidebar ul.collapse .nav-link:hover {
+    /* Thêm hover cho submenu items */
+    background-color: #1890ff;
+    /* Màu nền khi hover hoặc active */
+    color: #fff !important;
+}
+
+
+.sidebar ul.collapse {
+    overflow: hidden;
+    background-color: rgba(0, 0, 0, 0.1);
+    /* Nền submenu hơi tối hơn */
+}
+
+.sidebar ul.collapse .nav-link {
+    padding-left: 2.5rem;
+    /* Thụt lề các mục con */
+    font-size: 0.95em;
+    /* Font chữ nhỏ hơn một chút */
+    transition: background-color 0.6s ease, color 0.6s ease, padding-left 1s ease-out;
+    /* Thêm padding-left vào transition */
+}
+
+.sidebar ul.collapse .nav-link.active-submenu {
+    /* Khi mục con được active */
+    background-color: #1890ff;
+    /* Màu giống mục cha active */
+    color: #fff !important;
+    border-left-color: #fff !important;
+    /* Và có viền trắng */
+}
+.avatar-preview {
+    width: 100px;
+    height: 100px;
+    object-fit: cover;
+    border-radius: 50%;
+    border: 2px solid #dee2e6;
+    background-color: #f8f9fa;
+}
+
+/* PHẦN CSS ĐƯỢC THÊM VÀO TỪ FILE GỐC */
+
+/* dashboard-card list-group items from original file */
+.dashboard-card .list-group-item {
+    background-color: #fff;
+    border-color: #e9ecef;
+    /* Match card border */
+    padding-left: 1.25rem;
+}
+
+.dashboard-card .list-group-item:first-child {
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+}
+
+.dashboard-card .list-group-item:last-child {
+    border-bottom-left-radius: calc(0.375rem - 1px);
+    border-bottom-right-radius: calc(0.375rem - 1px);
+}
+
 /*
 |--------------------------------------------------------------------------
-| Dashboard Specific Styles
+| Dashboard Specific Styles (from original file)
 |--------------------------------------------------------------------------
 */
 
@@ -422,9 +549,12 @@
 
 .card .card-header {
     /* This might conflict if you have other .card .card-header styles, review if needed */
+    /* Note: The provided code already has .dashboard-card .card-header */
+    /* This rule from the original file is more generic. */
     background-color: #f8f9fa;
     font-weight: 600;
     color: #343a40;
+    /* Different color from .dashboard-card .card-header */
     border-bottom: 1px solid #e9ecef;
 }
 
@@ -516,62 +646,45 @@
     color: #007bff;
 }
 
-/* userManagement */
+/* userManagement section from original file (only if significantly different or missing) */
+/* Note: The userManagement section for submenu in the provided code is quite detailed. */
+/* The original file had these specific versions for submenu behavior: */
 
+/* .sidebar .nav-link .bi-caret-down-fill { */
+/* transition: transform 0.6s ease-in-out; */
+/* Original had 0.6s, provided code has 0.3s */
+/* } */
 
-/* === CSS for Sidebar Submenu (Đã cập nhật để mượt hơn) === */
-.sidebar .nav-link .bi-caret-down-fill {
-    transition: transform 0.6s ease-in-out;
-    /* Thời gian chuyển động cho icon mũi tên */
-}
+/* .sidebar .nav-link.active-submenu { */
+/* color: #fff !important; */
+/* background-color: #1890ff; */
+/* Provided code handles this via a combined rule */
+/* border-left: 3px solid #fff; */
+/* This specific border was in the original direct rule */
+/* font-weight: 500; */
+/* } */
 
-.sidebar .nav-link[aria-expanded="true"] .bi-caret-down-fill {
-    transform: rotate(180deg);
-}
+/* .sidebar ul.collapse { */
+/* overflow: hidden; */
+/* Already in provided code */
+/* transition: height 60s ease-out; */
+/* Original had this, very long duration. Provided code does not have height transition here. */
+/* background-color: rgba(0,0,0,0.1); */
+/* Provided code has this */
+/* } */
 
-.sidebar .nav-link.active-submenu {
-    color: #fff !important;
-    background-color: #1890ff;
-    border-left: 3px solid #fff;
-    font-weight: 500;
-}
+/* .sidebar ul.collapse .nav-link { */
+/* padding-left: 2.5rem; */
+/* Already in provided code */
+/* font-size: 0.95em; */
+/* Already in provided code */
+/* transition: background-color 0.6s ease, color 0.6s ease, padding-left 1s ease-out; */
+/* Original had this transition including padding-left. Provided code has different transition and adds border-left reset. */
+/* } */
 
-/* Style cho submenu để có chuyển động mượt mà */
-.sidebar ul.collapse {
-    overflow: hidden;
-    transition: height 60s ease-out;
-    /* Thêm transition cho thuộc tính height */
-}
+/* Considering the request to "add missing parts" and that the provided code seems to be an evolution, */
+/* I've added the distinct blocks like '.dashboard-card .list-group-item' and the entire 'Dashboard Specific Styles'. */
+/* Changes within existing selectors (like submenu transitions) are more nuanced and might override intentional changes in the provided code. */
+/* If you want to revert specific submenu behaviors to the original file, you'd uncomment and adjust the commented-out rules above. */
 
-/* Style cho các link bên trong submenu */
-.sidebar ul.collapse .nav-link {
-    padding-left: 2.5rem;
-    /* Thụt lề các mục con */
-    font-size: 0.95em;
-    /* Font chữ nhỏ hơn một chút */
-    transition: background-color 0.6s ease, color 0.6s ease, padding-left 1s ease-out;
-    /* Thêm padding-left vào transition */
-}
-
-
-
-.avatar-preview {
-    width: 100px;
-    /* Cố định chiều rộng là 100px */
-    height: 100px;
-    /* Cố định chiều cao là 100px */
-
-    /* Thuộc tính quan trọng nhất để ảnh không bị méo: */
-    object-fit: cover;
-    /* Giữ đúng tỷ lệ ảnh, tự động cắt phần thừa để lấp đầy khung 100x100 */
-
-    /* Các thuộc tính tùy chọn để làm đẹp thêm: */
-    border-radius: 50%;
-    /* Bo tròn 4 góc để tạo thành hình tròn (hoàn hảo cho avatar) */
-    border: 2px solid #dee2e6;
-    /* Thêm một đường viền mảnh cho đẹp mắt */
-    background-color: #f8f9fa;
-    /* Thêm màu nền phòng khi ảnh tải lên có phần trong suốt */
-}
-
-/* userManagement */
+/* The avatar-preview in the original file is identical to the one in the provided code. */

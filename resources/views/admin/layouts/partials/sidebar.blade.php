@@ -1,6 +1,12 @@
 <nav class="sidebar" id="sidebar">
-    <div class="logo">
-        <i class="bi bi-shield-lock-fill"></i> Admin Panel
+    <div class="sidebar-header"> {{-- Bọc logo và nút đóng --}}
+        <div class="logo">
+            <i class="bi bi-shield-lock-fill"></i> Admin Panel
+        </div>
+        <button class="btn btn-sm sidebar-close-button d-lg-none" type="button" id="sidebarCloseButton"
+            aria-label="Close sidebar">
+            <i class="bi bi-x-lg"></i>
+        </button>
     </div>
     <ul class="nav flex-column">
         {{-- =================== MAIN =================== --}}
@@ -14,7 +20,7 @@
         {{-- Quản lý Bán Hàng (Collapsible) --}}
         @php
             $isSalesMenuActive = request()->routeIs('admin.sales.orders') ||
-                                 request()->routeIs('admin.sales.promotions');
+                request()->routeIs('admin.sales.promotions');
         @endphp
         <li class="nav-item">
             <a class="nav-link {{ $isSalesMenuActive ? 'active' : '' }}" href="#salesSubmenu" data-bs-toggle="collapse"
@@ -36,14 +42,15 @@
         {{-- Quản lý Sản phẩm (Collapsible) --}}
         @php
             $isProductMenuActive = request()->routeIs('admin.productManagement.products') ||
-                                   request()->routeIs('admin.productManagement.categories.index') ||
-                                   request()->routeIs('admin.productManagement.brands.index') ||
-                                   request()->routeIs('admin.productManagement.vehicle') ||
-                                   request()->routeIs('admin.productManagement.inventory');
+                request()->routeIs('admin.productManagement.categories.index') ||
+                request()->routeIs('admin.productManagement.brands.index') ||
+                request()->routeIs('admin.productManagement.vehicle') ||
+                request()->routeIs('admin.productManagement.inventory');
         @endphp
         <li class="nav-item">
             <a class="nav-link {{ $isProductMenuActive ? 'active' : '' }}" href="#productSubmenu"
-                data-bs-toggle="collapse" role="button" aria-expanded="{{ $isProductMenuActive ? 'true' : 'false' }}" aria-controls="productSubmenu">
+                data-bs-toggle="collapse" role="button" aria-expanded="{{ $isProductMenuActive ? 'true' : 'false' }}"
+                aria-controls="productSubmenu">
                 <i class="bi bi-box-seam-fill"></i> Quản lý Sản phẩm <i class="bi bi-caret-down-fill ms-auto"></i>
             </a>
             <ul class="collapse list-unstyled ps-4 {{ $isProductMenuActive ? 'show' : '' }}" id="productSubmenu">
@@ -73,11 +80,12 @@
         {{-- Quản lý Nội dung (Collapsible) --}}
         @php
             $isContentMenuActive = request()->routeIs('admin.content.posts') ||
-                                   request()->routeIs('admin.content.reviews');
+                request()->routeIs('admin.content.reviews');
         @endphp
         <li class="nav-item">
             <a class="nav-link {{ $isContentMenuActive ? 'active' : '' }}" href="#contentSubmenu"
-                data-bs-toggle="collapse" role="button" aria-expanded="{{ $isContentMenuActive ? 'true' : 'false' }}" aria-controls="contentSubmenu">
+                data-bs-toggle="collapse" role="button" aria-expanded="{{ $isContentMenuActive ? 'true' : 'false' }}"
+                aria-controls="contentSubmenu">
                 <i class="bi bi-file-text-fill"></i> Quản lý Nội dung <i class="bi bi-caret-down-fill ms-auto"></i>
             </a>
             <ul class="collapse list-unstyled ps-4 {{ $isContentMenuActive ? 'show' : '' }}" id="contentSubmenu">
@@ -111,11 +119,12 @@
         {{-- Quản lý Người dùng (Collapsible) --}}
         @php
             $isUserMenuActive = request()->routeIs('admin.userManagement.admins') ||
-                                request()->routeIs('admin.userManagement.customers');
+                request()->routeIs('admin.userManagement.customers');
         @endphp
         <li class="nav-item">
             <a class="nav-link {{ $isUserMenuActive ? 'active' : '' }}" href="#userManagementSubmenu"
-                data-bs-toggle="collapse" role="button" aria-expanded="{{ $isUserMenuActive ? 'true' : 'false' }}" aria-controls="userManagementSubmenu">
+                data-bs-toggle="collapse" role="button" aria-expanded="{{ $isUserMenuActive ? 'true' : 'false' }}"
+                aria-controls="userManagementSubmenu">
                 <i class="bi bi-people-fill"></i> Quản lý Người dùng <i class="bi bi-caret-down-fill ms-auto"></i>
             </a>
             <ul class="collapse list-unstyled ps-4 {{ $isUserMenuActive ? 'show' : '' }}" id="userManagementSubmenu">
@@ -136,14 +145,14 @@
 
         {{-- Cấu hình Hệ thống (Collapsible) --}}
         @php
-            // Mục cha "Cấu hình Hệ thống" sẽ active nếu bạn ở một trong các trang con của nó
             $isSystemMenuActive = request()->routeIs('admin.system.delivery') ||
-                                  request()->routeIs('admin.system.geography.*') || // Sử dụng wildcard * để bao gồm tất cả các route con của geography
-                                  request()->routeIs('admin.system.settings');
+                request()->routeIs('admin.system.geography.*') ||
+                request()->routeIs('admin.system.settings');
         @endphp
         <li class="nav-item">
             <a class="nav-link {{ $isSystemMenuActive ? 'active' : '' }}" href="#configSubmenu"
-                data-bs-toggle="collapse" role="button" aria-expanded="{{ $isSystemMenuActive ? 'true' : 'false' }}" aria-controls="configSubmenu">
+                data-bs-toggle="collapse" role="button" aria-expanded="{{ $isSystemMenuActive ? 'true' : 'false' }}"
+                aria-controls="configSubmenu">
                 <i class="bi bi-gear-fill"></i> Cấu hình Hệ thống <i class="bi bi-caret-down-fill ms-auto"></i>
             </a>
             <ul class="collapse list-unstyled ps-4 {{ $isSystemMenuActive ? 'show' : '' }}" id="configSubmenu">
@@ -151,23 +160,12 @@
                     <a class="nav-link {{ request()->routeIs('admin.system.delivery') ? 'active-submenu' : '' }}"
                         href="{{ route('admin.system.delivery') }}">Đơn vị Giao hàng</a>
                 </li>
-                {{-- Mục Quản lý Địa lý --}}
                 <li class="nav-item">
-                    {{-- SỬA Ở ĐÂY: Liên kết đến trang tổng quan/import của địa lý --}}
                     <a class="nav-link {{ request()->routeIs('admin.system.geography.index') ? 'active-submenu' : '' }}"
-                       href="{{ route('admin.system.geography.index') }}">
-                       <i class="bi bi-globe-americas me-2"></i> Quản lý Địa lý
+                        href="{{ route('admin.system.geography.index') }}">
+                        <i class="bi bi-globe-americas me-2"></i> Quản lý Địa lý
                     </a>
                 </li>
-                {{-- Bạn có thể bỏ các link con riêng cho Tỉnh/Thành nếu trang geography.index đã hiển thị tất cả qua tabs --}}
-                {{--
-                <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('admin.system.geography.provinces.*') ? 'active-submenu' : '' }}"
-                       href="{{ route('admin.system.geography.provinces.index') }}">
-                       <i class="bi bi-geo-alt-fill me-2"></i> Tỉnh/Thành phố
-                    </a>
-                </li>
-                --}}
                 <li class="nav-item">
                     <a class="nav-link {{ request()->routeIs('admin.system.settings') ? 'active-submenu' : '' }}"
                         href="{{ route('admin.system.settings') }}">Cài đặt chung</a>
