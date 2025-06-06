@@ -58,28 +58,37 @@ class AdminProfileController extends Controller
 
     public function updateAvatar(Request $request)
     {
-        /** @var Admin $admin */ // Thêm PHPDoc
+        /** @var Admin $admin */
         $admin = Auth::guard('admin')->user();
         $errorBag = 'updateAvatar';
 
         $request->validateWithBag($errorBag, [
-            'avatar' => ['required', 'image', 'mimes:jpeg,png,jpg,gif,svg', 'max:2048'],
+            'avatar' => ['required', 'image', 'mimes:jpeg,png,jpg,gif,svg,webp', 'max:2048'],
         ]);
 
-
         if ($request->hasFile('avatar')) {
-            if ($admin->img && Storage::disk('public')->exists(str_replace('/storage/', '', $admin->img)) && !str_contains($admin->img, 'placehold.co')) {
-                Storage::disk('public')->delete(str_replace('/storage/', '', $admin->img));
+            // SỬA ĐỔI 1: Xóa file cũ một cách an toàn
+            // Logic này sẽ kiểm tra xem có ảnh cũ không và xóa nó đi
+            if ($admin->img && Storage::disk('public')->exists($admin->img)) {
+                Storage::disk('public')->delete($admin->img);
             }
+
+            // Giữ nguyên: Dòng này lưu file và trả về đường dẫn gốc (ví dụ: 'admin_avatars/file.jpg')
             $path = $request->file('avatar')->store('admin_avatars', 'public');
-            $admin->img = '/storage/' . $path;
-            $admin->save(); // Intelephense sẽ không còn báo lỗi
+
+            // SỬA ĐỔI 2: LƯU ĐƯỜNG DẪN GỐC VÀO DATABASE
+            // Bỏ hoàn toàn việc thêm '/storage/' vào đây.
+            $admin->img = $path;
+            $admin->save();
 
             if ($request->expectsJson()) {
+                // SỬA ĐỔI 3: SỬ DỤNG ACCESSOR ĐỂ TRẢ VỀ URL ĐÚNG
+                // Dùng $admin->fresh()->avatar_url để đảm bảo lấy giá trị mới nhất sau khi save
+                // và gọi đúng accessor 'avatar_url' mà bạn đã định nghĩa trong Model.
                 return response()->json([
                     'success' => true,
                     'message' => 'Ảnh đại diện đã được cập nhật.',
-                    'avatar_url' => asset($admin->img)
+                    'avatar_url' => $admin->fresh()->avatar_url
                 ]);
             }
 

@@ -14,7 +14,7 @@
     <link rel="stylesheet" href="{{ asset('assets_admin/css/common/base.css') }}">
     <link rel="stylesheet" href="{{ asset('assets_admin/css/common/normalize.css') }}">
     <link rel="stylesheet" href="{{ asset('assets_admin/css/common/reset.css') }}">
-    <link rel="stylesheet" href="{{ asset('assets_admin/css/common/style.css') }}"> 
+    <link rel="stylesheet" href="{{ asset('assets_admin/css/common/style.css') }}">
     {{-- Chứa CSS cho #loading-overlay
     --}}
 
@@ -118,7 +118,9 @@
             </div>
         </div>
     </div>
+    <script src="{{ asset('assets_admin/js/admin_layout.js') }}"></script>
     <script src="{{ asset('assets_admin/js/login.js') }}"></script>
+
 </body>
 
 </html>

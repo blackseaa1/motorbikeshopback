@@ -17,7 +17,7 @@
     {{--
     <link rel="stylesheet" href="{{ asset('assets_admin/css/register.css') }}"> --}}
     <style>
-       
+
     </style>
 </head>
 
@@ -134,8 +134,7 @@
             </div>
         </div>
     </div>
-
-    {{-- JavaScript --}}
+    <script src="{{ asset('assets_admin/js/admin_layout.js') }}"></script> {{-- Thêm dòng này --}}
     <script src="{{ asset('assets_admin/js/register.js') }}"></script>
 </body>
 

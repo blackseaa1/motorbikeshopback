@@ -137,10 +137,10 @@
         });
     };
 
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', window.initializeLoginPage);
-    } else {
-        window.initializeLoginPage();
-    }
+    // if (document.readyState === 'loading') {
+    //     document.addEventListener('DOMContentLoaded', window.initializeLoginPage);
+    // } else {
+    //     window.initializeLoginPage();
+    // }
 
 })();

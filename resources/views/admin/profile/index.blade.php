@@ -49,9 +49,11 @@
                                         @csrf
                                         <div class="profile-avatar-container">
                                             <label for="adminAvatarInput" class="cursor-pointer">
+                                                {{-- SỬA ĐỔI DUY NHẤT: Dùng accessor 'avatar_url' giống như sidebar và
+                                                topnav --}}
                                                 <img class="profile-avatar-preview" id="adminAvatarPreview"
-                                                    src="{{ $admin->img ? asset($admin->img) : 'https://placehold.co/150x150/001529/FFF?text=' . mb_substr(Auth::guard('admin')->user()->name, 0, 1) }}"
-                                                    alt="{{ Auth::guard('admin')->user()->name }} profile picture">
+                                                    src="{{ $admin->avatar_url }}" alt="{{ $admin->name }} profile picture">
+
                                                 <span class="profile-avatar-edit-icon" title="Đổi ảnh đại diện"><i
                                                         class="bi bi-pencil-fill"></i></span>
                                             </label>
