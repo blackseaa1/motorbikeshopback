@@ -137,7 +137,7 @@
                             </div>
                         </div>
                         {{-- Include Modals for Vehicle Brands --}}
-                        @include('admin.productManagement.partials.vehicleBrandModals')
+                        @include('admin.productManagement.vehicle.partials.vehicleBrandModals')
                     </div>
 
                     {{-- TAB DÒNG XE --}}
@@ -273,7 +273,7 @@
                             </div>
                         </div>
                         {{-- Include Modals for Vehicle Models --}}
-                        @include('admin.productManagement.partials.vehicleModelModals', ['allVehicleBrands' => $allVehicleBrandsForFilter])
+                        @include('admin.productManagement.vehicle.partials.vehicleModelModals', ['allVehicleBrands' => $allVehicleBrandsForFilter])
                     </div>
                 </div>
             </div>

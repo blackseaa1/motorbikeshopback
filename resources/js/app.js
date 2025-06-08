@@ -1,13 +1,22 @@
 // File: resources/js/app.js
 
 import './bootstrap'; // File bootstrap.js mặc định của Laravel
+import $ from 'jquery'; // Nếu jQuery chưa được nạp trong bootstrap.js
+import Chart from 'chart.js/auto';
+import * as bootstrap from 'bootstrap';
+import 'bootstrap-select/dist/js/bootstrap-select.min.js';
 
-// === CÁC THƯ VIỆN CHÍNH ===
-import Chart from 'chart.js/auto'; //
-import * as bootstrap from 'bootstrap'; // Import tất cả mọi thứ từ bootstrap
+// Gán jQuery vào window (nếu cần)
+window.jQuery = window.$ = $;
 
-// === GÁN CÁC THƯ VIỆN VÀO `window` ĐỂ CÁC SCRIPT BÊN NGOÀI CÓ THỂ TRUY CẬP ===
-window.Chart = Chart; //
-window.bootstrap = bootstrap; // Gán toàn bộ module bootstrap đã import vào window
+// Gán các thư viện vào window (chỉ nếu cần cho script bên ngoài)
+window.Chart = Chart;
+window.bootstrap = bootstrap;
 
-console.log("Vite (app.js): Các thư viện chính (Chart.js, Bootstrap bundle) đã được nạp và gán vào window.");
+// Khởi tạo Bootstrap-select
+$(document).ready(function () {
+    $('.selectpicker').selectpicker();
+});
+
+// Console log để debug (xóa khi triển khai)
+console.log("Vite (app.js): Các thư viện chính (Chart.js, Bootstrap, Bootstrap-select) đã được nạp.");

@@ -25,6 +25,7 @@ function initializeVehicleManagementPage() {
         const viewModalElement = document.querySelector(brandTabScope + '#viewVehicleBrandModal');
         const deleteModalElement = document.querySelector(brandTabScope + '#deleteVehicleBrandModal');
 
+        // Hàm chung để xem trước logo
         function setupLogoPreview(inputId, previewId, scopeElement = document) {
             const input = scopeElement.querySelector('#' + inputId);
             const preview = scopeElement.querySelector('#' + previewId);
@@ -45,6 +46,7 @@ function initializeVehicleManagementPage() {
         if (updateModalElement) setupLogoPreview('vbLogoUpdate', 'vbLogoPreviewUpdate', updateModalElement);
 
 
+        // Hàm chung để điền dữ liệu vào modal update và reset validation
         function populateAndUpdateModal(triggerButton, modalElement) {
             if (!modalElement || !triggerButton) return;
             const form = modalElement.querySelector('form');
@@ -68,19 +70,23 @@ function initializeVehicleManagementPage() {
             }
             if (logoInput) logoInput.value = '';
 
+            // Xóa lỗi validation cũ
             form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
-            form.querySelectorAll('.invalid-feedback').forEach(el => el.textContent = '');
+            form.querySelectorAll('.invalid-feedback').forEach(el => {
+                if (el.id && el.id.endsWith('Error')) el.textContent = '';
+            });
             if (submitButton) {
                 submitButton.disabled = false;
                 submitButton.innerHTML = modalElement.id.includes('create') ? `Lưu ${sectionTitle}` : 'Lưu thay đổi';
             }
         }
-        
+
+        // Hàm xử lý AJAX form submit chung cho cả create/update/delete
         function handleAjaxFormSubmit(formElement, successCallback) {
             if (!formElement) return;
             const submitButton = formElement.querySelector('button[type="submit"]');
 
-            formElement.addEventListener('submit', async function(e) {
+            formElement.addEventListener('submit', async function (e) {
                 e.preventDefault();
                 if (typeof window.showAppLoader === 'function') window.showAppLoader();
                 if (submitButton) {
@@ -90,7 +96,8 @@ function initializeVehicleManagementPage() {
 
                 const formData = new FormData(this);
                 const actionUrl = this.action;
-                const method = this.querySelector('input[name="_method"]')?.value || this.method; // PUT or POST
+                // Method lấy từ _method hidden input nếu có, nếu không thì dùng method của form (POST)
+                const method = this.querySelector('input[name="_method"]')?.value || this.method;
 
                 // Xóa lỗi cũ
                 this.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
@@ -110,17 +117,26 @@ function initializeVehicleManagementPage() {
                         if (response.status === 422 && result.errors) {
                             Object.keys(result.errors).forEach(key => {
                                 const inputField = this.querySelector(`[name="${key}"]`);
+                                // Tìm div lỗi phù hợp, có thể theo ID hoặc class
+                                const errorDivId = `vb${key.charAt(0).toUpperCase() + key.slice(1).replace(/_url$/, 'Url')}UpdateError`; // Cho update
+                                const createErrorDivId = `vb${key.charAt(0).toUpperCase() + key.slice(1).replace(/_url$/, 'Url')}CreateError`; // Cho create
+                                const passwordErrorDivId = `adminPasswordDeleteVehicleBrandError`; // Cho delete password
+
+                                let errorDiv = null;
+                                if (inputField) {
+                                    errorDiv = inputField.closest('.mb-3, .row')?.querySelector(`.invalid-feedback[id="${errorDivId}"], .invalid-feedback[id="${createErrorDivId}"], .invalid-feedback`);
+                                } else if (key === 'admin_password_delete_vehicle_brand') {
+                                    errorDiv = this.querySelector(`#${passwordErrorDivId}`);
+                                }
+
                                 if (inputField) {
                                     inputField.classList.add('is-invalid');
-                                    let errorDiv = inputField.closest('.mb-3,.row')?.querySelector(`.invalid-feedback[id$="${key.replace(/_url$/, 'Url')}UpdateError"],.invalid-feedback[id$="${key}CreateError"],.invalid-feedback`);
-                                    if (errorDiv) {
-                                        errorDiv.textContent = result.errors[key][0];
-                                        errorDiv.style.display = 'block';
-                                    } else {
-                                         window.showAppInfoModal(result.errors[key][0], 'validation_error', 'Lỗi Dữ Liệu');
-                                    }
-                                } else { // Lỗi chung không gắn với trường cụ thể
-                                     window.showAppInfoModal(result.errors[key][0], 'validation_error', 'Lỗi Dữ Liệu');
+                                }
+                                if (errorDiv) {
+                                    errorDiv.textContent = result.errors[key][0];
+                                    errorDiv.style.display = 'block';
+                                } else { // Lỗi chung không gắn với trường cụ thể hoặc không tìm thấy div lỗi
+                                    window.showAppInfoModal(result.errors[key][0], 'validation_error', 'Lỗi Dữ Liệu');
                                 }
                             });
                         } else {
@@ -133,7 +149,7 @@ function initializeVehicleManagementPage() {
                         if (successCallback && typeof successCallback === 'function') {
                             successCallback(result);
                         } else {
-                             window.showAppInfoModal(result.message || 'Thao tác thành công!', 'success', 'Thành công!');
+                            window.showAppInfoModal(result.message || 'Thao tác thành công!', 'success', 'Thành công!');
                             setTimeout(() => window.location.reload(), 1000); // Default reload
                         }
                     } else {
@@ -166,19 +182,81 @@ function initializeVehicleManagementPage() {
                     window.location.href = currentUrl.toString();
                 }, 1000);
             });
+
+            // Reset form và preview khi modal bị ẩn (do nhấn nút X hoặc Esc)
+            createModalElement.addEventListener('hidden.bs.modal', function () {
+                const createForm = this.querySelector('#createVehicleBrandForm');
+                if (createForm) {
+                    createForm.reset();
+                    createForm.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+                    createForm.querySelectorAll('.invalid-feedback').forEach(el => { el.textContent = ''; el.style.display = 'none'; });
+                    const imgPreview = this.querySelector('#vbLogoPreviewCreate');
+                    if (imgPreview && imgPreview.dataset.defaultSrc) {
+                        imgPreview.src = imgPreview.dataset.defaultSrc;
+                    }
+                }
+            });
         }
-        
+
         // Update Modal
         if (updateModalElement) {
-            updateModalElement.addEventListener('show.bs.modal', function(event) {
+            updateModalElement.addEventListener('show.bs.modal', function (event) {
                 populateAndUpdateModal(event.relatedTarget, this);
             });
             const updateForm = updateModalElement.querySelector('#updateVehicleBrandForm');
             handleAjaxFormSubmit(updateForm, (result) => {
                 const modalInstance = bootstrap.Modal.getInstance(updateModalElement);
                 if (modalInstance) modalInstance.hide();
-                 window.showAppInfoModal(result.message || `Cập nhật ${sectionTitle} thành công!`, 'success', 'Thành công!');
-                setTimeout(() => window.location.reload(), 1000); // Reload để thấy thay đổi
+                window.showAppInfoModal(result.message || `Cập nhật ${sectionTitle} thành công!`, 'success', 'Thành công!');
+
+                // Cập nhật UI trực tiếp cho dòng hãng xe
+                const updatedRow = document.getElementById(`vehicle-brand-row-${result.vehicleBrand.id}`);
+                if (updatedRow) {
+                    updatedRow.cells[2].textContent = result.vehicleBrand.name; // Tên Hãng xe
+                    updatedRow.cells[3].textContent = result.vehicleBrand.description ? (result.vehicleBrand.description.length > 50 ? result.vehicleBrand.description.substring(0, 50) + '...' : result.vehicleBrand.description) : 'Không có mô tả'; // Mô tả
+                    const statusCell = updatedRow.cells[4].querySelector('span');
+                    statusCell.textContent = result.vehicleBrand.status === 'active' ? 'Hoạt động' : 'Đã ẩn';
+                    statusCell.className = `badge ${result.vehicleBrand.status === 'active' ? 'bg-success' : 'bg-secondary'}`;
+
+                    // Cập nhật logo
+                    const logoImg = updatedRow.cells[1].querySelector('img');
+                    logoImg.src = result.vehicleBrand.logo_full_url || 'https://placehold.co/50x50/EFEFEF/AAAAAA&text=N/A';
+
+                    // Cập nhật data attributes trên các nút của dòng đó (quan trọng cho View/Edit/Toggle)
+                    const buttonsInRow = updatedRow.querySelectorAll('[data-id]');
+                    buttonsInRow.forEach(btn => {
+                        btn.dataset.name = result.vehicleBrand.name;
+                        btn.dataset.description = result.vehicleBrand.description || '';
+                        btn.dataset.status = result.vehicleBrand.status;
+                        btn.dataset.logoUrl = result.vehicleBrand.logo_full_url || 'https://placehold.co/150x150/EFEFEF/AAAAAA&text=LOGO';
+                        if (btn.classList.contains('toggle-status-btn')) {
+                            btn.title = result.vehicleBrand.status === 'active' ? 'Ẩn' : 'Hiện';
+                            btn.innerHTML = `<i class="bi ${result.vehicleBrand.status === 'active' ? 'bi-eye-slash-fill' : 'bi-eye-fill'}"></i>`; // Giữ nguyên icon toggle
+                            btn.classList.toggle('btn-outline-secondary', result.vehicleBrand.status === 'active');
+                            btn.classList.toggle('btn-danger', result.vehicleBrand.status !== 'active');
+                        }
+                        if (btn.classList.contains('btn-view-vehicle-brand') || btn.classList.contains('btn-edit-vehicle-brand')) {
+                            btn.dataset.updatedAt = new Date(result.vehicleBrand.updated_at).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' });
+                        }
+                    });
+                    updatedRow.classList.toggle('row-inactive', result.vehicleBrand.status === 'inactive');
+                } else {
+                    setTimeout(() => window.location.reload(), 1000); // Fallback reload
+                }
+            });
+
+            // Reset form và preview khi modal bị ẩn
+            updateModalElement.addEventListener('hidden.bs.modal', function () {
+                const updateForm = this.querySelector('#updateVehicleBrandForm');
+                if (updateForm) {
+                    updateForm.reset();
+                    updateForm.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+                    updateForm.querySelectorAll('.invalid-feedback').forEach(el => { el.textContent = ''; el.style.display = 'none'; });
+                    const imgPreview = this.querySelector('#vbLogoPreviewUpdate');
+                    if (imgPreview && imgPreview.dataset.defaultSrc) {
+                        imgPreview.src = imgPreview.dataset.defaultSrc;
+                    }
+                }
             });
         }
 
@@ -197,20 +275,21 @@ function initializeVehicleManagementPage() {
                 const button = event.relatedTarget;
                 if (!button) return;
 
-                if(idView) idView.textContent = button.dataset.id || '-';
-                if(nameView) nameView.textContent = button.dataset.name || '-';
-                if(descriptionView) descriptionView.textContent = button.dataset.description || 'Không có mô tả';
-                if(logoView) logoView.src = button.dataset.logoUrl || 'https://placehold.co/150x150/EFEFEF/AAAAAA&text=LOGO';
-                if(createdAtView) createdAtView.textContent = button.dataset.createdAt || '-';
-                if(updatedAtView) updatedAtView.textContent = button.dataset.updatedAt || '-';
+                if (idView) idView.textContent = button.dataset.id || '-';
+                if (nameView) nameView.textContent = button.dataset.name || '-';
+                if (descriptionView) descriptionView.textContent = button.dataset.description || 'Không có mô tả';
+                if (logoView) logoView.src = button.dataset.logoUrl || 'https://placehold.co/150x150/EFEFEF/AAAAAA&text=LOGO';
+                if (createdAtView) createdAtView.textContent = button.dataset.createdAt || '-';
+                if (updatedAtView) updatedAtView.textContent = button.dataset.updatedAt || '-';
 
                 if (statusViewText) {
                     if (button.dataset.status === 'active') statusViewText.innerHTML = '<span class="badge bg-success">Hoạt động</span>';
                     else if (button.dataset.status === 'inactive') statusViewText.innerHTML = '<span class="badge bg-secondary">Đã ẩn</span>';
                     else statusViewText.textContent = button.dataset.status || '-';
                 }
-                
+
                 if (editButtonFromView) {
+                    // Clone dataset từ nút kích hoạt view sang nút edit trong view modal
                     Object.keys(button.dataset).forEach(key => {
                         editButtonFromView.dataset[key] = button.dataset[key];
                     });
@@ -218,12 +297,12 @@ function initializeVehicleManagementPage() {
             });
 
             if (editButtonFromView && updateModalElement) {
-                editButtonFromView.addEventListener('click', function() {
+                editButtonFromView.addEventListener('click', function () {
                     const viewModalInstance = bootstrap.Modal.getInstance(viewModalElement);
                     if (viewModalInstance) viewModalInstance.hide();
-                    
+
                     populateAndUpdateModal(this, updateModalElement); // 'this' là editButtonFromView
-                    
+
                     const updateModal = bootstrap.Modal.getInstance(updateModalElement) || new bootstrap.Modal(updateModalElement);
                     updateModal.show();
                 });
@@ -236,14 +315,14 @@ function initializeVehicleManagementPage() {
             const nameSpan = deleteModalElement.querySelector('#vehicleBrandNameToDelete');
             const passwordInput = deleteModalElement.querySelector('#adminPasswordDeleteVehicleBrand');
             const passwordErrorDiv = deleteModalElement.querySelector('#adminPasswordDeleteVehicleBrandError');
-             const submitButton = deleteForm ? deleteForm.querySelector('button[type="submit"]') : null;
+            const submitButton = deleteForm ? deleteForm.querySelector('button[type="submit"]') : null;
 
 
-            deleteModalElement.addEventListener('show.bs.modal', function(event) {
+            deleteModalElement.addEventListener('show.bs.modal', function (event) {
                 const button = event.relatedTarget;
                 if (!button) return;
-                if(deleteForm) deleteForm.action = button.dataset.deleteUrl;
-                if(nameSpan) nameSpan.textContent = button.dataset.name;
+                if (deleteForm) deleteForm.action = button.dataset.deleteUrl;
+                if (nameSpan) nameSpan.textContent = button.dataset.name;
                 if (passwordInput) {
                     passwordInput.value = '';
                     passwordInput.classList.remove('is-invalid');
@@ -267,7 +346,7 @@ function initializeVehicleManagementPage() {
 
         // Toggle Status
         document.querySelectorAll(brandTabScope + '.toggle-status-btn').forEach(button => {
-            button.addEventListener('click', async function() {
+            button.addEventListener('click', async function () {
                 const id = this.dataset.id;
                 const url = this.dataset.url;
                 const currentButton = this;
@@ -281,6 +360,8 @@ function initializeVehicleManagementPage() {
                     const result = await response.json();
 
                     if (result.success) {
+                        window.showAppInfoModal(result.message || `Cập nhật trạng thái ${sectionTitle} thành công!`, 'success', 'Thành công!');
+
                         const row = document.getElementById(`vehicle-brand-row-${id}`);
                         const statusCell = document.getElementById(`vehicle-brand-status-${id}`);
                         if (statusCell) statusCell.innerHTML = `<span class="badge ${result.new_status === 'active' ? 'bg-success' : 'bg-secondary'}">${result.status_text}</span>`;
@@ -288,14 +369,21 @@ function initializeVehicleManagementPage() {
                         currentButton.title = result.new_button_title;
                         if (row) {
                             row.classList.toggle('row-inactive', result.new_status === 'inactive');
-                             // Update data-status cho các nút khác trong dòng
+                            // Update data-status cho các nút khác trong dòng
                             row.querySelectorAll('[data-status]').forEach(el => el.dataset.status = result.new_status);
                         }
+
+                        // THÊM LOGIC RELOAD TRANG ĐỂ CẬP NHẬT DỮ LIỆU DÒNG XE NẾU HÃNG XE BỊ ẨN HOẶC ĐƯỢC KÍCH HOẠT LẠI
+                        setTimeout(() => {
+                            const currentUrl = new URL(window.location);
+                            currentUrl.searchParams.set('tab', 'brands'); // Giữ nguyên ở tab brands sau khi reload
+                            window.location.href = currentUrl.toString();
+                        }, 1000); // Reload sau 1 giây
                     } else {
-                         window.showAppInfoModal(result.message || `Lỗi cập nhật trạng thái ${sectionTitle}.`, 'error', 'Lỗi!');
+                        window.showAppInfoModal(result.message || `Lỗi cập nhật trạng thái ${sectionTitle}.`, 'error', 'Lỗi!');
                     }
                 } catch (error) {
-                     window.showAppInfoModal(error.message || `Không thể cập nhật trạng thái ${sectionTitle}.`, 'error', 'Lỗi!');
+                    window.showAppInfoModal(error.message || `Không thể cập nhật trạng thái ${sectionTitle}.`, 'error', 'Lỗi!');
                 } finally {
                     if (typeof window.hideAppLoader === 'function') window.hideAppLoader();
                 }
@@ -313,6 +401,7 @@ function initializeVehicleManagementPage() {
         const viewModalElement = document.querySelector(modelTabScope + '#viewVehicleModelModal');
         const deleteModalElement = document.querySelector(modelTabScope + '#deleteVehicleModelModal');
 
+        // Hàm chung để điền dữ liệu vào modal update và reset validation
         function populateAndUpdateModal(triggerButton, modalElement) {
             if (!modalElement || !triggerButton) return;
             const form = modalElement.querySelector('form');
@@ -327,25 +416,29 @@ function initializeVehicleManagementPage() {
 
 
             form.action = triggerButton.dataset.updateUrl || form.action;
-            if(nameInput) nameInput.value = triggerButton.dataset.name || '';
-            if(brandSelect) brandSelect.value = triggerButton.dataset.vehicleBrandId || '';
-            if(yearInput) yearInput.value = triggerButton.dataset.year || '';
-            if(descriptionInput) descriptionInput.value = (triggerButton.dataset.description && triggerButton.dataset.description !== 'null') ? triggerButton.dataset.description : '';
-            if(statusSelect) statusSelect.value = triggerButton.dataset.status || 'active';
+            if (nameInput) nameInput.value = triggerButton.dataset.name || '';
+            if (brandSelect) brandSelect.value = triggerButton.dataset.vehicleBrandId || '';
+            if (yearInput) yearInput.value = triggerButton.dataset.year || '';
+            if (descriptionInput) descriptionInput.value = (triggerButton.dataset.description && triggerButton.dataset.description !== 'null') ? triggerButton.dataset.description : '';
+            if (statusSelect) statusSelect.value = triggerButton.dataset.status || 'active';
 
+            // Xóa lỗi validation cũ
             form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
-            form.querySelectorAll('.invalid-feedback').forEach(el => el.textContent = '');
+            form.querySelectorAll('.invalid-feedback').forEach(el => {
+                if (el.id && el.id.endsWith('Error')) el.textContent = '';
+            });
             if (submitButton) {
                 submitButton.disabled = false;
                 submitButton.innerHTML = modalElement.id.includes('create') ? `Lưu ${sectionTitle}` : 'Lưu thay đổi';
             }
         }
 
+        // Hàm xử lý AJAX form submit chung cho cả create/update/delete
         function handleAjaxFormSubmit(formElement, successCallback) {
             if (!formElement) return;
             const submitButton = formElement.querySelector('button[type="submit"]');
 
-            formElement.addEventListener('submit', async function(e) {
+            formElement.addEventListener('submit', async function (e) {
                 e.preventDefault();
                 if (typeof window.showAppLoader === 'function') window.showAppLoader();
                 if (submitButton) {
@@ -356,6 +449,7 @@ function initializeVehicleManagementPage() {
                 const actionUrl = this.action;
                 const method = this.querySelector('input[name="_method"]')?.value || this.method;
 
+                // Xóa lỗi cũ
                 this.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
                 this.querySelectorAll('.invalid-feedback').forEach(el => {
                     if (el.id && el.id.endsWith('Error')) el.textContent = '';
@@ -371,19 +465,27 @@ function initializeVehicleManagementPage() {
 
                     if (!response.ok) {
                         if (response.status === 422 && result.errors) {
-                             Object.keys(result.errors).forEach(key => {
+                            Object.keys(result.errors).forEach(key => {
                                 const inputField = this.querySelector(`[name="${key}"]`);
+                                const errorDivId = `vm${key.charAt(0).toUpperCase() + key.slice(1).replace(/_id$/, 'Id')}UpdateError`; // Cho update
+                                const createErrorDivId = `vm${key.charAt(0).toUpperCase() + key.slice(1).replace(/_id$/, 'Id')}CreateError`; // Cho create
+                                const passwordErrorDivId = `adminPasswordDeleteVehicleModelError`; // Cho delete password
+
+                                let errorDiv = null;
+                                if (inputField) {
+                                    errorDiv = inputField.closest('.mb-3')?.querySelector(`.invalid-feedback[id="${errorDivId}"], .invalid-feedback[id="${createErrorDivId}"], .invalid-feedback`);
+                                } else if (key === 'admin_password_delete_vehicle_model') {
+                                    errorDiv = this.querySelector(`#${passwordErrorDivId}`);
+                                }
+
                                 if (inputField) {
                                     inputField.classList.add('is-invalid');
-                                    let errorDiv = inputField.closest('.mb-3')?.querySelector(`.invalid-feedback[id^="vm${key.charAt(0).toUpperCase() + key.slice(1).replace(/_id$/, 'Id')}"],.invalid-feedback`);
-                                    if (errorDiv) {
-                                        errorDiv.textContent = result.errors[key][0];
-                                        errorDiv.style.display = 'block';
-                                    } else {
-                                         window.showAppInfoModal(result.errors[key][0], 'validation_error', 'Lỗi Dữ Liệu');
-                                    }
-                                }  else {
-                                     window.showAppInfoModal(result.errors[key][0], 'validation_error', 'Lỗi Dữ Liệu');
+                                }
+                                if (errorDiv) {
+                                    errorDiv.textContent = result.errors[key][0];
+                                    errorDiv.style.display = 'block';
+                                } else {
+                                    window.showAppInfoModal(result.errors[key][0], 'validation_error', 'Lỗi Dữ Liệu');
                                 }
                             });
                         } else {
@@ -406,7 +508,7 @@ function initializeVehicleManagementPage() {
                     window.showAppInfoModal('Có lỗi xảy ra trong quá trình xử lý.', 'error', 'Lỗi Hệ Thống!');
                 } finally {
                     if (typeof window.hideAppLoader === 'function') window.hideAppLoader();
-                     if (submitButton) {
+                    if (submitButton) {
                         submitButton.disabled = false;
                         submitButton.innerHTML = formElement.id.includes('create') ? `Lưu ${sectionTitle}` : 'Lưu thay đổi';
                     }
@@ -430,11 +532,20 @@ function initializeVehicleManagementPage() {
 
                 }, 1000);
             });
+            // Reset form khi modal bị ẩn
+            createModalElement.addEventListener('hidden.bs.modal', function () {
+                const createForm = this.querySelector('#createVehicleModelForm');
+                if (createForm) {
+                    createForm.reset();
+                    createForm.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+                    createForm.querySelectorAll('.invalid-feedback').forEach(el => { el.textContent = ''; el.style.display = 'none'; });
+                }
+            });
         }
 
         // Update Modal
         if (updateModalElement) {
-            updateModalElement.addEventListener('show.bs.modal', function(event) {
+            updateModalElement.addEventListener('show.bs.modal', function (event) {
                 populateAndUpdateModal(event.relatedTarget, this);
             });
             const updateForm = updateModalElement.querySelector('#updateVehicleModelForm');
@@ -442,10 +553,53 @@ function initializeVehicleManagementPage() {
                 const modalInstance = bootstrap.Modal.getInstance(updateModalElement);
                 if (modalInstance) modalInstance.hide();
                 window.showAppInfoModal(result.message || `Cập nhật ${sectionTitle} thành công!`, 'success', 'Thành công!');
-                setTimeout(() => window.location.reload(), 1000);
+
+                // Cập nhật UI trực tiếp cho dòng xe
+                const updatedRow = document.getElementById(`vehicle-model-row-${result.vehicleModel.id}`);
+                if (updatedRow) {
+                    updatedRow.cells[1].textContent = result.vehicleModel.name; // Tên Dòng xe
+                    updatedRow.cells[2].textContent = result.vehicleModel.vehicle_brand.name || 'N/A'; // Hãng xe (đã load ở controller)
+                    updatedRow.cells[3].textContent = result.vehicleModel.year || 'N/A'; // Năm SX
+                    updatedRow.cells[4].textContent = result.vehicleModel.description ? (result.vehicleModel.description.length > 50 ? result.vehicleModel.description.substring(0, 50) + '...' : result.vehicleModel.description) : 'Không có'; // Mô tả
+                    const statusCell = updatedRow.cells[5].querySelector('span');
+                    statusCell.textContent = result.vehicleModel.status === 'active' ? 'Hoạt động' : 'Đã ẩn';
+                    statusCell.className = `badge ${result.vehicleModel.status === 'active' ? 'bg-success' : 'bg-secondary'}`;
+
+                    // Cập nhật data attributes trên các nút của dòng đó
+                    const buttonsInRow = updatedRow.querySelectorAll('[data-id]');
+                    buttonsInRow.forEach(btn => {
+                        btn.dataset.name = result.vehicleModel.name;
+                        btn.dataset.vehicleBrandId = result.vehicleModel.vehicle_brand_id;
+                        btn.dataset.vehicleBrandName = result.vehicleModel.vehicle_brand.name || 'N/A';
+                        btn.dataset.year = result.vehicleModel.year;
+                        btn.dataset.description = result.vehicleModel.description || '';
+                        btn.dataset.status = result.vehicleModel.status;
+                        if (btn.classList.contains('toggle-status-btn')) {
+                            btn.title = result.vehicleModel.status === 'active' ? 'Ẩn' : 'Hiện';
+                            btn.innerHTML = `<i class="bi ${result.vehicleModel.status === 'active' ? 'bi-eye-slash-fill' : 'bi-eye-fill'}"></i>`; // Giữ nguyên icon toggle
+                            btn.classList.toggle('btn-outline-secondary', result.vehicleModel.status === 'active');
+                            btn.classList.toggle('btn-danger', result.vehicleModel.status !== 'active');
+                        }
+                        if (btn.classList.contains('btn-view-vehicle-model') || btn.classList.contains('btn-edit-vehicle-model')) {
+                            btn.dataset.updatedAt = new Date(result.vehicleModel.updated_at).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' });
+                        }
+                    });
+                    updatedRow.classList.toggle('row-inactive', result.vehicleModel.status === 'inactive');
+                } else {
+                    setTimeout(() => window.location.reload(), 1000); // Fallback reload
+                }
+            });
+            // Reset form khi modal bị ẩn
+            updateModalElement.addEventListener('hidden.bs.modal', function () {
+                const updateForm = this.querySelector('#updateVehicleModelForm');
+                if (updateForm) {
+                    updateForm.reset();
+                    updateForm.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+                    updateForm.querySelectorAll('.invalid-feedback').forEach(el => { el.textContent = ''; el.style.display = 'none'; });
+                }
             });
         }
-        
+
         // View Modal
         if (viewModalElement) {
             const idView = viewModalElement.querySelector('#vmIdView');
@@ -462,35 +616,37 @@ function initializeVehicleManagementPage() {
                 const button = event.relatedTarget;
                 if (!button) return;
 
-                if(idView) idView.textContent = button.dataset.id || '-';
-                if(nameView) nameView.textContent = button.dataset.name || '-';
-                if(brandNameView) brandNameView.textContent = button.dataset.vehicleBrandName || 'N/A';
-                if(yearView) yearView.textContent = button.dataset.year || 'N/A';
-                if(descriptionView) descriptionView.textContent = button.dataset.description || 'Không có mô tả';
-                if(statusViewText) {
+                if (idView) idView.textContent = button.dataset.id || '-';
+                if (nameView) nameView.textContent = button.dataset.name || '-';
+                if (brandNameView) brandNameView.textContent = button.dataset.vehicleBrandName || 'N/A';
+                if (yearView) yearView.textContent = button.dataset.year || 'N/A';
+                if (descriptionView) descriptionView.textContent = button.dataset.description || 'Không có mô tả';
+                if (statusViewText) {
                     if (button.dataset.status === 'active') statusViewText.innerHTML = '<span class="badge bg-success">Hoạt động</span>';
                     else if (button.dataset.status === 'inactive') statusViewText.innerHTML = '<span class="badge bg-secondary">Đã ẩn</span>';
                     else statusViewText.textContent = button.dataset.status || '-';
                 }
-                if(createdAtView) createdAtView.textContent = button.dataset.createdAt || '-';
-                if(updatedAtView) updatedAtView.textContent = button.dataset.updatedAt || '-';
-                
+                if (createdAtView) createdAtView.textContent = button.dataset.createdAt || '-';
+                if (updatedAtView) updatedAtView.textContent = button.dataset.updatedAt || '-';
+
                 if (editButtonFromView) {
+                    // Clone dataset từ nút kích hoạt view sang nút edit trong view modal
                     Object.keys(button.dataset).forEach(key => {
-                         if (['id', 'name', 'vehicleBrandId', 'year', 'description', 'status', 'updateUrl'].includes(key)) {
+                        // Chỉ copy các data-attribute cần thiết cho form update
+                        if (['id', 'name', 'vehicleBrandId', 'year', 'description', 'status', 'updateUrl'].includes(key)) {
                             editButtonFromView.dataset[key] = button.dataset[key];
-                         }
+                        }
                     });
                 }
             });
 
             if (editButtonFromView && updateModalElement) {
-                editButtonFromView.addEventListener('click', function() {
+                editButtonFromView.addEventListener('click', function () {
                     const viewModalInstance = bootstrap.Modal.getInstance(viewModalElement);
                     if (viewModalInstance) viewModalInstance.hide();
-                    
+
                     populateAndUpdateModal(this, updateModalElement); // 'this' là editButtonFromView
-                    
+
                     const updateModal = bootstrap.Modal.getInstance(updateModalElement) || new bootstrap.Modal(updateModalElement);
                     updateModal.show();
                 });
@@ -505,11 +661,11 @@ function initializeVehicleManagementPage() {
             const passwordErrorDiv = deleteModalElement.querySelector('#adminPasswordDeleteVehicleModelError');
             const submitButton = deleteForm ? deleteForm.querySelector('button[type="submit"]') : null;
 
-            deleteModalElement.addEventListener('show.bs.modal', function(event) {
+            deleteModalElement.addEventListener('show.bs.modal', function (event) {
                 const button = event.relatedTarget;
                 if (!button) return;
-                if(deleteForm) deleteForm.action = button.dataset.deleteUrl;
-                if(nameSpan) nameSpan.textContent = button.dataset.name;
+                if (deleteForm) deleteForm.action = button.dataset.deleteUrl;
+                if (nameSpan) nameSpan.textContent = button.dataset.name;
                 if (passwordInput) {
                     passwordInput.value = '';
                     passwordInput.classList.remove('is-invalid');
@@ -518,13 +674,13 @@ function initializeVehicleManagementPage() {
                     passwordErrorDiv.textContent = '';
                     passwordErrorDiv.style.display = 'none';
                 }
-                 if (submitButton) {
+                if (submitButton) {
                     submitButton.disabled = false;
                     submitButton.innerHTML = `Xóa ${sectionTitle}`;
                 }
             });
             handleAjaxFormSubmit(deleteForm, (result) => {
-                 const modalInstance = bootstrap.Modal.getInstance(deleteModalElement);
+                const modalInstance = bootstrap.Modal.getInstance(deleteModalElement);
                 if (modalInstance) modalInstance.hide();
                 window.showAppInfoModal(result.message || `Xóa ${sectionTitle} thành công!`, 'success', 'Thành công!');
                 setTimeout(() => window.location.reload(), 1000);
@@ -533,7 +689,7 @@ function initializeVehicleManagementPage() {
 
         // Toggle Status
         document.querySelectorAll(modelTabScope + '.toggle-status-btn').forEach(button => {
-            button.addEventListener('click', async function() {
+            button.addEventListener('click', async function () {
                 const id = this.dataset.id;
                 const url = this.dataset.url;
                 const currentButton = this;
@@ -547,18 +703,19 @@ function initializeVehicleManagementPage() {
                     const result = await response.json();
 
                     if (result.success) {
+                        window.showAppInfoModal(result.message || `Cập nhật trạng thái ${sectionTitle} thành công!`, 'success', 'Thành công!');
                         const row = document.getElementById(`vehicle-model-row-${id}`);
                         const statusCell = document.getElementById(`vehicle-model-status-${id}`);
                         if (statusCell) statusCell.innerHTML = `<span class="badge ${result.new_status === 'active' ? 'bg-success' : 'bg-secondary'}">${result.status_text}</span>`;
                         currentButton.innerHTML = `<i class="bi ${result.new_icon_class}"></i>`;
                         currentButton.title = result.new_button_title;
-                         if (row) {
+                        if (row) {
                             row.classList.toggle('row-inactive', result.new_status === 'inactive');
-                             // Update data-status cho các nút khác trong dòng
+                            // Update data-status cho các nút khác trong dòng
                             row.querySelectorAll('[data-status]').forEach(el => el.dataset.status = result.new_status);
                         }
                     } else {
-                         window.showAppInfoModal(result.message || `Lỗi cập nhật trạng thái ${sectionTitle}.`, 'error', 'Lỗi!');
+                        window.showAppInfoModal(result.message || `Lỗi cập nhật trạng thái ${sectionTitle}.`, 'error', 'Lỗi!');
                     }
                 } catch (error) {
                     window.showAppInfoModal(error.message || `Không thể cập nhật trạng thái ${sectionTitle}.`, 'error', 'Lỗi!');

@@ -27,7 +27,7 @@
             {{-- Quản lý Bán Hàng --}}
             @if ($currentUser->isSuperAdmin() || $currentUser->role === \App\Models\Admin::ROLE_STAFF)
                 @php
-                    $isSalesMenuActive = request()->routeIs('admin.sales.orders') ||
+                    $isSalesMenuActive = request()->routeIs('admin.sales.orders.index') ||
                         request()->routeIs('admin.sales.promotions.index');
                 @endphp
                 <li class="nav-item">
@@ -37,8 +37,8 @@
                     </a>
                     <ul class="collapse list-unstyled ps-4 {{ $isSalesMenuActive ? 'show' : '' }}" id="salesSubmenu">
                         <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('admin.sales.orders') ? 'active-submenu' : '' }}"
-                                href="{{ route('admin.sales.orders') }}">Đơn hàng</a>
+                            <a class="nav-link {{ request()->routeIs('admin.sales.orders.index') ? 'active-submenu' : '' }}"
+                                href="{{ route('admin.sales.orders.index') }}">Đơn hàng</a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('admin.sales.promotions.index') ? 'active-submenu' : '' }}"
@@ -51,11 +51,11 @@
             {{-- Quản lý Sản phẩm --}}
             @if ($currentUser->isSuperAdmin() || $currentUser->role === \App\Models\Admin::ROLE_STAFF || $currentUser->role === \App\Models\Admin::ROLE_WAREHOUSE_STAFF)
                 @php
-                    $isProductMenuActive = request()->routeIs('admin.productManagement.products') ||
+                    $isProductMenuActive = request()->routeIs('admin.productManagement.products.index') ||
                         request()->routeIs('admin.productManagement.categories.index') ||
                         request()->routeIs('admin.productManagement.brands.index') ||
                         request()->routeIs('admin.productManagement.vehicle.index') ||
-                        request()->routeIs('admin.productManagement.inventory');
+                        request()->routeIs('admin.productManagement.inventory.index');
                 @endphp
                 <li class="nav-item">
                     <a class="nav-link {{ $isProductMenuActive ? 'active' : '' }}" href="#productSubmenu"
@@ -65,8 +65,8 @@
                     </a>
                     <ul class="collapse list-unstyled ps-4 {{ $isProductMenuActive ? 'show' : '' }}" id="productSubmenu">
                         <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('admin.productManagement.products') ? 'active-submenu' : '' }}"
-                                href="{{ route('admin.productManagement.products') }}">Danh sách Sản phẩm</a>
+                            <a class="nav-link {{ request()->routeIs('admin.productManagement.products.index') ? 'active-submenu' : '' }}"
+                                href="{{ route('admin.productManagement.products.index') }}">Danh sách Sản phẩm</a>
                         </li>
                         @if ($currentUser->isSuperAdmin() || $currentUser->role === \App\Models\Admin::ROLE_STAFF)
                             <li class="nav-item">
@@ -85,8 +85,8 @@
                                     href="{{ route('admin.productManagement.vehicle.index') }}">Hãng xe & Dòng xe</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link {{ request()->routeIs('admin.productManagement.inventory') ? 'active-submenu' : '' }}"
-                                    href="{{ route('admin.productManagement.inventory') }}">Tồn kho</a>
+                                <a class="nav-link {{ request()->routeIs('admin.productManagement.inventory.index') ? 'active-submenu' : '' }}"
+                                    href="{{ route('admin.productManagement.inventory.index') }}">Tồn kho</a>
                             </li>
                         @endif
                     </ul>
@@ -96,8 +96,8 @@
             {{-- Quản lý Nội dung --}}
             @if ($currentUser->isSuperAdmin() || $currentUser->role === \App\Models\Admin::ROLE_STAFF)
                 @php
-                    $isContentMenuActive = request()->routeIs('admin.content.posts') ||
-                        request()->routeIs('admin.content.reviews');
+                    $isContentMenuActive = request()->routeIs('admin.content.posts.index') ||
+                        request()->routeIs('admin.content.reviews.index');
                 @endphp
                 <li class="nav-item">
                     <a class="nav-link {{ $isContentMenuActive ? 'active' : '' }}" href="#contentSubmenu"
@@ -107,12 +107,12 @@
                     </a>
                     <ul class="collapse list-unstyled ps-4 {{ $isContentMenuActive ? 'show' : '' }}" id="contentSubmenu">
                         <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('admin.content.posts') ? 'active-submenu' : '' }}"
-                                href="{{ route('admin.content.posts') }}">Blog/Bài viết</a>
+                            <a class="nav-link {{ request()->routeIs('admin.content.posts.index') ? 'active-submenu' : '' }}"
+                                href="{{ route('admin.content.posts.index') }}">Blog/Bài viết</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('admin.content.reviews') ? 'active-submenu' : '' }}"
-                                href="{{ route('admin.content.reviews') }}">Đánh giá sản phẩm</a>
+                            <a class="nav-link {{ request()->routeIs('admin.content.reviews.index') ? 'active-submenu' : '' }}"
+                                href="{{ route('admin.content.reviews.index') }}">Đánh giá sản phẩm</a>
                         </li>
                     </ul>
                 </li>

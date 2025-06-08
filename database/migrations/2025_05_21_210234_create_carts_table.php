@@ -12,9 +12,14 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('carts', function (Blueprint $table) {
-            $table->id(); // INT PRIMARY KEY AUTO_INCREMENT (SQL là AUTO_INCREMENT, docx là INT PRIMARY KEY) [cite: 73, 108]
-            $table->foreignId('customer_id')->unique()->constrained('customers')->onDelete('cascade')->onUpdate('cascade'); // FK đến customers(id), UNIQUE [cite: 73, 108]
-            $table->timestamps(); // created_at DATETIME, updated_at DATETIME [cite: 73, 108]
+            $table->id();
+            // Mỗi khách hàng chỉ có một giỏ hàng duy nhất
+            $table->foreignId('customer_id')
+                ->unique()
+                ->constrained('customers')
+                ->cascadeOnUpdate()
+                ->cascadeOnDelete();
+            $table->timestamps();
         });
     }
 

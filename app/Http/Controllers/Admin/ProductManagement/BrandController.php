@@ -7,15 +7,18 @@ use App\Models\Brand;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Database\QueryException;
-use Illuminate\Validation\Rule; // Import Rule để validate status
-use Illuminate\Support\Facades\Config; // Để lấy mật khẩu xóa
+use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Config;
 
 class BrandController extends Controller
 {
     public function index()
     {
-        $brands = Brand::latest()->get(); // Sắp xếp mới nhất lên đầu
-        return view('admin.productManagement.brands', compact('brands'));
+        // SỬA ĐỔI: Chuyển từ get() sang paginate() để phân trang
+        // Giúp trang tải nhanh hơn khi có nhiều dữ liệu.
+        $brands = Brand::latest()->paginate(10); // Lấy 10 thương hiệu mỗi trang
+
+        return view('admin.productManagement.brand.brands', compact('brands'));
     }
 
     public function store(Request $request)
@@ -67,13 +70,12 @@ class BrandController extends Controller
             'status' => $request->status,
         ]);
 
-        // Nếu là AJAX request, trả về JSON
         if ($request->expectsJson()) {
             return response()->json([
                 'success' => true,
                 'message' => 'Cập nhật thương hiệu thành công!',
-                'brand' => $brand->refresh(), // Trả về dữ liệu brand đã cập nhật
-                // Có thể thêm redirect_url nếu JS cần tự redirect sau khi đóng modal
+                // Nhờ $appends, $brand->refresh() sẽ tự động có 'logo_full_url'
+                'brand' => $brand->refresh(),
                 'redirect_url' => route('admin.productManagement.brands.index')
             ]);
         }
@@ -82,11 +84,10 @@ class BrandController extends Controller
             ->with('success', 'Cập nhật thương hiệu thành công!');
     }
 
-    public function destroy(Request $request, Brand $brand) // Thêm Request $request
+    public function destroy(Request $request, Brand $brand)
     {
-        // Validate mật khẩu nếu có yêu cầu
         $adminDeletionPassword = Config::get('admin.deletion_password');
-        if ($adminDeletionPassword) { // Chỉ validate nếu mật khẩu được cấu hình
+        if ($adminDeletionPassword) {
             $request->validate([
                 'deletion_password' => 'required|string',
             ]);
@@ -126,16 +127,13 @@ class BrandController extends Controller
                 return response()->json([
                     'success' => false,
                     'message' => $errorMessage
-                ], 500); // Hoặc 422 nếu coi đây là lỗi logic nghiệp vụ
+                ], 500);
             }
             return redirect()->route('admin.productManagement.brands.index')
                 ->with('error', $errorMessage);
         }
     }
 
-    /**
-     * Thay đổi trạng thái (active/inactive) của một thương hiệu.
-     */
     public function toggleStatus(Request $request, Brand $brand)
     {
         $brand->status = ($brand->status === Brand::STATUS_ACTIVE) ? Brand::STATUS_INACTIVE : Brand::STATUS_ACTIVE;
@@ -144,14 +142,14 @@ class BrandController extends Controller
         if ($request->expectsJson()) {
             return response()->json([
                 'success' => true,
-                'message' => 'Cập nhật trạng thái thương hiệu thành công!',
+                'message' => 'Cập nhật trạng thái thương hiệu thành công.',
                 'new_status' => $brand->status,
                 'status_text' => $brand->isActive() ? 'Hoạt động' : 'Đã ẩn',
-                'new_icon_class' => $brand->isActive() ? 'bi-eye-slash-fill' : 'bi-eye-fill', // Thay icon nếu cần
-                'new_button_title' => $brand->isActive() ? 'Ẩn thương hiệu này' : 'Hiển thị thương hiệu này',
+                // --- ĐÃ THAY ĐỔI ---
+                'new_icon_class' => 'bi-power',
+                'new_button_title' => $brand->isActive() ? 'Ẩn thương hiệu này' : 'Hiển thị thương hiệu này'
             ]);
         }
-        // Fallback nếu không phải AJAX
         $message = $brand->isActive() ? 'Thương hiệu đã được hiển thị.' : 'Thương hiệu đã được ẩn.';
         return redirect()->route('admin.productManagement.brands.index')->with('success', $message);
     }

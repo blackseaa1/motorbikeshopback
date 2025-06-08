@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Storage; // Thêm use Storage
 
 class Brand extends Model
 {
@@ -19,8 +20,35 @@ class Brand extends Model
         'name',
         'description',
         'logo_url',
-        'status', // Đảm bảo cột này có trong database và migration
+        'status',
     ];
+
+    /**
+     * SỬA ĐỔI 1: Thêm mảng $appends.
+     * Các accessor trong mảng này sẽ được tự động thêm vào khi model
+     * được chuyển đổi thành array hoặc JSON.
+     * @var array
+     */
+    protected $appends = ['logo_full_url'];
+
+    /**
+     * SỬA ĐỔI 2: Thêm Accessor để lấy URL đầy đủ của logo.
+     * Giúp tập trung logic xử lý URL vào Model.
+     *
+     * @return string
+     */
+    public function getLogoFullUrlAttribute()
+    {
+        // Lấy giá trị gốc từ DB, tránh vòng lặp vô hạn
+        $logoPath = $this->attributes['logo_url'];
+
+        if ($logoPath && Storage::disk('public')->exists($logoPath)) {
+            return Storage::url($logoPath);
+        }
+        // Trả về ảnh mặc định nếu không có logo
+        return 'https://placehold.co/100x100/EFEFEF/AAAAAA&text=LOGO';
+    }
+
 
     /**
      * Các sản phẩm thuộc thương hiệu này.

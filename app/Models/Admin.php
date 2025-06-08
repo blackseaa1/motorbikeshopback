@@ -3,6 +3,9 @@
 
 namespace App\Models;
 
+// Thêm use cho các Model có quan hệ
+use App\Models\BlogPost;
+use App\Models\Order;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -44,10 +47,6 @@ class Admin extends Authenticatable
         'password_change_required' => 'boolean',
     ];
 
-    /**
-     * Các accessor sẽ được tự động thêm vào khi model chuyển thành array/JSON.
-     * @var array
-     */
     protected $appends = [
         'avatar_url',
         'role_name',
@@ -56,6 +55,32 @@ class Admin extends Authenticatable
         'status_badge_class',
     ];
 
+    //======================================================================
+    // RELATIONSHIPS
+    //======================================================================
+
+    /**
+     * Lấy tất cả các bài blog được viết bởi admin này.
+     * Đây là quan hệ đa hình (Polymorphic Relationship).
+     */
+    public function blogPosts()
+    {
+        return $this->morphMany(BlogPost::class, 'author');
+    }
+
+    /**
+     * Lấy tất cả các đơn hàng được tạo bởi admin này.
+     */
+    public function createdOrders()
+    {
+        return $this->hasMany(Order::class, 'created_by_admin_id');
+    }
+
+
+    //======================================================================
+    // ACCESSORS & MUTATORS
+    //======================================================================
+
     // Accessor for avatar URL
     public function getAvatarUrlAttribute()
     {
@@ -63,12 +88,6 @@ class Admin extends Authenticatable
             return Storage::url($this->img);
         }
         return 'https://placehold.co/100x100/EFEFEF/AAAAAA&text=AD';
-    }
-
-    // Helper to check if the admin is a Super Admin
-    public function isSuperAdmin(): bool
-    {
-        return $this->role === self::ROLE_SUPER_ADMIN;
     }
 
     // Helper to get displayable role name
@@ -111,11 +130,6 @@ class Admin extends Authenticatable
         }
     }
 
-    public function isActive(): bool
-    {
-        return $this->status === self::STATUS_ACTIVE;
-    }
-
     public function getStatusTextAttribute(): string
     {
         return $this->isActive() ? 'Hoạt động' : 'Bị khóa';
@@ -124,5 +138,20 @@ class Admin extends Authenticatable
     public function getStatusBadgeClassAttribute(): string
     {
         return $this->isActive() ? 'bg-success' : 'bg-danger';
+    }
+
+    //======================================================================
+    // HELPERS
+    //======================================================================
+
+    // Helper to check if the admin is a Super Admin
+    public function isSuperAdmin(): bool
+    {
+        return $this->role === self::ROLE_SUPER_ADMIN;
+    }
+
+    public function isActive(): bool
+    {
+        return $this->status === self::STATUS_ACTIVE;
     }
 }

@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Number;
 
 class DeliveryService extends Model
 {
@@ -11,7 +13,6 @@ class DeliveryService extends Model
 
     protected $table = 'delivery_services';
 
-    // Định nghĩa các hằng số cho trạng thái
     const STATUS_ACTIVE = 'active';
     const STATUS_INACTIVE = 'inactive';
 
@@ -19,27 +20,68 @@ class DeliveryService extends Model
         'name',
         'logo_url',
         'shipping_fee',
-        'status', // Đảm bảo cột này có trong database và migration
+        'status',
     ];
 
     protected $casts = [
-        'shipping_fee' => 'decimal:0', // Hiển thị số nguyên cho VNĐ
+        'shipping_fee' => 'decimal:2',
     ];
 
-    /**
-     * Các đơn hàng sử dụng dịch vụ giao hàng này.
-     */
+    protected $appends = ['logo_full_url', 'status_text', 'status_badge_class', 'formatted_shipping_fee']; // Đảm bảo các accessor được append
+
+    //======================================================================
+    // RELATIONSHIPS
+    //======================================================================
+
     public function orders()
     {
         return $this->hasMany(Order::class, 'delivery_service_id');
     }
 
+    //======================================================================
+    // ACCESSORS
+    //======================================================================
+
     /**
-     * Kiểm tra xem dịch vụ có đang hoạt động không.
-     *
-     * @return bool
+     * Accessor cho URL đầy đủ của logo.
+     * Thêm timestamp để tránh cache trình duyệt.
      */
-    public function isActive()
+    public function getLogoFullUrlAttribute(): string
+    {
+        $logoPath = $this->attributes['logo_url'];
+        if ($logoPath && Storage::disk('public')->exists($logoPath)) {
+            // Thêm timestamp của updated_at để cache-busting
+            return Storage::url($logoPath) . '?v=' . $this->updated_at->timestamp;
+        }
+        return 'https://placehold.co/150x50/EFEFEF/AAAAAA&text=Logo';
+    }
+
+    /**
+     * Accessor cho hiển thị trạng thái.
+     */
+    public function getStatusTextAttribute(): string
+    {
+        return $this->isActive() ? 'Hoạt động' : 'Đã ẩn';
+    }
+
+    public function getStatusBadgeClassAttribute(): string
+    {
+        return $this->isActive() ? 'bg-success' : 'bg-secondary';
+    }
+
+    /**
+     * Accessor để định dạng phí vận chuyển.
+     */
+    public function getFormattedShippingFeeAttribute(): string
+    {
+        return Number::currency($this->shipping_fee, 'VND', 'vi');
+    }
+
+    //======================================================================
+    // HELPERS
+    //======================================================================
+
+    public function isActive(): bool
     {
         return $this->status === self::STATUS_ACTIVE;
     }

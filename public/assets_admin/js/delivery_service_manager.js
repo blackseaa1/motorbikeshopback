@@ -16,7 +16,6 @@ function initializeDeliveryServicesPage() {
 
     // Hàm hiển thị lỗi validation inline từ AJAX response
     function displayValidationErrors(formElement, errors) {
-        // Xóa các lỗi cũ
         formElement.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
         formElement.querySelectorAll('.invalid-feedback[id$="Error"]').forEach(el => {
             el.textContent = '';
@@ -24,44 +23,26 @@ function initializeDeliveryServicesPage() {
         });
 
         Object.keys(errors).forEach(key => {
-            // Input name trong form là 'logo_url', 'shipping_fee', nhưng ID của error div có thể là 'dsLogo_urlCreateError'
-            const fieldName = key.replace(/_/g, ''); // Chuyển shipping_fee -> shippingfee
-            const formType = formElement.id.includes('create') ? 'Create' : 'Update'; // createDeliveryServiceForm -> Create
-
-            // Cố gắng tìm input field
             const inputField = formElement.querySelector(`[name="${key}"]`);
-            let errorDiv = null;
+            const formType = formElement.id.includes('create') ? 'Create' : 'Update';
+            const errorDivId = `ds${key.charAt(0).toUpperCase() + key.slice(1).replace(/_([a-z])/g, g => g[1].toUpperCase())}${formType}Error`;
+            const errorDiv = formElement.querySelector(`#${errorDivId}`);
 
-            if (inputField) {
+            if (inputField && errorDiv) {
                 inputField.classList.add('is-invalid');
-                // Ưu tiên tìm error div theo ID quy ước: ds<FieldName><FormType>Error (vd: dsShipping_feeCreateError)
-                // Hoặc ds<FieldName><FormType>Error (vd: dsLogo_urlUpdateError)
-                const errorDivId = `ds${key.charAt(0).toUpperCase() + key.slice(1).replace(/_([a-z])/g, g => g[1].toUpperCase())}${formType}Error`;
-                errorDiv = formElement.querySelector(`#${errorDivId}`);
-
-
-                // Fallback: tìm div lỗi ngay sau input hoặc trong .mb-3 gần nhất
-                if (!errorDiv) {
-                    errorDiv = inputField.nextElementSibling;
-                    if (!errorDiv || !errorDiv.classList.contains('invalid-feedback')) {
-                        const parentGroup = inputField.closest('.mb-3');
-                        if (parentGroup) errorDiv = parentGroup.querySelector('.invalid-feedback');
-                    }
-                }
-            } else if (key === 'deletion_password') { // Trường hợp đặc biệt cho mật khẩu xóa
-                errorDiv = formElement.querySelector('#dsDeletionPasswordError');
-                const passInput = formElement.querySelector('#dsDeletionPassword');
-                if (passInput) passInput.classList.add('is-invalid');
-            }
-
-
-            if (errorDiv) {
                 errorDiv.textContent = errors[key][0];
                 errorDiv.style.display = 'block';
+            } else if (key === 'deletion_password') {
+                const passInput = formElement.querySelector('#dsDeletionPassword');
+                const passErrorDiv = formElement.querySelector('#dsDeletionPasswordError');
+                if (passInput && passErrorDiv) {
+                    passInput.classList.add('is-invalid');
+                    passErrorDiv.textContent = errors[key][0];
+                    passErrorDiv.style.display = 'block';
+                }
             } else {
-                // Nếu không tìm thấy chỗ hiển thị inline, dùng modal chung
                 window.showAppInfoModal(errors[key][0], 'validation_error', 'Lỗi Dữ Liệu');
-                console.warn(`Không tìm thấy error div cho trường: ${key} với ID dự kiến: ds${key.charAt(0).toUpperCase() + key.slice(1)}${formType}Error`);
+                console.warn(`Không tìm thấy input hoặc error div cho trường: ${key}`);
             }
         });
     }
@@ -186,9 +167,13 @@ function initializeDeliveryServicesPage() {
             updateForm.querySelector('#dsShippingFeeUpdate').value = button.dataset.shippingFee || '';
             updateForm.querySelector('#dsStatusUpdate').value = button.dataset.status || 'active';
 
+            // Handle logo preview and existing logo URL
             const logoPreview = updateForm.querySelector('#dsLogoPreviewUpdate');
+            const existingLogoInput = updateForm.querySelector('#dsExistingLogoUrl');
             const defaultLogoSrc = logoPreview.dataset.defaultSrc || 'https://placehold.co/100x50/EFEFEF/AAAAAA&text=Current';
-            logoPreview.src = button.dataset.logoUrl && button.dataset.logoUrl !== 'https://placehold.co/100x50/EFEFEF/AAAAAA&text=N/A' ? button.dataset.logoUrl : defaultLogoSrc;
+            const logoUrl = button.dataset.logoUrl && button.dataset.logoUrl !== 'https://placehold.co/100x50/EFEFEF/AAAAAA&text=N/A' ? button.dataset.logoUrl : defaultLogoSrc;
+            logoPreview.src = logoUrl;
+            existingLogoInput.value = logoUrl !== defaultLogoSrc ? button.dataset.logoUrl : '';
 
             // Clear old file input if any
             updateForm.querySelector('#dsLogoUpdate').value = '';
@@ -211,15 +196,9 @@ function initializeDeliveryServicesPage() {
                 statusCell.textContent = result.deliveryService.status === 'active' ? 'Hoạt động' : 'Đã ẩn';
                 statusCell.className = `badge ${result.deliveryService.status === 'active' ? 'bg-success' : 'bg-secondary'}`;
 
-                // Cập nhật logo nếu có thay đổi (cần URL đầy đủ từ server)
+                // Cập nhật logo sử dụng logo_full_url từ server
                 const logoImg = updatedRow.cells[1].querySelector('img');
-                if (result.deliveryService.logo_url) { // Giả sử server trả về logo_url đầy đủ
-                    logoImg.src = `/storage/${result.deliveryService.logo_url}`; // Điều chỉnh path nếu cần
-                } else if (result.deliveryService.logo_url === null && logoImg.src !== 'https://placehold.co/100x50/EFEFEF/AAAAAA&text=N/A') {
-                    // Nếu logo bị xóa và không có logo mới
-                    logoImg.src = 'https://placehold.co/100x50/EFEFEF/AAAAAA&text=N/A';
-                }
-
+                logoImg.src = result.deliveryService.logo_full_url || 'https://placehold.co/100x50/EFEFEF/AAAAAA&text=N/A';
 
                 // Cập nhật data attributes trên các nút của dòng đó
                 const viewBtn = updatedRow.querySelector('.btn-view-ds');
@@ -230,23 +209,29 @@ function initializeDeliveryServicesPage() {
                     viewBtn.dataset.name = result.deliveryService.name;
                     viewBtn.dataset.shippingFee = result.deliveryService.shipping_fee;
                     viewBtn.dataset.status = result.deliveryService.status;
-                    if (result.deliveryService.logo_url) viewBtn.dataset.logoUrl = `/storage/${result.deliveryService.logo_url}`;
-                    else viewBtn.dataset.logoUrl = 'https://placehold.co/100x50/EFEFEF/AAAAAA&text=N/A';
+                    viewBtn.dataset.logoUrl = result.deliveryService.logo_full_url || 'https://placehold.co/100x50/EFEFEF/AAAAAA&text=N/A';
                     viewBtn.dataset.updatedAt = new Date(result.deliveryService.updated_at).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' });
                 }
                 if (editBtn) {
                     editBtn.dataset.name = result.deliveryService.name;
                     editBtn.dataset.shippingFee = result.deliveryService.shipping_fee;
                     editBtn.dataset.status = result.deliveryService.status;
-                    if (result.deliveryService.logo_url) editBtn.dataset.logoUrl = `/storage/${result.deliveryService.logo_url}`;
-                    else editBtn.dataset.logoUrl = 'https://placehold.co/100x50/EFEFEF/AAAAAA&text=N/A';
+                    editBtn.dataset.logoUrl = result.deliveryService.logo_full_url || 'https://placehold.co/100x50/EFEFEF/AAAAAA&text=N/A';
                 }
                 if (toggleBtn) {
                     toggleBtn.title = result.deliveryService.status === 'active' ? 'Ẩn đơn vị này' : 'Hiển thị đơn vị này';
-                    toggleBtn.innerHTML = `<i class="bi ${result.deliveryService.status === 'active' ? 'bi-eye-slash-fill' : 'bi-eye-fill'}"></i>`;
+                    // Giữ nguyên icon bi-power, không cập nhật icon bi-eye-slash-fill/bi-eye-fill ở đây
+                    // toggleBtn.innerHTML = `<i class="bi ${result.deliveryService.status === 'active' ? 'bi-eye-slash-fill' : 'bi-eye-fill'}"></i>`; // Dòng này đã được loại bỏ
                     updatedRow.classList.toggle('row-inactive', result.deliveryService.status !== 'active');
-                }
 
+                    // Cập nhật class btn-danger/btn-outline-secondary cho toggleBtn
+                    toggleBtn.classList.remove('btn-danger', 'btn-outline-secondary');
+                    if (result.deliveryService.status === 'active') {
+                        toggleBtn.classList.add('btn-outline-secondary');
+                    } else {
+                        toggleBtn.classList.add('btn-danger');
+                    }
+                }
             } else {
                 setTimeout(() => window.location.reload(), 1200); // Fallback reload
             }
@@ -258,8 +243,15 @@ function initializeDeliveryServicesPage() {
     if (viewModalElement) {
         viewModalElement.addEventListener('show.bs.modal', function (event) {
             const button = event.relatedTarget;
-            if (!button) return;
+            if (!button) {
+                console.error('Không tìm thấy nút kích hoạt modal xem chi tiết.');
+                window.showAppInfoModal('Không thể tải dữ liệu đơn vị giao hàng.', 'error', 'Lỗi!');
+                return;
+            }
 
+            console.log('Dữ liệu nút kích hoạt:', button.dataset); // Ghi log để kiểm tra dữ liệu
+
+            // Điền dữ liệu vào modal
             viewModalElement.querySelector('#dsIdView').textContent = button.dataset.id || '-';
             viewModalElement.querySelector('#dsNameView').textContent = button.dataset.name || '-';
             viewModalElement.querySelector('#dsLogoView').src = (button.dataset.logoUrl && button.dataset.logoUrl !== 'https://placehold.co/100x50/EFEFEF/AAAAAA&text=N/A') ? button.dataset.logoUrl : 'https://placehold.co/150x75/EFEFEF/AAAAAA&text=LOGO';
@@ -273,74 +265,47 @@ function initializeDeliveryServicesPage() {
                 statusTextElement.innerHTML = '<span class="badge bg-secondary">Đã ẩn</span>';
             } else {
                 statusTextElement.textContent = button.dataset.status || '-';
+                console.warn('Trạng thái không hợp lệ:', button.dataset.status);
             }
+
             viewModalElement.querySelector('#dsCreatedAtView').textContent = button.dataset.createdAt || '-';
             viewModalElement.querySelector('#dsUpdatedAtView').textContent = button.dataset.updatedAt || '-';
 
             // Setup "Edit from View" button
             const editFromViewButton = viewModalElement.querySelector('#editDeliveryServiceFromViewButton');
             if (editFromViewButton && updateModalElement) {
-                // Copy all relevant data attributes from the view button to the edit button's dataset
-                // This makes the edit button behave as if it was the original edit button in the table row
-                Object.keys(button.dataset).forEach(key => {
-                    editFromViewButton.dataset[key] = button.dataset[key];
-                });
-
-                editFromViewButton.onclick = function () { // Use .onclick for simplicity or manage event listeners carefully
+                editFromViewButton.addEventListener('click', function () {
                     const viewModalInstance = bootstrap.Modal.getInstance(viewModalElement);
                     if (viewModalInstance) viewModalInstance.hide();
 
-                    // Directly trigger the show event for the update modal, passing this button as relatedTarget
-                    const updateModalInstance = bootstrap.Modal.getInstance(updateModalElement) || new bootstrap.Modal(updateModalElement);
-                    // Manually call the event listener logic if direct event dispatch is tricky
-                    const showModalEvent = new CustomEvent('show.bs.modal', { detail: { relatedTarget: this } });
-                    updateModalElement.dispatchEvent(showModalEvent); // Might not work if BS uses internal listeners
-                    // Safer: Just call the population logic directly or ensure the modal's 'show.bs.modal' listener fires
-                    // For now, we rely on the 'show.bs.modal' event of updateDeliveryServiceModal
-                    // which should pick up `this` as relatedTarget when we call .show()
-                    const tempButtonForUpdate = document.createElement('button');
-                    Object.assign(tempButtonForUpdate.dataset, this.dataset);
-                    updateModalElement.settings = { relatedTarget: tempButtonForUpdate }; // Hacky, better to refactor population
+                    // Create a temporary button-like object with the necessary dataset
+                    const triggerData = { ...button.dataset }; // Clone dataset from the view button
 
-                    updateModalInstance.show(); // This should trigger the 'show.bs.modal' on updateModalElement
-                    // and its listener should use `this` (editFromViewButton) as `event.relatedTarget`
-                };
+                    // Get or create Bootstrap modal instance for update
+                    const updateModalBsInstance = bootstrap.Modal.getInstance(updateModalElement) || new bootstrap.Modal(updateModalElement);
+
+                    // Manually populate the update form using the cloned data
+                    const updateForm = updateModalElement.querySelector('#updateDeliveryServiceForm');
+                    if (updateForm) {
+                        updateForm.action = triggerData.updateUrl;
+                        updateForm.querySelector('#dsNameUpdate').value = triggerData.name || '';
+                        updateForm.querySelector('#dsShippingFeeUpdate').value = triggerData.shippingFee || '';
+                        updateForm.querySelector('#dsStatusUpdate').value = triggerData.status || 'active';
+                        const logoPreview = updateForm.querySelector('#dsLogoPreviewUpdate');
+                        const existingLogoInput = updateForm.querySelector('#dsExistingLogoUrl');
+                        const defaultLogoSrc = logoPreview.dataset.defaultSrc || 'https://placehold.co/100x50/EFEFEF/AAAAAA&text=Current';
+                        const logoUrl = triggerData.logoUrl && triggerData.logoUrl !== 'https://placehold.co/100x50/EFEFEF/AAAAAA&text=N/A' ? triggerData.logoUrl : defaultLogoSrc;
+                        logoPreview.src = logoUrl;
+                        existingLogoInput.value = logoUrl !== defaultLogoSrc ? triggerData.logoUrl : '';
+                        updateForm.querySelector('#dsLogoUpdate').value = '';
+                        updateForm.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+                        updateForm.querySelectorAll('.invalid-feedback[id$="Error"]').forEach(el => { el.textContent = ''; el.style.display = 'none'; });
+                    }
+                    updateModalBsInstance.show();
+                }, { once: true }); // Ensure the listener is added only once
             }
         });
-        // Re-do the Edit from View button logic to be more robust
-        const editFromViewButton = viewModalElement.querySelector('#editDeliveryServiceFromViewButton');
-        if (editFromViewButton && updateModalElement) {
-            editFromViewButton.addEventListener('click', function () {
-                const viewModalInstance = bootstrap.Modal.getInstance(viewModalElement);
-                if (viewModalInstance) viewModalInstance.hide();
-
-                // Create a temporary button-like object with the necessary dataset
-                // to pass to the update modal's show event or population logic.
-                const triggerData = { ...this.dataset }; // Clone dataset from the "Edit from View" button
-
-                // Get or create Bootstrap modal instance for update
-                const updateModalBsInstance = bootstrap.Modal.getInstance(updateModalElement) || new bootstrap.Modal(updateModalElement);
-
-                // Manually populate the update form using the cloned data,
-                // mimicking what the 'show.bs.modal' listener on updateModalElement would do.
-                const updateForm = updateModalElement.querySelector('#updateDeliveryServiceForm');
-                if (updateForm) {
-                    updateForm.action = triggerData.updateUrl;
-                    updateForm.querySelector('#dsNameUpdate').value = triggerData.name || '';
-                    updateForm.querySelector('#dsShippingFeeUpdate').value = triggerData.shippingFee || '';
-                    updateForm.querySelector('#dsStatusUpdate').value = triggerData.status || 'active';
-                    const logoPreview = updateForm.querySelector('#dsLogoPreviewUpdate');
-                    const defaultLogoSrc = logoPreview.dataset.defaultSrc || 'https://placehold.co/100x50/EFEFEF/AAAAAA&text=Current';
-                    logoPreview.src = triggerData.logoUrl && triggerData.logoUrl !== 'https://placehold.co/100x50/EFEFEF/AAAAAA&text=N/A' ? triggerData.logoUrl : defaultLogoSrc;
-                    updateForm.querySelector('#dsLogoUpdate').value = '';
-                    updateForm.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
-                    updateForm.querySelectorAll('.invalid-feedback[id$="Error"]').forEach(el => { el.textContent = ''; el.style.display = 'none'; });
-                }
-                updateModalBsInstance.show();
-            });
-        }
     }
-
 
     // --- DELETE DELIVERY SERVICE ---
     const deleteModalElement = document.getElementById('deleteDeliveryServiceModal');
@@ -351,7 +316,6 @@ function initializeDeliveryServicesPage() {
         const passwordErrorDiv = deleteModalElement.querySelector('#dsDeletionPasswordError');
 
         deleteModalElement.addEventListener('show.bs.modal', function (event) {
-            // ... (logic populate modal delete không đổi)
             const button = event.relatedTarget;
             if (!button) return;
 
@@ -371,78 +335,82 @@ function initializeDeliveryServicesPage() {
         });
 
         handleAjaxFormSubmit(deleteForm, deleteModalElement, "Đơn vị Giao hàng", (result) => {
-            // BẮT ĐẦU PHẦN THAY ĐỔI
             const modalInstance = bootstrap.Modal.getInstance(deleteModalElement);
             if (modalInstance) modalInstance.hide();
             window.showAppInfoModal(result.message || 'Xóa Đơn vị Giao hàng thành công!', 'success', 'Thành công!');
-
-            // Luôn tải lại trang để cập nhật STT và phân trang
-            setTimeout(() => {
-                window.location.reload();
-            }, 1200); // Đợi 1.2 giây để người dùng đọc thông báo rồi mới reload
-            // KẾT THÚC PHẦN THAY ĐỔI
+            setTimeout(() => window.location.reload(), 1200);
         }, 'DELETE');
     }
 
     // --- TOGGLE STATUS ---
     document.querySelectorAll(pageScope + '.toggle-status-btn').forEach(button => {
-        button.addEventListener('click', async function () {
-            const deliveryServiceId = this.dataset.id;
-            const url = this.dataset.url;
-            const currentButton = this;
+        button.removeEventListener('click', handleToggleStatus); // Xóa listener cũ để tránh double-trigger
+        button.addEventListener('click', handleToggleStatus); // Gắn listener mới
+    });
 
-            if (typeof window.showAppLoader === 'function') window.showAppLoader();
-            try {
-                const response = await fetch(url, {
-                    method: 'POST', // Or PATCH
-                    headers: {
-                        'X-CSRF-TOKEN': csrfToken,
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json' // If sending JSON body
-                    },
-                    // body: JSON.stringify({}) // If your backend expects a JSON body
-                });
+    async function handleToggleStatus() {
+        const deliveryServiceId = this.dataset.id;
+        const url = this.dataset.url;
+        const currentButton = this;
 
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({}));
-                    throw new Error(errorData.message || `HTTP error ${response.status}`);
+        if (typeof window.showAppLoader === 'function') window.showAppLoader();
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': csrfToken,
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
                 }
+            });
+            if (!response.ok) {
+                const errorResult = await response.json().catch(() => ({ message: 'Lỗi không xác định từ máy chủ.' }));
+                throw new Error(errorResult.message || `Lỗi HTTP: ${response.status}`);
+            }
+            const result = await response.json();
+            if (result.success) {
+                window.showAppInfoModal(result.message || 'Cập nhật trạng thái thành công!', 'success', 'Thành công!');
 
-                const result = await response.json();
-
-                if (result.success) {
-                    const row = document.getElementById(`ds-row-${deliveryServiceId}`);
+                const row = document.getElementById(`ds-row-${deliveryServiceId}`);
+                if (row) {
                     const statusCell = document.getElementById(`ds-status-${deliveryServiceId}`);
-
                     if (statusCell) {
                         statusCell.innerHTML = `<span class="badge ${result.new_status === 'active' ? 'bg-success' : 'bg-secondary'}">${result.status_text}</span>`;
                     }
                     currentButton.innerHTML = `<i class="bi ${result.new_icon_class}"></i>`;
                     currentButton.title = result.new_button_title;
 
-                    if (row) {
-                        row.classList.toggle('row-inactive', result.new_status === 'inactive');
-                        // Update data-status on other buttons in the same row if needed
-                        row.querySelectorAll('[data-status]').forEach(el => el.dataset.status = result.new_status);
+                    if (result.new_status === 'inactive') {
+                        row.classList.add('row-inactive');
+                    } else {
+                        row.classList.remove('row-inactive');
                     }
-                    // window.showAppInfoModal(result.message, 'success', 'Thành công'); // Optional: notify on toggle
-                } else {
-                    window.showAppInfoModal(result.message || 'Lỗi cập nhật trạng thái.', 'error', 'Lỗi!');
+
+                    currentButton.classList.remove('btn-danger', 'btn-outline-secondary');
+                    if (result.new_status === 'active') {
+                        currentButton.classList.add('btn-outline-secondary');
+                    } else {
+                        currentButton.classList.add('btn-danger');
+                    }
+
+                    const viewButton = row.querySelector('.btn-view-ds');
+                    const editButton = row.querySelector('.btn-edit-ds');
+                    if (viewButton) {
+                        viewButton.dataset.status = result.new_status;
+                    }
+                    if (editButton) {
+                        editButton.dataset.status = result.new_status;
+                    }
                 }
-            } catch (error) {
-                console.error('Lỗi toggle status:', error);
-                window.showAppInfoModal(error.message || 'Không thể cập nhật trạng thái.', 'error', 'Lỗi!');
-            } finally {
-                if (typeof window.hideAppLoader === 'function') window.hideAppLoader();
+            } else {
+                throw new Error(result.message || 'Có lỗi khi cập nhật trạng thái.');
             }
-        });
-    });
+        } catch (error) {
+            console.error('Lỗi khi thay đổi trạng thái đơn vị giao hàng:', error);
+            window.showAppInfoModal(error.message || 'Lỗi cập nhật trạng thái.', 'error', 'Lỗi!');
+        } finally {
+            if (typeof window.hideAppLoader === 'function') window.hideAppLoader();
+        }
+    }
 
 } // End initializeDeliveryServicesPage
-
-// Chạy hàm khởi tạo khi DOM sẵn sàng
-// Hàm này sẽ được gọi bởi runPageSpecificInitializers trong admin_layout.js
-// nếu document.getElementById('adminDeliveryServicesPage') tồn tại.
-// Nếu admin_layout.js không gọi, bạn có thể cần:
-// document.addEventListener('DOMContentLoaded', initializeDeliveryServicesPage);
-// Nhưng với cấu trúc hiện tại, admin_layout.js sẽ đảm nhiệm việc này.

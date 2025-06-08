@@ -12,12 +12,14 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('blog_posts', function (Blueprint $table) {
-            $table->id(); // INT PRIMARY KEY AUTO_INCREMENT (SQL là AUTO_INCREMENT, docx là INT PRIMARY KEY) [cite: 77, 110]
-            $table->string('title'); // VARCHAR(255) NOT NULL, Tiêu đề bài viết [cite: 77, 110]
-            $table->text('content')->nullable(); // TEXT, Nội dung bài viết [cite: 77, 110]
-            $table->text('image_url')->nullable(); // TEXT, URL ảnh minh họa của bài đăng [cite: 77, 110]
-            $table->foreignId('author_id')->constrained('customers')->onDelete('cascade')->onUpdate('cascade'); // FK đến customers(id) (khách viết blog) [cite: 77, 110] (Nếu admin cũng có thể viết, cần xem xét lại cấu trúc này)
-            $table->timestamps(); // created_at DATETIME, updated_at DATETIME [cite: 77, 110]
+            $table->id();
+            $table->string('title');
+            $table->text('content')->nullable();
+            $table->text('image_url')->nullable();
+            $table->unsignedBigInteger('author_id'); // ID của tác giả
+            $table->string('author_type'); // Loại tác giả (App\Models\Admin hoặc App\Models\Customer)
+            $table->string('status', 50)->default('draft'); // draft, published
+            $table->timestamps();
         });
     }
 

@@ -12,10 +12,13 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('product_images', function (Blueprint $table) {
-            $table->id(); // INT PRIMARY KEY AUTO_INCREMENT [cite: 63, 102]
-            $table->foreignId('product_id')->constrained('products')->onDelete('cascade')->onUpdate('cascade'); // FK đến products(id) [cite: 63, 102]
-            $table->text('image_url')->nullable(); // TEXT, Link ảnh sản phẩm [cite: 63, 102]
-            $table->timestamps(); // created_at DATETIME, updated_at DATETIME [cite: 63, 102]
+            $table->id();
+            $table->foreignId('product_id')
+                ->constrained('products') // Liên kết với bảng products
+                ->cascadeOnUpdate()
+                ->cascadeOnDelete(); // Nếu sản phẩm bị xóa, ảnh cũng sẽ bị xóa
+            $table->text('image_url')->nullable();
+            $table->timestamps();
         });
     }
 

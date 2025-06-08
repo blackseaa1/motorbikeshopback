@@ -12,14 +12,25 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('reviews', function (Blueprint $table) {
-            $table->foreignId('customer_id')->constrained('customers')->onDelete('cascade')->onUpdate('cascade'); // FK đến customers(id) [cite: 71, 107]
-            $table->foreignId('product_id')->constrained('products')->onDelete('cascade')->onUpdate('cascade'); // FK đến products(id) [cite: 71, 107]
-            $table->integer('rating')->nullable(); // Điểm đánh giá (ví dụ: 1–5 sao) [cite: 71, 107]
-            $table->text('comment')->nullable(); // Nội dung nhận xét [cite: 71, 107]
-            $table->timestamps(); // created_at DATETIME, updated_at DATETIME [cite: 71, 107]
-            
-            // Một khách hàng chỉ review 1 lần 1 sản phẩm [cite: 71, 107]
-            $table->primary(['customer_id', 'product_id']); 
+            // Khóa ngoại tới bảng customers
+            $table->foreignId('customer_id')
+                ->constrained('customers')
+                ->cascadeOnUpdate()
+                ->cascadeOnDelete();
+
+            // Khóa ngoại tới bảng products
+            $table->foreignId('product_id')
+                ->constrained('products')
+                ->cascadeOnUpdate()
+                ->cascadeOnDelete();
+
+            $table->integer('rating')->nullable()->comment('Đánh giá từ 1 đến 5 sao');
+            $table->text('comment')->nullable();
+            $table->string('status', 50)->default('pending_approval'); // 'pending_approval', 'approved', 'rejected'
+            $table->timestamps();
+
+            // Thiết lập khóa chính phức hợp: mỗi khách hàng chỉ được review 1 sản phẩm 1 lần
+            $table->primary(['customer_id', 'product_id']);
         });
     }
 

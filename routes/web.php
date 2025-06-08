@@ -48,117 +48,123 @@ Route::get('/', function () {
 });
 
 Route::prefix('admin')->name('admin.')->group(function () {
-    // Routes for forcing password change (nằm ngoài nhóm bảo vệ chính)
-    Route::get('/force-password-change', [AdminLoginController::class, 'showForcePasswordChangeForm'])->middleware('auth:admin')->name('auth.showForcePasswordChangeForm');
-    Route::post('/force-password-change', [AdminLoginController::class, 'forcePasswordChange'])->middleware('auth:admin')->name('auth.forcePasswordChange');
-
-    // Routes for guests (unauthenticated)
-    Route::middleware('guest:admin')->group(function () {
-        Route::get('login', [AdminLoginController::class, 'showLoginForm'])->name('auth.login');
-        Route::post('login', [AdminLoginController::class, 'login']);
-        Route::get('register', [AdminRegisterController::class, 'showRegistrationForm'])->name('auth.register');
-        Route::post('register', [AdminRegisterController::class, 'register']);
-    });
-
-    Route::middleware(['auth:admin', 'password.changed'])->group(function () {
+    // --- AUTH LOGIC ---
+    Route::middleware('auth:admin')->group(function () {
+        Route::get('/force-password-change', [AdminLoginController::class, 'showForcePasswordChangeForm'])->name('auth.showForcePasswordChangeForm');
+        Route::post('/force-password-change', [AdminLoginController::class, 'forcePasswordChange'])->name('auth.forcePasswordChange');
         Route::get('/pending-authorization', [PendingAuthorizationController::class, 'show'])->name('pending_authorization');
         Route::post('/logout', [AdminLoginController::class, 'logout'])->name('logout');
+    });
 
-        // Routes requiring authentication and role (được kế thừa bảo vệ từ nhóm cha)
-        Route::middleware(['admin.hasrole'])->group(function () {
-            Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::middleware('guest:admin')->group(function () {
+        Route::get('login', [AdminLoginController::class, 'showLoginForm'])->name('auth.login');
+        Route::post('login', [AdminLoginController::class, 'login'])->name('auth.login.perform');
+        Route::get('register', [AdminRegisterController::class, 'showRegistrationForm'])->name('auth.register');
+        Route::post('register', [AdminRegisterController::class, 'register'])->name('auth.register.perform');
+    });
 
-            // --- Sales Management ---
-            Route::prefix('sales')->name('sales.')->group(function () {
-                Route::get('orders', [OrderController::class, 'index'])->name('orders');
-                Route::resource('promotions', PromotionController::class)->except(['create', 'show', 'edit']);
-                Route::post('promotions/{promotion}/toggle-status', [PromotionController::class, 'toggleStatus'])->name('promotions.toggleStatus');
+    // --- MAIN ADMIN PANEL ---
+    Route::middleware(['auth:admin', 'password.changed', 'admin.hasrole'])->group(function () {
+        Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+        // --- Sales Management ---
+        Route::prefix('sales')->name('sales.')->group(function () {
+            Route::get('orders', [OrderController::class, 'index'])->name('orders.index');
+            Route::get('orders/{order}', [OrderController::class, 'show'])->name('orders.show');
+            Route::post('orders/{order}/update-status', [OrderController::class, 'updateStatus'])->name('orders.updateStatus');
+
+            Route::resource('promotions', PromotionController::class)->except(['create', 'show', 'edit'])->names('promotions');
+            Route::post('promotions/{promotion}/toggle-status', [PromotionController::class, 'toggleStatus'])->name('promotions.toggleStatus');
+        });
+
+        // --- Product Management ---
+        Route::prefix('product-management')->name('productManagement.')->group(function () {
+
+
+
+
+
+            Route::resource('products', ProductController::class)->except(['create', 'edit']);
+
+            Route::resource('categories', CategoryController::class)->except(['create', 'edit', 'show'])->names('categories');
+            Route::post('categories/{category}/toggle-status', [CategoryController::class, 'toggleStatus'])->name('categories.toggleStatus');
+
+            Route::resource('brands', BrandController::class)->except(['create', 'edit', 'show'])->names('brands');
+            Route::post('brands/{brand}/toggle-status', [BrandController::class, 'toggleStatus'])->name('brands.toggleStatus');
+
+            Route::get('vehicle-management', [VehicleManagementController::class, 'index'])->name('vehicle.index');
+            Route::resource('vehicle-brands', VehicleBrandController::class)->except(['index', 'create', 'edit', 'show'])->names('vehicleBrands');
+            Route::post('vehicle-brands/{vehicle_brand}/toggle-status', [VehicleBrandController::class, 'toggleStatus'])->name('vehicleBrands.toggleStatus');
+            Route::resource('vehicle-models', VehicleModelController::class)->except(['index', 'create', 'edit', 'show'])->names('vehicleModels');
+            Route::post('vehicle-models/{vehicle_model}/toggle-status', [VehicleModelController::class, 'toggleStatus'])->name('vehicleModels.toggleStatus');
+
+            Route::get('inventory', [InventoryController::class, 'index'])->name('inventory.index');
+        });
+
+        // --- Content Management ---
+        Route::prefix('content')->name('content.')->group(function () {
+            Route::resource('posts', PostController::class)->except(['show']);
+            Route::resource('reviews', ReviewController::class)->only(['index', 'destroy']);
+            Route::post('reviews/{review}/update-status', [ReviewController::class, 'updateStatus'])->name('reviews.updateStatus');
+        });
+
+        // --- Reports & Statistics ---
+        Route::get('reports', [ReportsController::class, 'index'])->name('reports');
+
+        // --- User Management ---
+        Route::prefix('user-management')->name('userManagement.')->group(function () {
+            Route::resource('staff', StaffAccountController::class);
+            Route::post('staff/{staff}/toggle-status', [StaffAccountController::class, 'toggleStatus'])->name('staff.toggleStatus');
+            Route::post('staff/{staff}/reset-password', [StaffAccountController::class, 'resetPassword'])->name('staff.resetPassword');
+
+            Route::resource('customers', CustomerAccountController::class)->except(['create', 'edit', 'show'])->names('customers');
+            Route::post('customers/{customer}/toggle-status', [CustomerAccountController::class, 'toggleStatus'])->name('customers.toggleStatus');
+            Route::post('customers/{customer}/reset-password', [CustomerAccountController::class, 'resetPassword'])->name('customers.resetPassword');
+            Route::post('customers/{customer}/restore', [CustomerAccountController::class, 'restore'])->name('customers.restore')->withTrashed();
+            Route::delete('customers/{customer}/force-delete', [CustomerAccountController::class, 'forceDelete'])->name('customers.forceDelete')->withTrashed();
+        });
+
+        Route::prefix('system')->name('system.')->group(function () {
+            /**
+             * SỬA ĐỔI: Thêm ->names('deliveryServices') để tên route được tạo ra là
+             * 'admin.system.deliveryServices.index' (camelCase) thay vì
+             * 'admin.system.delivery-services.index' (kebab-case).
+             * Điều này sẽ khắc phục lỗi "Route not defined" của bạn.
+             */
+            Route::resource('delivery-services', DeliveryServiceController::class)
+                ->except(['create', 'edit', 'show'])
+                ->names('deliveryServices'); // <--- SỬA ĐỔI QUAN TRỌNG
+
+            // Đặt tên cho route toggle-status cho nhất quán
+            Route::post('delivery-services/{delivery_service}/toggle-status', [DeliveryServiceController::class, 'toggleStatus'])
+                ->name('deliveryServices.toggleStatus');
+
+            Route::prefix('geography')->name('geography.')->group(function () {
+                Route::get('/', [GeographyController::class, 'index'])->name('index');
+                Route::post('/import', [GeographyController::class, 'import'])->name('import');
+                Route::resource('provinces', ProvinceController::class)->only(['store', 'update', 'destroy']);
+                Route::resource('districts', DistrictController::class)->only(['store', 'update', 'destroy']);
+                Route::resource('wards', WardController::class)->only(['store', 'update', 'destroy']);
             });
+            Route::get('settings', function () {
+                return view('admin.system.settings');
+            })->name('settings');
+        });
 
-            // --- Product Management ---
-            Route::prefix('productManagement')->name('productManagement.')->group(function () {
-                Route::get('products', [ProductController::class, 'index'])->name('products');
-                Route::resource('categories', CategoryController::class)->except(['create', 'edit', 'show']);
-                Route::post('categories/{category}/toggle-status', [CategoryController::class, 'toggleStatus'])->name('categories.toggleStatus');
-                Route::resource('brands', BrandController::class)->except(['create', 'edit', 'show'])->names('brands');
-                Route::post('brands/{brand}/toggle-status', [BrandController::class, 'toggleStatus'])->name('brands.toggleStatus');
-                Route::get('vehicle-management', [VehicleManagementController::class, 'index'])->name('vehicle.index');
-                Route::post('vehicle-brands/store', [VehicleBrandController::class, 'store'])->name('vehicleBrands.store');
-                Route::put('vehicle-brands/{vehicleBrand}', [VehicleBrandController::class, 'update'])->name('vehicleBrands.update');
-                Route::delete('vehicle-brands/{vehicleBrand}', [VehicleBrandController::class, 'destroy'])->name('vehicleBrands.destroy');
-                Route::post('vehicle-brands/{vehicleBrand}/toggle-status', [VehicleBrandController::class, 'toggleStatus'])->name('vehicleBrands.toggleStatus');
-                Route::post('vehicle-models/store', [VehicleModelController::class, 'store'])->name('vehicleModels.store');
-                Route::put('vehicle-models/{vehicleModel}', [VehicleModelController::class, 'update'])->name('vehicleModels.update');
-                Route::delete('vehicle-models/{vehicleModel}', [VehicleModelController::class, 'destroy'])->name('vehicleModels.destroy');
-                Route::post('vehicle-models/{vehicleModel}/toggle-status', [VehicleModelController::class, 'toggleStatus'])->name('vehicleModels.toggleStatus');
-                Route::get('inventory', [InventoryController::class, 'index'])->name('inventory');
-            });
-
-            // --- Content Management ---
-            Route::prefix('content')->name('content.')->group(function () {
-                Route::get('posts', [PostController::class, 'index'])->name('posts');
-                Route::get('reviews', [ReviewController::class, 'index'])->name('reviews');
-            });
-
-            // --- Reports & Statistics ---
-            Route::get('reports', [ReportsController::class, 'index'])->name('reports');
-
-            // --- User Management ---
-            Route::prefix('userManagement')->name('userManagement.')->group(function () {
-                // Staff Routes (giữ nguyên)
-                Route::resource('staff', StaffAccountController::class);
-                Route::post('staff/{staff}/toggle-status', [StaffAccountController::class, 'toggleStatus'])->name('staff.toggleStatus');
-                Route::post('staff/{staff}/reset-password', [StaffAccountController::class, 'resetPassword'])->name('staff.resetPassword');
-
-                // === CUSTOMER ROUTES ĐÃ ĐƯỢC SỬA ĐÚNG ===
-                Route::get('customers', [CustomerAccountController::class, 'index'])->name('customers.index');
-                Route::post('customers', [CustomerAccountController::class, 'store'])->name('customers.store');
-
-                // Đổi {id} thành {customer} để Route Model Binding hoạt động
-                Route::put('customers/{customer}', [CustomerAccountController::class, 'update'])->name('customers.update');
-                Route::delete('customers/{customer}', [CustomerAccountController::class, 'destroy'])->name('customers.destroy');
-                Route::post('customers/{customer}/toggle-status', [CustomerAccountController::class, 'toggleStatus'])->name('customers.toggleStatus');
-                Route::post('customers/{customer}/reset-password', [CustomerAccountController::class, 'resetPassword'])->name('customers.resetPassword');
-
-                // Thêm withTrashed() để binding hoạt động với các model trong thùng rác
-                Route::post('customers/{customer}/restore', [CustomerAccountController::class, 'restore'])->name('customers.restore')->withTrashed();
-                Route::delete('customers/{customer}/force-delete', [CustomerAccountController::class, 'forceDelete'])->name('customers.forceDelete')->withTrashed();
-            });
-
-            // --- System Configuration ---
-            Route::prefix('system')->name('system.')->group(function () {
-                Route::get('delivery-services', [DeliveryServiceController::class, 'index'])->name('deliveryServices.index');
-                Route::post('delivery-services/store', [DeliveryServiceController::class, 'store'])->name('deliveryServices.store');
-                Route::put('delivery-services/{deliveryService}', [DeliveryServiceController::class, 'update'])->name('deliveryServices.update');
-                Route::delete('delivery-services/{deliveryService}', [DeliveryServiceController::class, 'destroy'])->name('deliveryServices.destroy');
-                Route::post('delivery-services/{deliveryService}/toggle-status', [DeliveryServiceController::class, 'toggleStatus'])->name('deliveryServices.toggleStatus');
-                Route::prefix('geography')->name('geography.')->group(function () {
-                    Route::get('/', [GeographyController::class, 'index'])->name('index');
-                    Route::post('/import', [GeographyController::class, 'import'])->name('import');
-                    Route::resource('provinces', ProvinceController::class)->except(['create', 'edit', 'show']);
-                    Route::resource('districts', DistrictController::class)->except(['create', 'edit', 'show']);
-                    Route::resource('wards', WardController::class)->except(['create', 'edit', 'show']);
-                });
-                Route::get('settings', function () {
-                    return view('admin.system.settings');
-                })->name('settings');
-            });
-
-            // --- Admin Profile ---
-            Route::prefix('profile')->name('profile.')->group(function () {
-                Route::get('/', [AdminProfileController::class, 'showProfileForm'])->name('show');
-                Route::post('/update-info', [AdminProfileController::class, 'updateInfo'])->name('updateInfo');
-                Route::post('/change-password', [AdminProfileController::class, 'changePassword'])->name('changePassword');
-                Route::post('/update-avatar', [AdminProfileController::class, 'updateAvatar'])->name('updateAvatar');
-            });
+        // --- Admin Profile ---
+        Route::prefix('profile')->name('profile.')->group(function () {
+            Route::get('/', [AdminProfileController::class, 'showProfileForm'])->name('show');
+            Route::post('/update-info', [AdminProfileController::class, 'updateInfo'])->name('updateInfo');
+            Route::post('/change-password', [AdminProfileController::class, 'changePassword'])->name('changePassword');
+            Route::post('/update-avatar', [AdminProfileController::class, 'updateAvatar'])->name('updateAvatar');
         });
     });
 });
 
+// --- API Routes ---
 Route::prefix('api')->name('api.')->group(function () {
     Route::get('/provinces/{province}/districts', [GeographyApiController::class, 'getDistrictsByProvince'])->name('provinces.districts');
     Route::get('/notifications/unread-count', function () {
-        $simulatedCount = rand(0, 5);
-        return response()->json(['count' => $simulatedCount]);
+        return response()->json(['count' => rand(0, 5)]);
     })->middleware('auth:admin')->name('notifications.unreadCount');
 });

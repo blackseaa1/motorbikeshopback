@@ -9,9 +9,8 @@ class VehicleModel extends Model
 {
     use HasFactory;
 
-    protected $table = 'vehicle_models'; // Đảm bảo tên bảng đúng
+    protected $table = 'vehicle_models';
 
-    // Định nghĩa các hằng số cho trạng thái
     const STATUS_ACTIVE = 'active';
     const STATUS_INACTIVE = 'inactive';
 
@@ -24,31 +23,55 @@ class VehicleModel extends Model
     ];
 
     /**
-     * Hãng xe của dòng xe này.
+     * SỬA ĐỔI 1: Thêm $appends để tự động thêm accessor vào JSON.
+     * @var array
      */
+    protected $appends = [
+        'status_text',
+        'status_badge_class'
+    ];
+
+    //======================================================================
+    // RELATIONSHIPS
+    //======================================================================
+
     public function vehicleBrand()
     {
         return $this->belongsTo(VehicleBrand::class, 'vehicle_brand_id');
     }
 
-    /**
-     * Các sản phẩm thuộc dòng xe này. (Thêm nếu bạn có model Product)
-     */
     public function products()
     {
-        // return $this->hasMany(Product::class, 'vehicle_model_id');
-        // Giả sử bạn có một model Product và cột vehicle_model_id
-        // Nếu không, bạn có thể comment hoặc xóa dòng này
-        // Trong VehicleModelController, bạn có kiểm tra $vehicleModel->products()->exists()
-        // nên bạn cần định nghĩa relation này hoặc thay đổi logic kiểm tra đó.
-        // Tạm thời, tôi sẽ comment nó đi để tránh lỗi nếu bạn chưa có Product model.
-        return $this->hasMany('App\Models\Product'); // Thay 'App\Models\Product' bằng model Product thực tế
+        return $this->belongsToMany(Product::class, 'product_vehicle_models', 'vehicle_model_id', 'product_id')
+            ->withTimestamps();
     }
 
+    //======================================================================
+    // ACCESSORS
+    //======================================================================
 
     /**
-     * Kiểm tra xem dòng xe có đang hoạt động không.
+     * SỬA ĐỔI 2: Thêm các Accessor cho trạng thái.
      */
+    public function getStatusTextAttribute(): string
+    {
+        return $this->isActive() ? 'Hoạt động' : 'Đã ẩn';
+    }
+
+    public function getStatusBadgeClassAttribute(): string
+    {
+        return $this->isActive() ? 'bg-success' : 'bg-secondary';
+    }
+
+    //======================================================================
+    // SCOPES & HELPERS
+    //======================================================================
+
+    public function scopeActive($query)
+    {
+        return $query->where('status', self::STATUS_ACTIVE);
+    }
+
     public function isActive()
     {
         return $this->status === self::STATUS_ACTIVE;

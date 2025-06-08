@@ -15,6 +15,11 @@ class VehicleManagementController extends Controller
         $selectedBrandIdForModelsFilter = $request->query('filter_vehicle_brand_id');
         $vehicleModelsQuery = VehicleModel::with('vehicleBrand')->latest();
 
+        // THÊM DÒNG NÀY: Chỉ hiển thị dòng xe của các hãng xe đang Hoạt động (active)
+        $vehicleModelsQuery->whereHas('vehicleBrand', function ($query) {
+            $query->where('status', VehicleBrand::STATUS_ACTIVE);
+        });
+
         if ($selectedBrandIdForModelsFilter) {
             $vehicleModelsQuery->where('vehicle_brand_id', $selectedBrandIdForModelsFilter);
         }
@@ -26,7 +31,7 @@ class VehicleManagementController extends Controller
         // Dữ liệu cho tab Hãng xe
         $vehicleBrands = VehicleBrand::latest()->paginate(10, ['*'], 'brands_page'); // Paginate cho Hãng xe
 
-        return view('admin.productManagement.vehicle', [
+        return view('admin.productManagement.vehicle.vehicles', [
             'vehicleModels' => $vehicleModels,
             'allVehicleBrandsForFilter' => $allActiveVehicleBrands,
             'selectedBrandIdForFilter' => $selectedBrandIdForModelsFilter,

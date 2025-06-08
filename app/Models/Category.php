@@ -9,31 +9,66 @@ class Category extends Model
 {
     use HasFactory;
 
-    protected $table = 'categories'; //
+    protected $table = 'categories';
 
-    // Định nghĩa các hằng số cho trạng thái (sử dụng tiếng Anh cho giá trị trong DB)
+    // Định nghĩa các hằng số cho trạng thái
     const STATUS_ACTIVE = 'active';
     const STATUS_INACTIVE = 'inactive';
 
     protected $fillable = [
-        'name', //
-        'description', //
-        'status', // Đảm bảo đã có cột này trong CSDL và migration
+        'name',
+        'description',
+        'status',
     ];
+
+    /**
+     * Thêm các accessor vào các dạng biểu diễn mảng/JSON của model.
+     * @var array
+     */
+    protected $appends = [
+        'status_text',
+        'status_badge_class'
+    ];
+
+
+    //======================================================================
+    // RELATIONSHIPS (CÁC MỐI QUAN HỆ)
+    //======================================================================
 
     /**
      * Các sản phẩm thuộc danh mục này.
      */
     public function products()
     {
-        return $this->hasMany(Product::class, 'category_id'); //
+        return $this->hasMany(Product::class, 'category_id');
+    }
+
+    //======================================================================
+    // ACCESSORS (TRÌNH TRUY CẬP)
+    //======================================================================
+
+    /**
+     * Lấy văn bản mô tả trạng thái (ví dụ: 'Hoạt động', 'Đã ẩn').
+     */
+    public function getStatusTextAttribute(): string
+    {
+        return $this->isActive() ? 'Hoạt động' : 'Đã ẩn';
     }
 
     /**
+     * Lấy lớp CSS cho badge trạng thái (ví dụ: 'bg-success', 'bg-secondary').
+     */
+    public function getStatusBadgeClassAttribute(): string
+    {
+        return $this->isActive() ? 'bg-success' : 'bg-secondary';
+    }
+
+    //======================================================================
+    // SCOPES & HELPERS (PHẠM VI & HÀM HỖ TRỢ)
+    //======================================================================
+
+    /**
      * Scope để chỉ lấy các danh mục đang hoạt động.
-     *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeActive($query)
     {
@@ -42,11 +77,11 @@ class Category extends Model
 
     /**
      * Kiểm tra xem danh mục có đang hoạt động không.
-     *
-     * @return bool
+     * Phương thức này đã được cập nhật để chấp nhận cả giá trị 'visible' cũ là trạng thái hoạt động.
      */
-    public function isActive()
+    public function isActive(): bool
     {
-        return $this->status === self::STATUS_ACTIVE;
+        // Kiểm tra xem status có nằm trong mảng các giá trị được coi là "active" không.
+        return in_array($this->status, [self::STATUS_ACTIVE, 'visible']);
     }
 }

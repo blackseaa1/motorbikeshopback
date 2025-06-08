@@ -466,6 +466,54 @@
     border-bottom-right-radius: calc(0.375rem - 1px);
 }
 
+/* Các style cho trang quản lý sản phẩm, được scope bằng #adminProductsPage */
+#adminProductsPage .btn-action {
+    width: 38px;
+}
+
+#adminProductsPage .img-thumbnail-small {
+    width: 50px;
+    height: 50px;
+    object-fit: contain;
+}
+
+#adminProductsPage .img-preview-container {
+    position: relative;
+    display: inline-block;
+    margin-right: 8px;
+    margin-bottom: 8px;
+}
+
+#adminProductsPage .img-preview {
+    width: 100px;
+    height: 100px;
+    object-fit: cover;
+    border-radius: 5px;
+    border: 1px solid #ddd;
+}
+
+#adminProductsPage .img-preview-remove {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    width: 20px;
+    height: 20px;
+    background-color: rgba(255, 0, 0, 0.8);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+#adminProductsPage .bootstrap-select .dropdown-menu {
+    max-height: 300px !important;
+}
+
 /* ========================================================================== */
 /* === CSS CHO TRANG HỒ SƠ (PROFILE PAGE) === */
 /* ========================================================================== */

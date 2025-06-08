@@ -3,17 +3,25 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model; // Hoặc Relations\Pivot
+use Illuminate\Database\Eloquent\Model;
 
-class Review extends Model // Hoặc Pivot
+class Review extends Model
 {
     use HasFactory;
 
-    protected $table = 'reviews'; 
-    // protected $primaryKey = ['customer_id', 'product_id']; // Laravel không hỗ trợ array primary key
+    protected $table = 'reviews';
 
-    public $incrementing = false; // Không có cột id auto-increment đơn lẻ
+    /**
+     * SỬA ĐỔI 1: Bỏ các khai báo khóa chính phức hợp để dùng id tự tăng.
+     */
+    // public $incrementing = false; // Bỏ dòng này
 
+    /**
+     * SỬA ĐỔI 2: Định nghĩa các hằng số cho trạng thái.
+     */
+    const STATUS_PENDING = 'pending';
+    const STATUS_APPROVED = 'approved';
+    const STATUS_REJECTED = 'rejected';
 
     protected $fillable = [
         'customer_id',
@@ -23,23 +31,46 @@ class Review extends Model // Hoặc Pivot
         'status',
     ];
 
+    /**
+     * SỬA ĐỔI 3: Thêm $appends.
+     * @var array
+     */
+    protected $appends = ['status_text', 'status_badge_class'];
+
     protected $casts = [
         'rating' => 'integer',
     ];
 
-    /**
-     * Khách hàng đã viết đánh giá.
-     */
     public function customer()
     {
         return $this->belongsTo(Customer::class, 'customer_id');
     }
 
-    /**
-     * Sản phẩm được đánh giá.
-     */
     public function product()
     {
         return $this->belongsTo(Product::class, 'product_id');
+    }
+
+    /**
+     * SỬA ĐỔI 4: Thêm các Accessor cho trạng thái.
+     */
+    public function getStatusTextAttribute(): string
+    {
+        return match ($this->status) {
+            self::STATUS_PENDING => 'Chờ duyệt',
+            self::STATUS_APPROVED => 'Đã duyệt',
+            self::STATUS_REJECTED => 'Từ chối',
+            default => 'Không xác định',
+        };
+    }
+
+    public function getStatusBadgeClassAttribute(): string
+    {
+        return match ($this->status) {
+            self::STATUS_PENDING => 'bg-warning text-dark',
+            self::STATUS_APPROVED => 'bg-success',
+            self::STATUS_REJECTED => 'bg-danger',
+            default => 'bg-secondary',
+        };
     }
 }

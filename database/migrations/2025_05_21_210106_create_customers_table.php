@@ -12,13 +12,17 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('customers', function (Blueprint $table) {
-            $table->id(); // INT PRIMARY KEY AUTO_INCREMENT [cite: 41, 90]
-            $table->string('name'); // VARCHAR(255) NOT NULL [cite: 41, 90]
-            $table->string('email')->unique(); // VARCHAR(255) UNIQUE NOT NULL [cite: 41, 90]
-            $table->string('password'); // VARCHAR(255) NOT NULL [cite: 41, 90]
-            $table->string('phone')->nullable(); // VARCHAR(255) [cite: 41, 90]
-            $table->text('img')->nullable(); // TEXT, ảnh đại diện khách hàng [cite: 41, 90]
-            $table->timestamps(); // created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME ON UPDATE CURRENT_TIMESTAMP [cite: 41, 90]
+            $table->id();
+            $table->string('name');
+            $table->string('email')->unique();
+            $table->string('password');
+            $table->string('phone')->nullable();
+            $table->string('status', 50)->default('active');
+            $table->boolean('password_change_required')->default(false);
+            $table->text('img')->nullable();
+            $table->rememberToken();
+            $table->timestamps();
+            $table->softDeletes(); // Thêm cột deleted_at cho soft delete
         });
     }
 

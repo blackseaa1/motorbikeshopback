@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Carbon\Carbon; // Import Carbon
+use Carbon\Carbon;
 
 class Promotion extends Model
 {
@@ -12,25 +12,25 @@ class Promotion extends Model
 
     protected $table = 'promotions';
 
-    // Định nghĩa các hằng số cho trạng thái cài đặt (manual status)
-    const STATUS_ACTIVE = 'active';     // Người dùng cài đặt là active
-    const STATUS_INACTIVE = 'inactive'; // Người dùng cài đặt là inactive
+    // Trạng thái cài đặt thủ công
+    const STATUS_MANUAL_ACTIVE = 'active';
+    const STATUS_MANUAL_INACTIVE = 'inactive';
 
-    // Các trạng thái hiển thị hiệu lực (effective status)
-    const STATUS_EFFECTIVE_ACTIVE = 'active';      // Đang trong thời gian và được bật
-    const STATUS_EFFECTIVE_SCHEDULED = 'scheduled';  // Chưa tới ngày bắt đầu nhưng được bật
-    const STATUS_EFFECTIVE_EXPIRED = 'expired';    // Đã qua ngày kết thúc (dù được bật hay không)
-    const STATUS_EFFECTIVE_INACTIVE = 'inactive';  // Bị tắt thủ công
+    // Trạng thái hiệu lực (tính toán động)
+    const STATUS_EFFECTIVE_ACTIVE = 'active';
+    const STATUS_EFFECTIVE_SCHEDULED = 'scheduled';
+    const STATUS_EFFECTIVE_EXPIRED = 'expired';
+    const STATUS_EFFECTIVE_INACTIVE = 'inactive'; // Bị tắt thủ công
 
     protected $fillable = [
         'code',
-        'description', // Thêm description
+        'description',
         'discount_percentage',
         'start_date',
         'end_date',
-        'max_uses',    // Số lượt sử dụng tối đa
-        'uses_count',  // Số lượt đã sử dụng
-        'status',      // Trạng thái cài đặt bởi người dùng (active/inactive)
+        'max_uses',
+        'uses_count',
+        'status',
     ];
 
     protected $casts = [
@@ -42,113 +42,83 @@ class Promotion extends Model
     ];
 
     /**
-     * Các đơn hàng sử dụng mã khuyến mãi này.
+     * SỬA ĐỔI 1: Thêm $appends để tự động thêm các accessor vào JSON.
+     * @var array
      */
+    protected $appends = [
+        'effective_status_key',
+        'effective_status_text',
+        'effective_status_badge_class',
+        'manual_status_text',
+        'manual_status_badge_class',
+        'formatted_discount'
+    ];
+
+
     public function orders()
     {
         return $this->hasMany(Order::class, 'promotion_id');
     }
 
     /**
-     * Lấy trạng thái hiệu lực hiện tại của khuyến mãi.
-     *
-     * @return string
+     * SỬA ĐỔI 2: Chuyển các phương thức helper thành Accessor.
      */
-    public function getEffectiveStatusKey()
+    public function getEffectiveStatusKeyAttribute(): string
     {
-        $now = Carbon::now();
-        if ($this->status === self::STATUS_INACTIVE) {
+        if ($this->status === self::STATUS_MANUAL_INACTIVE) {
             return self::STATUS_EFFECTIVE_INACTIVE;
         }
-        if ($this->end_date && $this->end_date < $now) {
+        if ($this->end_date && $this->end_date < Carbon::now()) {
             return self::STATUS_EFFECTIVE_EXPIRED;
         }
-        if ($this->start_date && $this->start_date > $now) {
-            return self::STATUS_EFFECTIVE_SCHEDULED;
-        }
-        // Nếu max_uses được đặt và uses_count >= max_uses
         if (isset($this->max_uses) && $this->uses_count >= $this->max_uses) {
-            return self::STATUS_EFFECTIVE_EXPIRED; // Coi như hết hạn/hết lượt
+            return self::STATUS_EFFECTIVE_EXPIRED;
+        }
+        if ($this->start_date && $this->start_date > Carbon::now()) {
+            return self::STATUS_EFFECTIVE_SCHEDULED;
         }
         return self::STATUS_EFFECTIVE_ACTIVE;
     }
 
-    /**
-     * Lấy text hiển thị cho trạng thái hiệu lực.
-     *
-     * @return string
-     */
-    public function getCurrentDisplayStatus()
+    public function getEffectiveStatusTextAttribute(): string
     {
-        switch ($this->getEffectiveStatusKey()) {
-            case self::STATUS_EFFECTIVE_ACTIVE:
-                return 'Đang có hiệu lực';
-            case self::STATUS_EFFECTIVE_SCHEDULED:
-                return 'Chưa bắt đầu';
-            case self::STATUS_EFFECTIVE_EXPIRED:
-                return 'Đã kết thúc/Hết lượt';
-            case self::STATUS_EFFECTIVE_INACTIVE:
-                return 'Đã tắt';
-            default:
-                return 'Không xác định';
-        }
+        return match ($this->effective_status_key) {
+            self::STATUS_EFFECTIVE_ACTIVE => 'Đang hiệu lực',
+            self::STATUS_EFFECTIVE_SCHEDULED => 'Chưa bắt đầu',
+            self::STATUS_EFFECTIVE_EXPIRED => 'Hết hạn/Hết lượt',
+            self::STATUS_EFFECTIVE_INACTIVE => 'Đã tắt',
+            default => 'Không xác định',
+        };
     }
 
-    /**
-     * Lấy class CSS (badge) cho trạng thái hiệu lực.
-     *
-     * @return string
-     */
-    public function getStatusBadgeClass()
+    public function getEffectiveStatusBadgeClassAttribute(): string
     {
-        switch ($this->getEffectiveStatusKey()) {
-            case self::STATUS_EFFECTIVE_ACTIVE:
-                return 'bg-success';
-            case self::STATUS_EFFECTIVE_SCHEDULED:
-                return 'bg-info text-dark';
-            case self::STATUS_EFFECTIVE_EXPIRED:
-                return 'bg-danger';
-            case self::STATUS_EFFECTIVE_INACTIVE:
-                return 'bg-secondary';
-            default:
-                return 'bg-warning text-dark';
-        }
+        return match ($this->effective_status_key) {
+            self::STATUS_EFFECTIVE_ACTIVE => 'bg-success',
+            self::STATUS_EFFECTIVE_SCHEDULED => 'bg-info text-dark',
+            self::STATUS_EFFECTIVE_EXPIRED => 'bg-danger',
+            self::STATUS_EFFECTIVE_INACTIVE => 'bg-secondary',
+            default => 'bg-warning text-dark',
+        };
     }
 
-    /**
-     * Lấy text hiển thị cho trạng thái cài đặt (manual status).
-     *
-     * @return string
-     */
-    public function getConfigStatusText()
+    public function getManualStatusTextAttribute(): string
     {
-        if ($this->status === self::STATUS_ACTIVE) {
-            return 'Hoạt động (Bật)';
-        }
-        return 'Tạm tắt (Tắt)';
+        return $this->status === self::STATUS_MANUAL_ACTIVE ? 'Đang bật' : 'Đang tắt';
     }
 
-    /**
-     * Lấy class CSS (badge) cho trạng thái cài đặt.
-     *
-     * @return string
-     */
-    public function getConfigStatusBadgeClass()
+    public function getManualStatusBadgeClassAttribute(): string
     {
-        if ($this->status === self::STATUS_ACTIVE) {
-            return 'bg-success';
-        }
-        return 'bg-secondary';
+        return $this->status === self::STATUS_MANUAL_ACTIVE ? 'bg-success' : 'bg-secondary';
     }
 
-
-    /**
-     * Kiểm tra xem trạng thái cài đặt có phải là active không.
-     *
-     * @return bool
-     */
-    public function isManuallyActive()
+    public function getFormattedDiscountAttribute(): string
     {
-        return $this->status === self::STATUS_ACTIVE;
+        return rtrim(rtrim(number_format($this->discount_percentage, 2), '0'), '.') . '%';
+    }
+
+    public function isManuallyActive(): bool
+    {
+        return $this->status === self::STATUS_MANUAL_ACTIVE;
     }
 }

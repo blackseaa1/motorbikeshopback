@@ -14,8 +14,8 @@ class DeliveryServiceController extends Controller
 {
     public function index()
     {
-        $deliveryServices = DeliveryService::latest()->paginate(10); // Sử dụng paginate
-        return view('admin.system.deliveryServices', compact('deliveryServices')); // Đảm bảo view này tồn tại
+        $deliveryServices = DeliveryService::latest()->paginate(10);
+        return view('admin.system.deliveryServices', compact('deliveryServices'));
     }
 
     public function store(Request $request)
@@ -30,9 +30,8 @@ class DeliveryServiceController extends Controller
         if ($request->hasFile('logo_url')) {
             $validatedData['logo_url'] = $request->file('logo_url')->store('delivery_service_logos', 'public');
         } else {
-            $validatedData['logo_url'] = null; // Đảm bảo là null nếu không có file
+            $validatedData['logo_url'] = null;
         }
-
 
         DeliveryService::create($validatedData);
 
@@ -42,7 +41,7 @@ class DeliveryServiceController extends Controller
                 'message' => 'Thêm đơn vị giao hàng thành công!',
             ]);
         }
-        return redirect()->route('admin.system.deliveryServices.index') // Hoặc route bạn dùng cho trang list
+        return redirect()->route('admin.system.deliveryServices.index')
             ->with('success', 'Thêm đơn vị giao hàng thành công!');
     }
 
@@ -52,17 +51,21 @@ class DeliveryServiceController extends Controller
             'name' => 'required|string|max:150|unique:delivery_services,name,' . $deliveryService->id,
             'shipping_fee' => 'required|numeric|min:0',
             'logo_url' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg,webp|max:2048',
+            'existing_logo_url' => 'nullable|string',
             'status' => ['required', Rule::in([DeliveryService::STATUS_ACTIVE, DeliveryService::STATUS_INACTIVE])],
         ]);
 
+        // Handle logo update
         if ($request->hasFile('logo_url')) {
+            // Delete old logo if it exists
             if ($deliveryService->logo_url) {
                 Storage::disk('public')->delete($deliveryService->logo_url);
             }
             $validatedData['logo_url'] = $request->file('logo_url')->store('delivery_service_logos', 'public');
+        } else {
+            // Preserve existing logo if no new file is uploaded
+            $validatedData['logo_url'] = $deliveryService->logo_url;
         }
-        // Nếu không upload file mới và muốn giữ lại logo cũ thì không cần gán $validatedData['logo_url']
-        // Nếu muốn xóa logo cũ mà không upload mới, cần thêm 1 checkbox "Xóa logo hiện tại"
 
         $deliveryService->update($validatedData);
 
@@ -79,7 +82,7 @@ class DeliveryServiceController extends Controller
 
     public function destroy(Request $request, DeliveryService $deliveryService)
     {
-        $masterDeletePassword = Config::get('admin.deletion_password'); // Lấy từ config/admin.php
+        $masterDeletePassword = Config::get('admin.deletion_password');
         if ($masterDeletePassword) {
             $request->validate([
                 'deletion_password' => 'required|string',
@@ -87,15 +90,14 @@ class DeliveryServiceController extends Controller
 
             if ($request->deletion_password !== $masterDeletePassword) {
                 if ($request->expectsJson()) {
-                    return response()->json(['success' => false, 'message' => 'Mật khẩu xóa không chính xác.'], 422);
+                    return response()->json(['success' => false, 'message' => 'Mật khẩu xóa không chính xác.', 'errors' => ['deletion_password' => ['Mật khẩu xóa không chính xác.']]], 422);
                 }
                 return back()->with('error', 'Mật khẩu xóa không chính xác.');
             }
         }
 
         try {
-            // Kiểm tra ràng buộc, ví dụ: nếu đơn vị này đã được sử dụng trong đơn hàng nào đó
-            if ($deliveryService->orders()->exists()) { // Giả sử có relation 'orders'
+            if ($deliveryService->orders()->exists()) {
                 $msg = 'Không thể xóa đơn vị này vì đã được sử dụng trong các đơn hàng.';
                 if ($request->expectsJson()) return response()->json(['success' => false, 'message' => $msg], 422);
                 return redirect()->route('admin.system.deliveryServices.index')->with('error', $msg);
@@ -126,13 +128,19 @@ class DeliveryServiceController extends Controller
         $deliveryService->status = ($deliveryService->status === DeliveryService::STATUS_ACTIVE) ? DeliveryService::STATUS_INACTIVE : DeliveryService::STATUS_ACTIVE;
         $deliveryService->save();
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Cập nhật trạng thái thành công!',
-            'new_status' => $deliveryService->status,
-            'status_text' => $deliveryService->isActive() ? 'Hoạt động' : 'Đã ẩn',
-            'new_icon_class' => $deliveryService->isActive() ? 'bi-eye-slash-fill' : 'bi-eye-fill',
-            'new_button_title' => $deliveryService->isActive() ? 'Ẩn đơn vị' : 'Hiện đơn vị',
-        ]);
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Cập nhật trạng thái đơn vị giao hàng thành công!',
+                'new_status' => $deliveryService->status,
+                'status_text' => $deliveryService->isActive() ? 'Hoạt động' : 'Đã ẩn',
+                'new_icon_class' => 'bi-power',
+                'new_button_title' => $deliveryService->isActive() ? 'Ẩn đơn vị này' : 'Hiển thị đơn vị này'
+            ]);
+        }
+
+        $message = $deliveryService->isActive() ? 'Đơn vị giao hàng đã được hiển thị.' : 'Đơn vị giao hàng đã được ẩn.';
+        return redirect()->route('admin.system.deliveryServices.index')
+            ->with('success', $message);
     }
 }

@@ -12,11 +12,12 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('vehicle_brands', function (Blueprint $table) {
-            $table->id(); // INT PRIMARY KEY AUTO_INCREMENT [cite: 53, 96]
-            $table->string('name', 100); // VARCHAR(100) NOT NULL, Tên hãng xe [cite: 53, 96]
-            $table->text('description')->nullable(); // TEXT, Mô tả [cite: 53, 96]
-            $table->text('logo_url')->nullable(); // TEXT, Link logo hãng xe [cite: 53, 96]
-            $table->timestamps(); // created_at DATETIME, updated_at DATETIME (auto) [cite: 53, 96]
+            $table->id();
+            $table->string('name', 100);
+            $table->text('description')->nullable();
+            $table->text('logo_url')->nullable();
+            $table->string('status', 50)->default('active');
+            $table->timestamps();
         });
     }
 

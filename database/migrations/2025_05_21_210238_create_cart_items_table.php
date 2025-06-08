@@ -12,13 +12,19 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('cart_items', function (Blueprint $table) {
-            $table->foreignId('cart_id')->constrained('carts')->onDelete('cascade')->onUpdate('cascade'); // FK đến carts(id) [cite: 75, 109]
-            $table->foreignId('product_id')->constrained('products')->onDelete('cascade')->onUpdate('cascade'); // FK đến products(id) [cite: 75, 109]
-            $table->integer('quantity'); // Số lượng sản phẩm trong giỏ hàng [cite: 75, 109]
-            $table->timestamps(); // created_at DATETIME, updated_at DATETIME [cite: 75, 109]
-            
-            // Một sản phẩm chỉ được thêm 1 lần vào mỗi giỏ hàng [cite: 75, 109]
-            $table->primary(['cart_id', 'product_id']); 
+            $table->foreignId('cart_id')
+                ->constrained('carts')
+                ->cascadeOnUpdate()
+                ->cascadeOnDelete();
+            $table->foreignId('product_id')
+                ->constrained('products')
+                ->cascadeOnUpdate()
+                ->cascadeOnDelete();
+            $table->integer('quantity');
+            $table->timestamps();
+
+            // Khóa chính phức hợp
+            $table->primary(['cart_id', 'product_id']);
         });
     }
 

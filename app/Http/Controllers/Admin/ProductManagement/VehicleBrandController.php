@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin\ProductManagement;
 
 use App\Http\Controllers\Controller;
 use App\Models\VehicleBrand;
+use App\Models\VehicleModel; // Đảm bảo dòng này đã được thêm vào
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Database\QueryException;
@@ -115,12 +116,22 @@ class VehicleBrandController extends Controller
         }
     }
 
-    public function toggleStatus(Request $request, VehicleBrand $vehicleBrand) // Giữ nguyên từ file bạn gửi
+    public function toggleStatus(Request $request, VehicleBrand $vehicleBrand)
     {
-        $vehicleBrand->status = ($vehicleBrand->status === VehicleBrand::STATUS_ACTIVE) ? VehicleBrand::STATUS_INACTIVE : VehicleBrand::STATUS_ACTIVE;
+        // Xác định trạng thái mới của hãng xe
+        $newStatus = ($vehicleBrand->status === VehicleBrand::STATUS_ACTIVE) ? VehicleBrand::STATUS_INACTIVE : VehicleBrand::STATUS_ACTIVE;
+        $vehicleBrand->status = $newStatus;
         $vehicleBrand->save();
 
-        return response()->json([ // Luôn trả JSON cho AJAX
+        // Nếu hãng xe bị ẩn, ẩn tất cả các dòng xe thuộc hãng này
+        if ($newStatus === VehicleBrand::STATUS_INACTIVE) {
+            $vehicleBrand->vehicleModels()->update(['status' => VehicleModel::STATUS_INACTIVE]);
+        } else { // Nếu hãng xe được kích hoạt (newStatus là active)
+            // KÍCH HOẠT LẠI TẤT CẢ CÁC DÒNG XE CỦA HÃNG NÀY
+            $vehicleBrand->vehicleModels()->update(['status' => VehicleModel::STATUS_ACTIVE]);
+        }
+
+        return response()->json([
             'success' => true,
             'message' => 'Cập nhật trạng thái hãng xe thành công!',
             'new_status' => $vehicleBrand->status,

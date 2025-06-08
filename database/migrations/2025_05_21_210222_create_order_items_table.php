@@ -12,14 +12,13 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('order_items', function (Blueprint $table) {
-            $table->foreignId('order_id')->constrained('orders')->onDelete('cascade')->onUpdate('cascade'); // FK đến orders(id) [cite: 69, 106]
-            $table->foreignId('product_id')->constrained('products')->onDelete('cascade')->onUpdate('cascade'); // FK đến products(id) [cite: 69, 106] (SQL gốc là CASCADE, nên nếu sản phẩm bị xóa, item này cũng bị xóa khỏi đơn hàng)
-            $table->integer('quantity'); // Số lượng sản phẩm trong đơn hàng [cite: 69, 106]
-            $table->decimal('price', 10, 2); // Giá của sản phẩm tại thời điểm đặt [cite: 69, 106]
-            $table->timestamps(); // created_at DATETIME, updated_at DATETIME [cite: 69, 106]
-            
-            // Không cho phép cùng sản phẩm trong một đơn lặp lại [cite: 69, 106]
-            $table->primary(['order_id', 'product_id']); 
+            $table->foreignId('order_id')->constrained()->cascadeOnUpdate()->cascadeOnDelete();
+            $table->foreignId('product_id')->constrained()->cascadeOnUpdate()->cascadeOnDelete();
+            $table->integer('quantity');
+            $table->decimal('price', 10, 2);
+            $table->timestamps();
+            // Set Primary Key
+            $table->primary(['order_id', 'product_id']);
         });
     }
 

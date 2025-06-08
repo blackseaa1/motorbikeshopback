@@ -345,6 +345,9 @@
         if (typeof initializePromotionsPage === 'function' && document.getElementById('adminPromotionsPage')) {
             initializePromotionsPage();
         }
+        if (typeof initializeProductsPage === 'function' && document.getElementById('adminProductsPage')) {
+            initializeProductsPage();
+        }
         if (typeof initializeProfilePage === 'function' && document.getElementById('adminProfilePage')) {
             initializeProfilePage();
         }
@@ -352,7 +355,10 @@
             initializeCategoriesPage();
         }
         if (typeof initializeBrandsPage === 'function' && document.getElementById('adminBrandsPage')) {
-            initializeBrandsPage();
+            // Pass validation data to initializeBrandsPage
+            const hasValidationErrors = window.brandValidationErrors || false;
+            const formMarker = window.brandFormMarker || null;
+            initializeBrandsPage(hasValidationErrors, formMarker);
         }
         if (document.getElementById('adminVehicleManagementPage') && typeof initializeVehicleManagementPage === 'function') {
             initializeVehicleManagementPage();
