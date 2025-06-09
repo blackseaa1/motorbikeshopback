@@ -1,5 +1,5 @@
 /* resources/css/app.css */
-@import 'bootstrap/dist/css/bootstrap.min.css';
+@import 'node_modules/bootstrap/dist/css/bootstrap.min.css';
 @import 'bootstrap-icons/font/bootstrap-icons.css';
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 @import 'bootstrap-select/dist/css/bootstrap-select.min.css';

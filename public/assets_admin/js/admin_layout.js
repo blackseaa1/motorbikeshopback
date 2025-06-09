@@ -16,6 +16,8 @@
         const overlay = document.getElementById('loading-overlay');
         if (overlay) {
             overlay.classList.add('active');
+        } else {
+            console.warn('Không tìm thấy loading-overlay.');
         }
     };
 
@@ -26,6 +28,8 @@
         const overlay = document.getElementById('loading-overlay');
         if (overlay) {
             overlay.classList.remove('active');
+        } else {
+            console.warn('Không tìm thấy loading-overlay.');
         }
     };
 
@@ -36,11 +40,13 @@
         const modalElement = document.getElementById('appInfoModal');
         if (!modalElement) {
             console.error('Modal element #appInfoModal không tìm thấy!');
-            const messageText = (typeof message === 'object' && message.html) ?
-                `HTML Content (see console for details): ${title}` :
-                (title !== 'Thông báo' ? `${title}: ${message}` : message);
+            const messageText = (typeof message === 'object' && message.html)
+                ? `HTML Content (see console for details): ${title}`
+                : (title !== 'Thông báo' ? `${title}: ${message}` : message);
             alert(messageText);
-            if (typeof message === 'object' && message.html) console.error("HTML content for missing modal:", message.html);
+            if (typeof message === 'object' && message.html) {
+                console.error("HTML content for missing modal:", message.html);
+            }
             return;
         }
 
@@ -87,14 +93,23 @@
 
         try {
             const appModalInstance = bootstrap.Modal.getInstance(modalElement) || new bootstrap.Modal(modalElement);
+            // Đóng tất cả modal khác trước khi mở modal mới
+            document.querySelectorAll('.modal').forEach(modalEl => {
+                if (modalEl !== modalElement) {
+                    const modalInstance = bootstrap.Modal.getInstance(modalEl);
+                    if (modalInstance) modalInstance.hide();
+                }
+            });
             appModalInstance.show();
         } catch (e) {
             console.error("Lỗi khi hiển thị Bootstrap modal (#appInfoModal):", e);
-            const messageText = (typeof message === 'object' && message.html) ?
-                `HTML Content (see console for details): ${title}` :
-                (title !== 'Thông báo' ? `${title}: ${message}` : message);
+            const messageText = (typeof message === 'object' && message.html)
+                ? `HTML Content (see console for details): ${title}`
+                : (title !== 'Thông báo' ? `${title}: ${message}` : message);
             alert(messageText);
-            if (typeof message === 'object' && message.html) console.error("HTML content for modal error:", message.html);
+            if (typeof message === 'object' && message.html) {
+                console.error("HTML content for modal error:", message.html);
+            }
         }
     };
 
@@ -102,7 +117,10 @@
      * A.4. Hiển thị lỗi validation trên một form bất kỳ.
      */
     window.displayValidationErrors = function (form, errors) {
-        if (!form || !errors) return;
+        if (!form || !errors) {
+            console.warn('Form hoặc errors không hợp lệ:', { form, errors });
+            return;
+        }
         form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
         form.querySelectorAll('.invalid-feedback').forEach(el => el.textContent = '');
 
@@ -116,12 +134,19 @@
                 }
             }
         }
+
+        // Làm mới selectpicker sau khi hiển thị lỗi
+        try {
+            $(form).find('.selectpicker').selectpicker('refresh');
+        } catch (error) {
+            console.error('Lỗi khi làm mới selectpicker sau validation:', error);
+        }
     };
 
     /**
      * A.5. Gắn sự kiện submit AJAX cho một form.
      */
-    window.setupAjaxForm = function (formId, modalId = null, successCallback = null) {
+    window.setupAjaxForm = function (formId, modalId = null, successCallback = null, errorCallback = null) {
         const form = document.getElementById(formId);
         if (!form) {
             console.error(`Không tìm thấy form với ID: ${formId}`);
@@ -132,8 +157,9 @@
             e.preventDefault();
             window.showAppLoader();
             try {
+                const method = form.querySelector('input[name="_method"]')?.value || form.method;
                 const response = await fetch(form.action, {
-                    method: 'POST',
+                    method: method.toUpperCase() === 'POST' ? 'POST' : method.toUpperCase(),
                     body: new FormData(form),
                     headers: {
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
@@ -149,6 +175,7 @@
                     } else {
                         throw new Error(result.message || 'Có lỗi không xác định.');
                     }
+                    if (errorCallback) errorCallback(result);
                     return;
                 }
 
@@ -158,6 +185,13 @@
                 }
 
                 form.reset();
+                // Làm mới selectpicker sau khi reset form
+                try {
+                    $(form).find('.selectpicker').selectpicker('val', '').selectpicker('refresh');
+                } catch (error) {
+                    console.error('Lỗi khi làm mới selectpicker sau reset form:', error);
+                }
+
                 window.showAppInfoModal(result.message, 'success', 'Thành công');
 
                 if (successCallback) {
@@ -168,6 +202,7 @@
             } catch (error) {
                 console.error(`Lỗi khi submit form ${formId}:`, error);
                 window.showAppInfoModal(error.message, 'error', 'Lỗi Hệ thống');
+                if (errorCallback) errorCallback(error);
             } finally {
                 window.hideAppLoader();
             }
@@ -279,8 +314,8 @@
             { inputId: 'vbLogoUpdate', previewId: 'vbLogoPreviewUpdate' },
             { inputId: 'categoryLogoCreate', previewId: 'categoryLogoPreviewCreate' },
             { inputId: 'categoryLogoUpdate', previewId: 'categoryLogoPreviewUpdate' },
-            { inputId: 'productImageCreate', previewId: 'productImagePreviewCreate' },
-            { inputId: 'productImageUpdate', previewId: 'productImagePreviewUpdate' },
+            { inputId: 'productImagesCreate', previewId: 'productImagesPreviewCreate' },
+            { inputId: 'productImagesUpdate', previewId: 'productImagesPreviewUpdate' },
             { inputId: 'adminAvatarInput', previewId: 'adminAvatarPreview' },
             { inputId: 'dsLogoCreate', previewId: 'dsLogoPreviewCreate' },
             { inputId: 'dsLogoUpdate', previewId: 'dsLogoPreviewUpdate' },
@@ -355,7 +390,6 @@
             initializeCategoriesPage();
         }
         if (typeof initializeBrandsPage === 'function' && document.getElementById('adminBrandsPage')) {
-            // Pass validation data to initializeBrandsPage
             const hasValidationErrors = window.brandValidationErrors || false;
             const formMarker = window.brandFormMarker || null;
             initializeBrandsPage(hasValidationErrors, formMarker);
@@ -398,9 +432,15 @@
             window.initializeLoginPage();
         }
 
+        // Làm mới tất cả selectpicker sau khi DOM sẵn sàng
         setTimeout(() => {
+            try {
+                $('.selectpicker').selectpicker('refresh');
+            } catch (error) {
+                console.error('Lỗi khi làm mới selectpicker:', error);
+            }
             window.hideAppLoader();
-        }, 50);
+        }, 100);
     });
 
 })();

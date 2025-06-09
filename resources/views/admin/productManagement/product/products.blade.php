@@ -37,20 +37,15 @@
                                     <tr id="product-row-{{ $product->id }}">
                                         <td>{{ $product->id }}</td>
                                         <td>
-                                            <img src="{{ $product->images->first() ? Storage::url($product->images->first()->image_path) : 'https://placehold.co/50x50/EFEFEF/AAAAAA&text=N/A' }}"
+                                            <img src="{{ $product->thumbnail_url }}"
                                                 alt="{{ $product->name }}" class="img-thumbnail img-thumbnail-small">
                                         </td>
                                         <td>{{ $product->name }}</td>
                                         <td>{{ $product->category->name ?? 'N/A' }}</td>
                                         <td>{{ $product->brand->name ?? 'N/A' }}</td>
-                                        <td>{{ number_format($product->price, 0, ',', '.') }} đ</td>
-                                        <td>{{ $product->stock_quantity }}</td>
+                                        <td>{{ $product->formatted_price }}</td> <td>{{ $product->stock_quantity }}</td>
                                         <td>
-                                            @if ($product->status == 'active')
-                                                <span class="badge bg-success">Hoạt động</span>
-                                            @else
-                                                <span class="badge bg-secondary">Tạm ẩn</span>
-                                            @endif
+                                            <span class="badge {{ $product->status_badge_class }}">{{ $product->status_text }}</span>
                                         </td>
                                         <td class="text-center">
                                             <button class="btn btn-info btn-sm btn-action btn-view"
@@ -83,9 +78,9 @@
             </div>
         </div>
 
-        @include('admin.productManagement.modals.create_product')
-        @include('admin.productManagement.modals.update_product')
-        @include('admin.productManagement.modals.delete_product')
+        @include('admin.productManagement.product.modals.create_product')
+        @include('admin.productManagement.product.modals.update_product')
+        @include('admin.productManagement.product.modals.delete_product')
     </div>
 @endsection
 

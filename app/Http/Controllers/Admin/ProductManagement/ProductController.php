@@ -34,7 +34,7 @@ class ProductController extends Controller
             $query->where('status', 'active')->orderBy('name');
         }])->where('status', 'active')->orderBy('name')->get();
 
-        return view('admin.productManagement.products', compact('products', 'categories', 'brands', 'vehicleBrands'));
+        return view('admin.productManagement.product.products', compact('products', 'categories', 'brands', 'vehicleBrands'));
     }
 
     /**
@@ -56,7 +56,8 @@ class ProductController extends Controller
             'vehicle_model_ids.*' => 'exists:vehicle_models,id',
             'product_images' => 'nullable|array',
             'product_images.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:2048',
-            'status' => 'required|in:active,inactive',
+            // SỬA ĐỔI: Bỏ validation cho 'status' vì ta sẽ tự gán nó từ 'is_active'
+            // 'status' => 'required|in:active,inactive', 
         ]);
 
         if ($validator->fails()) {
@@ -65,7 +66,10 @@ class ProductController extends Controller
 
         DB::beginTransaction();
         try {
-            $productData = $request->except(['product_images', 'vehicle_model_ids']);
+            $productData = $request->except(['product_images', 'vehicle_model_ids', 'is_active']);
+
+            // SỬA ĐỔI: Chuyển đổi 'is_active' từ form thành 'status' cho database
+            $productData['status'] = $request->has('is_active') ? 'active' : 'inactive';
 
             // 1. Tạo sản phẩm
             $product = Product::create($productData);
@@ -132,7 +136,8 @@ class ProductController extends Controller
             'vehicle_model_ids.*' => 'exists:vehicle_models,id',
             'product_images' => 'nullable|array',
             'product_images.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:2048',
-            'status' => 'required|in:active,inactive',
+            // SỬA ĐỔI: Bỏ validation cho 'status'
+            // 'status' => 'required|in:active,inactive', 
         ]);
 
         if ($validator->fails()) {
@@ -141,7 +146,10 @@ class ProductController extends Controller
 
         DB::beginTransaction();
         try {
-            $productData = $request->except(['product_images', 'vehicle_model_ids', '_method', 'existing_images']);
+            $productData = $request->except(['product_images', 'vehicle_model_ids', '_method', 'existing_images', 'is_active']);
+
+            // SỬA ĐỔI: Chuyển đổi 'is_active' từ form thành 'status' cho database
+            $productData['status'] = $request->has('is_active') ? 'active' : 'inactive';
 
             // 1. Cập nhật thông tin sản phẩm
             $product->update($productData);
@@ -150,9 +158,8 @@ class ProductController extends Controller
             $product->vehicleModels()->sync($request->input('vehicle_model_ids', []));
 
             // 3. Xử lý ảnh
-            // 3.1 Xóa các ảnh cũ đã bị người dùng loại bỏ
             $existingImageIds = $product->images->pluck('id')->toArray();
-            $keptImageIds = $request->input('existing_images', []); // ID của các ảnh được giữ lại
+            $keptImageIds = $request->input('existing_images', []);
             $imageIdsToDelete = array_diff($existingImageIds, $keptImageIds);
 
             if (!empty($imageIdsToDelete)) {
@@ -163,11 +170,9 @@ class ProductController extends Controller
                 }
             }
 
-            // 3.2 Thêm ảnh mới
             if ($request->hasFile('product_images')) {
                 foreach ($request->file('product_images') as $imageFile) {
                     $path = $imageFile->store('products', 'public');
-                    // SỬA ĐỔI 1: Sửa lỗi logic khi tạo ảnh mới và dùng đúng key 'image_url'
                     $product->images()->create([
                         'image_url' => $path,
                     ]);
@@ -195,26 +200,19 @@ class ProductController extends Controller
      */
     public function destroy(Product $product)
     {
-        // SỬA ĐỔI 2: Thêm kiểm tra ràng buộc với các đơn hàng để đảm bảo an toàn dữ liệu
         if ($product->orderItems()->exists()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Không thể xóa sản phẩm này vì đã tồn tại trong các đơn hàng của khách.'
-            ], 422); // 422: Unprocessable Entity
+            ], 422);
         }
 
         DB::beginTransaction();
         try {
-            // Xóa tất cả hình ảnh liên quan trong storage
             foreach ($product->images as $image) {
                 Storage::disk('public')->delete($image->image_url);
             }
-
-            // Xóa sản phẩm.
-            // Các record trong bảng pivot (product_vehicle_models) và bảng product_images
-            // sẽ được tự động xóa theo nếu bạn đã thiết lập 'cascadeOnDelete()' trong migrations.
             $product->delete();
-
             DB::commit();
 
             return response()->json([

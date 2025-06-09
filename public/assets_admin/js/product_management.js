@@ -1,170 +1,206 @@
 /**
  * ===================================================================
- * product_manager.js
- * Xử lý JavaScript cho trang quản lý Sản phẩm.
+ * product_management.js
+ * Xử lý JavaScript cho trang quản lý Sản phẩm (Thêm, Sửa, Xóa).
+ * Bao gồm khởi tạo selectpicker, xử lý preview ảnh, và các sự kiện modal.
  * ===================================================================
+ */
+
+// Hàm chính sẽ được chạy khi toàn bộ cây DOM đã được tải.
+document.addEventListener('DOMContentLoaded', initializeProductsPage);
+
+/**
+ * Hàm khởi tạo chính cho toàn bộ trang quản lý sản phẩm.
  */
 function initializeProductsPage() {
     console.log("Khởi tạo JS cho trang Sản phẩm...");
 
+    // --- 1. Lấy các element DOM quan trọng ---
     const createProductModalEl = document.getElementById('createProductModal');
     const updateProductModalEl = document.getElementById('updateProductModal');
     const deleteProductModalEl = document.getElementById('deleteProductModal');
+    const productTableBody = document.getElementById('product-table-body');
 
-    if (!createProductModalEl || !updateProductModalEl || !deleteProductModalEl) {
-        console.warn('Một hoặc nhiều modal sản phẩm không tồn tại.');
+    // Nếu không tìm thấy các modal cần thiết, dừng thực thi để tránh lỗi.
+    if (!createProductModalEl || !updateProductModalEl || !deleteProductModalEl || !productTableBody) {
+        console.warn('Một hoặc nhiều element quan trọng (modal, table body) không tồn tại. Script sẽ không chạy.');
         return;
     }
 
-    // --- KHỞI TẠO BOOTSTRAP-SELECT CHO CÁC MODAL ---
-    $('#productCategoryCreate').selectpicker({
-        liveSearch: true,
-        width: '100%',
-        title: 'Chọn danh mục...'
-    });
-    $('#productBrandCreate').selectpicker({
-        liveSearch: true,
-        width: '100%',
-        title: 'Chọn thương hiệu...'
-    });
-    $('#productVehicleModelsCreate').selectpicker({
-        liveSearch: true,
-        width: '100%',
-        title: 'Chọn các dòng xe tương thích',
-        actionsBox: true
-    });
-
-    $('#productCategoryUpdate').selectpicker({
-        liveSearch: true,
-        width: '100%',
-        title: 'Chọn danh mục...'
-    });
-    $('#productBrandUpdate').selectpicker({
-        liveSearch: true,
-        width: '100%',
-        title: 'Chọn thương hiệu...'
-    });
-    $('#productVehicleModelsUpdate').selectpicker({
-        liveSearch: true,
-        width: '100%',
-        title: 'Chọn các dòng xe tương thích',
-        actionsBox: true
-    });
+    // --- 2. Khởi tạo các thư viện và chức năng phụ ---
 
     /**
-     * Hàm xem trước nhiều ảnh cho một input[type=file]
-     * @param {string} inputId - ID của input file
-     * @param {string} previewContainerId - ID của div chứa ảnh xem trước
+     * Khởi tạo thư viện bootstrap-select cho các dropdown.
+     * Thư viện này giúp tạo các dropdown có chức năng tìm kiếm.
      */
-    function setupMultipleImagePreview(inputId, previewContainerId) {
-        const input = document.getElementById(inputId);
-        const previewContainer = document.getElementById(previewContainerId);
-        if (!input || !previewContainer) return;
-
-        input.addEventListener('change', function (event) {
-            const newPreviews = previewContainer.querySelectorAll('.new-preview');
-            newPreviews.forEach(p => p.remove());
-
-            if (this.files) {
-                Array.from(this.files).forEach(file => {
-                    const reader = new FileReader();
-                    reader.onload = function (e) {
-                        const previewWrapper = document.createElement('div');
-                        previewWrapper.className = 'img-preview-container new-preview';
-                        previewWrapper.innerHTML = `
-                            <img src="${e.target.result}" class="img-preview" alt="Preview">
-                            <button type="button" class="img-preview-remove" title="Bỏ chọn">&times;</button>
-                        `;
-                        previewContainer.appendChild(previewWrapper);
-                    };
-                    reader.readAsDataURL(file);
-                });
-            }
-        });
-    }
-
-    setupMultipleImagePreview('productImagesCreate', 'productImagesPreviewCreate');
-    setupMultipleImagePreview('productImagesUpdate', 'productImagesPreviewUpdate');
-
-    // --- XỬ LÝ SỰ KIỆN XÓA ẢNH ---
-    document.body.addEventListener('click', function (event) {
-        if (event.target.classList.contains('img-preview-remove')) {
-            event.preventDefault(); // Sửa lỗi typo từ preventPrevent thành preventDefault
-            const previewContainer = event.target.closest('.img-preview-container');
-            if (previewContainer) {
-                previewContainer.remove();
+    const initializeSelectPickers = () => {
+        try {
+            $('.selectpicker').selectpicker({
+                liveSearch: true,
+                width: '100%',
+                noneSelectedText: 'Chưa chọn mục nào',
+                actionsBox: true,
+                selectAllText: 'Chọn tất cả',
+                deselectAllText: 'Bỏ chọn tất cả'
+            });
+        } catch (error) {
+            console.error('Lỗi nghiêm trọng khi khởi tạo selectpicker:', error);
+            // Giả sử bạn có một hàm hiển thị thông báo lỗi chung
+            if (typeof window.showAppInfoModal === 'function') {
+                window.showAppInfoModal('Không thể khởi tạo dropdown. Vui lòng kiểm tra thư viện bootstrap-select.', 'error');
             }
         }
-    });
+    };
 
-    // --- LOGIC CHO CREATE MODAL ---
-    if (typeof window.setupAjaxForm === 'function') {
-        window.setupAjaxForm('createProductForm', 'createProductModal', (result) => {
-            window.showAppInfoModal(result.message, 'success', 'Thành công');
-            setTimeout(() => window.location.reload(), 1200);
+
+    /**
+     * Xử lý hiển thị ảnh preview khi người dùng chọn file.
+     * @param {HTMLInputElement} inputEl - Element input type="file".
+     * @param {HTMLElement} previewContainerEl - Element div để chứa ảnh preview.
+     */
+    const setupImagePreviews = (inputEl, previewContainerEl) => {
+        inputEl.addEventListener('change', function(event) {
+            // Xóa các ảnh preview mới (được tạo từ lần chọn trước)
+            previewContainerEl.querySelectorAll('.new-preview').forEach(el => el.remove());
+
+            const files = event.target.files;
+            if (!files) return;
+
+            for (const file of files) {
+                if (!file.type.startsWith('image/')) continue;
+
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const previewWrapper = document.createElement('div');
+                    // 'new-preview' dùng để phân biệt với ảnh đã có sẵn từ server
+                    previewWrapper.className = 'img-preview-wrapper new-preview';
+                    previewWrapper.innerHTML = `
+                        <img src="${e.target.result}" class="img-preview" alt="${file.name}">
+                        <button type="button" class="img-preview-remove" title="Xóa ảnh này">×</button>
+                    `;
+                    previewContainerEl.appendChild(previewWrapper);
+                };
+                reader.readAsDataURL(file);
+            }
         });
-    } else {
-        console.warn('Hàm window.setupAjaxForm không khả dụng.');
-    }
+    };
 
-    // Reset form và selectpicker khi modal được đóng
-    createProductModalEl.addEventListener('hidden.bs.modal', function () {
-        const createForm = document.getElementById('createProductForm');
-        if (createForm) {
-            createForm.reset();
-            createForm.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+    // --- 3. Logic xử lý cho từng Modal ---
+
+    // ** CREATE MODAL **
+    const setupCreateModal = () => {
+        // Gắn sự kiện để reset form khi modal được đóng
+        createProductModalEl.addEventListener('hidden.bs.modal', () => {
+            const form = document.getElementById('createProductForm');
+            form.reset();
+            form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
             document.getElementById('productImagesPreviewCreate').innerHTML = '';
+            $('#productCategoryCreate, #productBrandCreate, #productVehicleModelsCreate').selectpicker('val', '');
+        });
+
+        // Kích hoạt preview ảnh cho form create
+        const createImagesInput = document.getElementById('productImagesCreate');
+        const createImagesPreview = document.getElementById('productImagesPreviewCreate');
+        if (createImagesInput && createImagesPreview) {
+            setupImagePreviews(createImagesInput, createImagesPreview);
         }
-        $('#productCategoryCreate').selectpicker('val', '');
-        $('#productBrandCreate').selectpicker('val', '');
-        $('#productVehicleModelsCreate').selectpicker('val', []);
-    });
+    };
 
-    // --- LOGIC CHO UPDATE MODAL ---
-    document.getElementById('product-table-body').addEventListener('click', async function (event) {
-        const editButton = event.target.closest('.btn-edit');
-        if (!editButton) return;
+    // ** UPDATE MODAL **
+    const setupUpdateModal = () => {
+        // Gắn sự kiện để reset form khi modal được đóng
+        updateProductModalEl.addEventListener('hidden.bs.modal', () => {
+            const form = document.getElementById('updateProductForm');
+            form.reset();
+            form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+            document.getElementById('productImagesPreviewUpdate').innerHTML = '';
+            document.getElementById('productImagesUpdate').value = ''; // Reset file input
+            $('#productCategoryUpdate, #productBrandUpdate, #productVehicleModelsUpdate').selectpicker('val', '');
+        });
 
-        const productId = editButton.dataset.id;
+        // Kích hoạt preview cho các ảnh mới tải lên ở form update
+        const updateImagesInput = document.getElementById('productImagesUpdate');
+        const updateImagesPreview = document.getElementById('productImagesPreviewUpdate');
+        if (updateImagesInput && updateImagesPreview) {
+            setupImagePreviews(updateImagesInput, updateImagesPreview);
+        }
+    };
+
+    // --- 4. Gắn các Event Listener chính ---
+
+    const setupEventListeners = () => {
+        // Sử dụng event delegation cho toàn bộ table body
+        productTableBody.addEventListener('click', async function(event) {
+            const editButton = event.target.closest('.btn-edit');
+            const deleteButton = event.target.closest('.btn-delete');
+
+            if (editButton) {
+                await handleShowUpdateModal(editButton.dataset.id);
+            }
+
+            if (deleteButton) {
+                handleShowDeleteModal(deleteButton.dataset.id, deleteButton.dataset.name);
+            }
+        });
+
+        // Sự kiện xóa ảnh preview (cho cả ảnh cũ và ảnh mới)
+        document.body.addEventListener('click', function(event) {
+            if (event.target.classList.contains('img-preview-remove')) {
+                event.preventDefault();
+                event.target.closest('.img-preview-wrapper').remove();
+            }
+        });
+
+         // Sự kiện làm mới selectpicker khi modal được hiển thị
+         $(createProductModalEl).on('shown.bs.modal', () => $('.selectpicker').selectpicker('refresh'));
+         $(updateProductModalEl).on('shown.bs.modal', () => $('.selectpicker').selectpicker('refresh'));
+    };
+
+
+    /**
+     * Lấy dữ liệu sản phẩm và hiển thị modal Cập nhật.
+     * @param {string} productId ID của sản phẩm.
+     */
+    const handleShowUpdateModal = async (productId) => {
         if (typeof window.showAppLoader === 'function') window.showAppLoader();
 
         try {
             const response = await fetch(`/admin/productManagement/products/${productId}`);
-            if (!response.ok) throw new Error('Không thể lấy dữ liệu sản phẩm.');
+            if (!response.ok) {
+                throw new Error(`Lỗi mạng: ${response.statusText}`);
+            }
             const product = await response.json();
 
-            // Populate form
-            const updateForm = document.getElementById('updateProductForm');
-            if (updateForm) {
-                updateForm.action = `/admin/productManagement/products/${productId}`;
-                updateForm.querySelector('#productNameUpdate').value = product.name;
-                updateForm.querySelector('#productDescriptionUpdate').value = product.description || '';
-                updateForm.querySelector('#productCategoryUpdate').value = product.category_id;
-                updateForm.querySelector('#productBrandUpdate').value = product.brand_id;
-                updateForm.querySelector('#productPriceUpdate').value = parseFloat(product.price);
-                updateForm.querySelector('#productStockUpdate').value = product.stock_quantity;
-                updateForm.querySelector('#productMaterialUpdate').value = product.material || '';
-                updateForm.querySelector('#productColorUpdate').value = product.color || '';
-                updateForm.querySelector('#productSpecificationsUpdate').value = product.specifications || '';
-                updateForm.querySelector('#productIsActiveUpdate').checked = product.status === 'active';
+            const form = document.getElementById('updateProductForm');
+            form.action = `/admin/productManagement/products/${productId}`;
 
-                // Populate Bootstrap-select
-                $('#productCategoryUpdate').selectpicker('val', product.category_id);
-                $('#productBrandUpdate').selectpicker('val', product.brand_id);
-                const vehicleModelIds = product.vehicle_models.map(model => model.id);
-                $('#productVehicleModelsUpdate').selectpicker('val', vehicleModelIds);
+            // Điền dữ liệu vào form
+            form.querySelector('#productNameUpdate').value = product.name || '';
+            form.querySelector('#productDescriptionUpdate').value = product.description || '';
+            form.querySelector('#productPriceUpdate').value = parseFloat(product.price) || 0;
+            form.querySelector('#productStockUpdate').value = product.stock_quantity || 0;
+            form.querySelector('#productMaterialUpdate').value = product.material || '';
+            form.querySelector('#productColorUpdate').value = product.color || '';
+            form.querySelector('#productSpecificationsUpdate').value = product.specifications || '';
+            form.querySelector('#productIsActiveUpdate').checked = product.status === 'active';
 
-                // Populate existing images
-                const previewContainer = document.getElementById('productImagesPreviewUpdate');
-                previewContainer.innerHTML = '';
-                const storageUrlPrefix = '/storage/';
+            // Cập nhật selectpicker
+            $('#productCategoryUpdate').selectpicker('val', product.category_id);
+            $('#productBrandUpdate').selectpicker('val', product.brand_id);
+            const vehicleModelIds = product.vehicle_models ? product.vehicle_models.map(model => model.id) : [];
+            $('#productVehicleModelsUpdate').selectpicker('val', vehicleModelIds);
+
+            // Hiển thị ảnh hiện có
+            const previewContainer = document.getElementById('productImagesPreviewUpdate');
+            previewContainer.innerHTML = ''; // Xóa preview cũ
+            if (product.images && product.images.length > 0) {
                 product.images.forEach(image => {
                     const previewWrapper = document.createElement('div');
-                    previewWrapper.className = 'img-preview-container existing-preview';
+                    previewWrapper.className = 'img-preview-wrapper existing-preview';
                     previewWrapper.innerHTML = `
                         <input type="hidden" name="existing_images[]" value="${image.id}">
-                        <img src="${storageUrlPrefix}${image.image_path}" class="img-preview" alt="${image.alt_text || ''}">
-                        <button type="button" class="img-preview-remove" title="Xóa ảnh này">&times;</button>
+                        <img src="${image.image_full_url}" class="img-preview" alt="${image.alt_text || ''}">
+                        <button type="button" class="img-preview-remove" title="Xóa ảnh này">×</button>
                     `;
                     previewContainer.appendChild(previewWrapper);
                 });
@@ -174,59 +210,66 @@ function initializeProductsPage() {
             modal.show();
 
         } catch (error) {
-            console.error('Lỗi khi lấy dữ liệu cập nhật:', error);
+            console.error('Lỗi khi lấy dữ liệu để cập nhật:', error);
             if (typeof window.showAppInfoModal === 'function') {
-                window.showAppInfoModal(error.message, 'error', 'Lỗi');
+                window.showAppInfoModal(error.message || 'Lỗi không xác định khi lấy dữ liệu.', 'error');
             }
         } finally {
             if (typeof window.hideAppLoader === 'function') window.hideAppLoader();
         }
-    });
+    };
 
-    // Setup form submit cho Update
-    if (typeof window.setupAjaxForm === 'function') {
-        window.setupAjaxForm('updateProductForm', 'updateProductModal', (result) => {
-            window.showAppInfoModal(result.message, 'success', 'Thành công');
-            setTimeout(() => window.location.reload(), 1200);
-        });
-    }
 
-    // Reset form và selectpicker khi modal được đóng
-    updateProductModalEl.addEventListener('hidden.bs.modal', function () {
-        const updateForm = document.getElementById('updateProductForm');
-        if (updateForm) {
-            updateForm.reset();
-            updateForm.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
-            document.getElementById('productImagesPreviewUpdate').innerHTML = '';
-        }
-        $('#productCategoryUpdate').selectpicker('val', '');
-        $('#productBrandUpdate').selectpicker('val', '');
-        $('#productVehicleModelsUpdate').selectpicker('val', []);
-    });
-
-    // --- LOGIC CHO DELETE MODAL ---
-    document.getElementById('product-table-body').addEventListener('click', function (event) {
-        const deleteButton = event.target.closest('.btn-delete');
-        if (!deleteButton) return;
-
-        const productId = deleteButton.dataset.id;
-        const productName = deleteButton.dataset.name;
-
-        const deleteForm = document.getElementById('deleteProductForm');
-        if (deleteForm) {
-            deleteForm.action = `/admin/productManagement/products/${productId}`;
-        }
-        document.getElementById('productNameToDelete').textContent = productName;
+    /**
+     * Hiển thị modal xác nhận Xóa.
+     * @param {string} productId ID sản phẩm.
+     * @param {string} productName Tên sản phẩm.
+     */
+    const handleShowDeleteModal = (productId, productName) => {
+        const form = document.getElementById('deleteProductForm');
+        form.action = `/admin/productManagement/products/${productId}`;
+        document.getElementById('productNameToDelete').textContent = productName || 'Sản phẩm không xác định';
 
         const modal = new bootstrap.Modal(deleteProductModalEl);
         modal.show();
-    });
+    };
 
-    // Setup form submit cho Delete
-    if (typeof window.setupAjaxForm === 'function') {
+    // --- 5. Khởi tạo các form AJAX ---
+
+    const setupAjaxForms = () => {
+        // Giả sử bạn có một hàm toàn cục `setupAjaxForm` để xử lý việc gửi form qua AJAX
+        if (typeof window.setupAjaxForm !== 'function') {
+            console.warn('Hàm global `setupAjaxForm` không được định nghĩa.');
+            return;
+        }
+
+        const reloadPage = () => setTimeout(() => window.location.reload(), 1200);
+        const showError = (error) => window.showAppInfoModal(error.message || 'Có lỗi xảy ra', 'error');
+        const showSuccess = (result) => window.showAppInfoModal(result.message, 'success');
+
+        window.setupAjaxForm('createProductForm', 'createProductModal', (result) => {
+            showSuccess(result);
+            reloadPage();
+        }, showError);
+
+        window.setupAjaxForm('updateProductForm', 'updateProductModal', (result) => {
+            showSuccess(result);
+            reloadPage();
+        }, showError);
+
         window.setupAjaxForm('deleteProductForm', 'deleteProductModal', (result) => {
-            window.showAppInfoModal(result.message, 'success', 'Thành công');
-            setTimeout(() => window.location.reload(), 1200);
-        });
-    }
+            showSuccess(result);
+            reloadPage();
+        }, showError);
+    };
+
+
+    // --- 6. Chạy các hàm khởi tạo ---
+    initializeSelectPickers();
+    setupCreateModal();
+    setupUpdateModal();
+    setupEventListeners();
+    setupAjaxForms();
+
+    console.log("JS cho trang Sản phẩm đã được khởi tạo thành công.");
 }

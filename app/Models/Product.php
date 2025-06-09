@@ -4,15 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Number; // Thêm use Number
+use Illuminate\Support\Number;
 
 class Product extends Model
 {
     use HasFactory;
 
-    /**
-     * SỬA ĐỔI 1: Thêm hằng số cho trạng thái.
-     */
     const STATUS_ACTIVE = 'active';
     const STATUS_INACTIVE = 'inactive';
 
@@ -36,10 +33,6 @@ class Product extends Model
         'status' => 'string',
     ];
 
-    /**
-     * SỬA ĐỔI 2: Thêm $appends để tự động thêm các accessor vào JSON.
-     * @var array
-     */
     protected $appends = [
         'formatted_price',
         'status_text',
@@ -48,37 +41,70 @@ class Product extends Model
     ];
 
     //======================================================================
-    // RELATIONSHIPS (Không đổi)
+    // RELATIONSHIPS (SỬA ĐỔI: ĐIỀN ĐẦY ĐỦ CÁC QUAN HỆ)
     //======================================================================
+
+    /**
+     * Danh mục mà sản phẩm này thuộc về.
+     */
     public function category()
-    { /*...*/
+    {
+        return $this->belongsTo(Category::class, 'category_id');
     }
+
+    /**
+     * Thương hiệu của sản phẩm.
+     */
     public function brand()
-    { /*...*/
+    {
+        return $this->belongsTo(Brand::class, 'brand_id');
     }
+
+    /**
+     * Các hình ảnh của sản phẩm.
+     */
     public function images()
-    { /*...*/
+    {
+        return $this->hasMany(ProductImage::class, 'product_id');
     }
+
+    /**
+     * Các dòng xe tương thích với sản phẩm (quan hệ nhiều-nhiều).
+     */
     public function vehicleModels()
-    { /*...*/
+    {
+        return $this->belongsToMany(VehicleModel::class, 'product_vehicle_models', 'product_id', 'vehicle_model_id')
+            ->withTimestamps();
     }
+
+    /**
+     * Các mục trong đơn hàng liên quan đến sản phẩm này.
+     */
     public function orderItems()
-    { /*...*/
+    {
+        return $this->hasMany(OrderItem::class, 'product_id');
     }
+
+    /**
+     * Các đánh giá của sản phẩm.
+     */
     public function reviews()
-    { /*...*/
+    {
+        return $this->hasMany(Review::class, 'product_id');
     }
+
+    /**
+     * Các mục trong giỏ hàng liên quan đến sản phẩm này.
+     */
     public function cartItems()
-    { /*...*/
+    {
+        return $this->hasMany(CartItem::class, 'product_id');
     }
 
     //======================================================================
     // ACCESSORS (Bổ sung)
     //======================================================================
 
-    /**
-     * SỬA ĐỔI 3: Thêm các Accessor cần thiết.
-     */
     public function getFormattedPriceAttribute(): string
     {
         return Number::currency($this->price, 'VND', 'vi');
@@ -97,10 +123,12 @@ class Product extends Model
     public function getThumbnailUrlAttribute(): string
     {
         // Để tối ưu, hãy eager load: Product::with('images')->find(1);
-        if ($this->images->isNotEmpty()) {
-            // Lấy URL đầy đủ từ accessor của ProductImage
+        if ($this->relationLoaded('images') && $this->images->isNotEmpty()) {
             return $this->images->first()->image_full_url;
+        } else if ($this->images()->exists()) { // Fallback query if not eager loaded
+            return $this->images()->first()->image_full_url;
         }
+
         return 'https://placehold.co/400x400/EFEFEF/AAAAAA&text=Product';
     }
 
@@ -108,9 +136,6 @@ class Product extends Model
     // SCOPES (Bổ sung)
     //======================================================================
 
-    /**
-     * SỬA ĐỔI 4: Thêm scope cho trạng thái active.
-     */
     public function scopeActive($query)
     {
         return $query->where('status', self::STATUS_ACTIVE);
