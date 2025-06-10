@@ -19,18 +19,16 @@
                                     class="text-danger">*</span></label>
                             <input type="text" class="form-control" id="promoCodeUpdate" name="code" required
                                 style="text-transform: uppercase;">
-                            @error('code', 'update_promotion_form')
-                                <div class="text-danger mt-1">{{ $message }}</div>
-                            @enderror
+                            {{-- SỬA ĐỔI: Thêm div để JS hiển thị lỗi validation --}}
+                            <div id="promoCodeUpdateError" class="invalid-feedback"></div>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label for="promoDiscountUpdate" class="form-label">Phần trăm giảm giá (%) <span
                                     class="text-danger">*</span></label>
                             <input type="number" class="form-control" id="promoDiscountUpdate"
                                 name="discount_percentage" required step="0.01" min="0.01" max="100">
-                            @error('discount_percentage', 'update_promotion_form')
-                                <div class="text-danger mt-1">{{ $message }}</div>
-                            @enderror
+                            {{-- SỬA ĐỔI: Thêm div để JS hiển thị lỗi validation --}}
+                            <div id="promoDiscount_percentageUpdateError" class="invalid-feedback"></div>
                         </div>
                     </div>
 
@@ -38,9 +36,8 @@
                         <label for="promoDescriptionUpdate" class="form-label">Mô tả ngắn</label>
                         <textarea class="form-control" id="promoDescriptionUpdate" name="description"
                             rows="2"></textarea>
-                        @error('description', 'update_promotion_form')
-                            <div class="text-danger mt-1">{{ $message }}</div>
-                        @enderror
+                        {{-- SỬA ĐỔI: Thêm div để JS hiển thị lỗi validation --}}
+                        <div id="promoDescriptionUpdateError" class="invalid-feedback"></div>
                     </div>
 
                     <div class="row">
@@ -49,18 +46,16 @@
                                     class="text-danger">*</span></label>
                             <input type="datetime-local" class="form-control" id="promoStartDateUpdate"
                                 name="start_date" required>
-                            @error('start_date', 'update_promotion_form')
-                                <div class="text-danger mt-1">{{ $message }}</div>
-                            @enderror
+                            {{-- SỬA ĐỔI: Thêm div để JS hiển thị lỗi validation --}}
+                            <div id="promoStart_dateUpdateError" class="invalid-feedback"></div>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label for="promoEndDateUpdate" class="form-label">Ngày kết thúc <span
                                     class="text-danger">*</span></label>
                             <input type="datetime-local" class="form-control" id="promoEndDateUpdate" name="end_date"
                                 required>
-                            @error('end_date', 'update_promotion_form')
-                                <div class="text-danger mt-1">{{ $message }}</div>
-                            @enderror
+                            {{-- SỬA ĐỔI: Thêm div để JS hiển thị lỗi validation --}}
+                            <div id="promoEnd_dateUpdateError" class="invalid-feedback"></div>
                         </div>
                     </div>
 
@@ -69,9 +64,8 @@
                             <label for="promoMaxUsesUpdate" class="form-label">Số lượt sử dụng tối đa</label>
                             <input type="number" class="form-control" id="promoMaxUsesUpdate" name="max_uses" min="1"
                                 placeholder="Bỏ trống nếu không giới hạn">
-                            @error('max_uses', 'update_promotion_form')
-                                <div class="text-danger mt-1">{{ $message }}</div>
-                            @enderror
+                            {{-- SỬA ĐỔI: Thêm div để JS hiển thị lỗi validation --}}
+                            <div id="promoMax_usesUpdateError" class="invalid-feedback"></div>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label for="promoStatusUpdate" class="form-label">Trạng thái cài đặt <span
@@ -81,9 +75,8 @@
                                 <option value="{{ \App\Models\Promotion::STATUS_MANUAL_INACTIVE }}">Tắt (Inactive)
                                 </option>
                             </select>
-                            @error('status', 'update_promotion_form')
-                                <div class="text-danger mt-1">{{ $message }}</div>
-                            @enderror
+                            {{-- SỬA ĐỔI: Thêm div để JS hiển thị lỗi validation --}}
+                            <div id="promoStatusUpdateError" class="invalid-feedback"></div>
                         </div>
                     </div>
 

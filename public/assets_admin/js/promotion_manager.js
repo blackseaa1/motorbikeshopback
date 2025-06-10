@@ -1,412 +1,276 @@
 /**
  * ===================================================================
- * promotion_manager.js
- * Xử lý JavaScript cho trang quản lý Mã Khuyến Mãi.
+ * promotion_manager.js (Phiên bản đầy đủ, đã tái cấu trúc)
+ *
+ * Xử lý toàn bộ logic JavaScript cho trang Quản lý Mã Khuyến Mãi,
+ * bao gồm xem, tạo, sửa, xóa và bật/tắt trạng thái bằng AJAX.
  * ===================================================================
  */
-function initializePromotionsPage() {
-    console.log("Khởi tạo JS cho trang Quản lý Mã Khuyến Mãi...");
+
+// Bọc toàn bộ code trong sự kiện 'DOMContentLoaded' để đảm bảo DOM đã sẵn sàng.
+document.addEventListener('DOMContentLoaded', function () {
+    'use strict';
+
+    // -----------------------------------------------------------------------------
+    // SECTION 1: KHAI BÁO BIẾN & LẤY ELEMENTS
+    // -----------------------------------------------------------------------------
+
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-
-    // --- HELPER FUNCTIONS (Reference from admin_layout.js or define locally if needed) ---
-    const showAppLoader = window.showAppLoader || (() => console.log('showAppLoader missing'));
-    const hideAppLoader = window.hideAppLoader || (() => console.log('hideAppLoader missing'));
-    const showAppInfoModal = window.showAppInfoModal || ((msg, type, title) => alert(`${title}: ${msg}`));
-    // Tự động chuyển Mã Code sang chữ hoa khi nhập liệu
-    const promoCodeCreateInput = document.getElementById('promoCodeCreate');
-    const promoCodeUpdateInput = document.getElementById('promoCodeUpdate');
-
-    function autoUppercase(event) {
-        const start = event.target.selectionStart;
-        const end = event.target.selectionEnd;
-        event.target.value = event.target.value.toUpperCase();
-        event.target.setSelectionRange(start, end); // Giữ vị trí con trỏ
+    if (!csrfToken) {
+        console.error('Lỗi nghiêm trọng: Không tìm thấy CSRF Token!');
+        // Dừng thực thi nếu không có CSRF token để tránh lỗi không cần thiết
+        return;
     }
 
-    if (promoCodeCreateInput) {
-        promoCodeCreateInput.addEventListener('input', autoUppercase);
-    }
-    if (promoCodeUpdateInput) {
-        promoCodeUpdateInput.addEventListener('input', autoUppercase);
-    }
+    // Lấy các hàm helper toàn cục từ admin_layout.js
+    const showAppLoader = window.showAppLoader;
+    const hideAppLoader = window.hideAppLoader;
+    const showAppInfoModal = window.showAppInfoModal;
 
-    // Hàm hiển thị lỗi validation inline từ AJAX response
-    function displayValidationErrors(formElement, errors, formType = 'Update') { // Mặc định formType là Update
-        formElement.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
-        formElement.querySelectorAll('.invalid-feedback').forEach(el => {
-            if (el.id && (el.id.endsWith('Error') || el.id.startsWith('promo') || el.id.startsWith('adminPassword'))) {
-                el.textContent = '';
-                el.style.display = 'none';
-            }
-        });
+    // Lấy các element chính của trang
+    const tableBody = document.getElementById('promotions-table-body');
+    const createModalEl = document.getElementById('createPromotionModal');
+    const updateModalEl = document.getElementById('updatePromotionModal');
+    const deleteModalEl = document.getElementById('deletePromotionModal');
+    const viewModalEl = document.getElementById('viewPromotionModal');
 
-        Object.keys(errors).forEach(key => {
-            const inputField = formElement.querySelector(`[name="${key}"]`);
-            let errorDiv = null;
-            let errorDivId = '';
-
-            // Xây dựng ID cho div lỗi dựa trên key và formType (Create, Update)
-            // Ví dụ: key 'code' và formType 'Update' -> promoCodeUpdateError
-            // Ví dụ: key 'admin_password_delete_promotion' -> admin_password_delete_promotionError (cho modal delete)
-            if (key.startsWith('admin_password_delete_')) { // Xử lý đặc biệt cho mật khẩu xóa
-                errorDivId = `${key.replace(/_/g, '')}Error`;
-            } else {
-                // Chuyển snake_case (ví dụ: discount_percentage) sang CamelCase (Discount_percentage)
-                const camelCaseKey = key.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join('');
-                errorDivId = `promo${camelCaseKey}${formType}Error`;
-            }
-
-            errorDiv = formElement.querySelector(`#${errorDivId}`);
-
-            if (inputField) {
-                inputField.classList.add('is-invalid');
-                // Nếu không tìm thấy errorDiv bằng ID quy ước, thử tìm theo cấu trúc DOM
-                if (!errorDiv) {
-                    errorDiv = inputField.parentElement.querySelector('.invalid-feedback');
-                }
-            }
-
-            if (errorDiv) {
-                errorDiv.textContent = errors[key][0];
-                errorDiv.style.display = 'block';
-            } else {
-                // Nếu vẫn không tìm thấy, hiển thị qua modal chung
-                showAppInfoModal(`${key}: ${errors[key][0]}`, 'validation_error', 'Lỗi Dữ Liệu');
-                console.warn(`Không tìm thấy error div cho trường '${key}' với ID dự kiến '${errorDivId}' hoặc gần input.`);
-            }
-        });
+    // Kiểm tra các element quan trọng trước khi chạy
+    if (!tableBody || !createModalEl || !updateModalEl || !deleteModalEl || !viewModalEl) {
+        console.warn('Cảnh báo: Một hoặc nhiều element modal/table quan trọng không tồn tại. Script có thể không hoạt động đầy đủ.');
+        return;
     }
 
+    // Khởi tạo các đối tượng Modal của Bootstrap một lần duy nhất
+    const createModal = new bootstrap.Modal(createModalEl);
+    const updateModal = new bootstrap.Modal(updateModalEl);
+    const deleteModal = new bootstrap.Modal(deleteModalEl);
+    const viewModal = new bootstrap.Modal(viewModalEl);
 
-    // Hàm xử lý AJAX form submit chung
-    function handleAjaxFormSubmit(formElement, modalElement, sectionTitle, successCallback, httpMethod = 'POST') {
+    // -----------------------------------------------------------------------------
+    // SECTION 2: HÀM TIỆN ÍCH (HELPER FUNCTIONS)
+    // -----------------------------------------------------------------------------
+
+    /**
+     * Định dạng ngày giờ từ chuỗi ISO sang định dạng dd/mm/yyyy, hh:mm:ss.
+     * @param {string} dateString - Chuỗi ngày giờ.
+     * @returns {string} - Chuỗi đã định dạng hoặc chuỗi rỗng nếu đầu vào không hợp lệ.
+     */
+    function formatLocaleDateTime(dateString) {
+        if (!dateString) return '';
+        try {
+            const date = new Date(dateString);
+            return date.toLocaleString('vi-VN', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false,
+                timeZone: 'Asia/Ho_Chi_Minh' // Explicitly set to UTC+7 (Vietnam timezone)
+            });
+        } catch (e) {
+            console.error("Lỗi định dạng ngày:", e);
+            return dateString;
+        }
+    }
+
+    /**
+     * Định dạng ngày giờ sang chuẩn cho input `datetime-local`.
+     * @param {string} dateString - Chuỗi ngày giờ.
+     * @returns {string} - Chuỗi định dạng yyyy-MM-ddTHH:mm.
+     */
+    function formatForInput(dateString) {
+        if (!dateString) return '';
+        try {
+            const date = new Date(dateString);
+            // Use Intl.DateTimeFormat to format the date in Asia/Ho_Chi_Minh timezone
+            const formatter = new Intl.DateTimeFormat('sv-SE', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                timeZone: 'Asia/Ho_Chi_Minh'
+            });
+            const parts = formatter.formatToParts(date);
+            const year = parts.find(p => p.type === 'year').value;
+            const month = parts.find(p => p.type === 'month').value;
+            const day = parts.find(p => p.type === 'day').value;
+            const hour = parts.find(p => p.type === 'hour').value;
+            const minute = parts.find(p => p.type === 'minute').value;
+            return `${year}-${month}-${day}T${hour}:${minute}`;
+        } catch (e) {
+            console.error("Lỗi định dạng ngày cho input:", e);
+            return '';
+        }
+    }
+
+    /**
+     * Xóa các lỗi validation đang hiển thị trên form.
+     * @param {HTMLElement} formElement - Form cần xóa lỗi.
+     */
+    function clearValidationErrors(formElement) {
         if (!formElement) return;
+        formElement.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+        formElement.querySelectorAll('.invalid-feedback').forEach(el => el.textContent = '');
+    }
 
-        formElement.addEventListener('submit', async function (event) {
+    // -----------------------------------------------------------------------------
+    // SECTION 3: CÁC HÀM XỬ LÝ MODAL (HIỂN THỊ DỮ LIỆU)
+    // -----------------------------------------------------------------------------
+
+    async function handleShowViewModal(button) {
+        showAppLoader();
+        try {
+            const response = await fetch(button.dataset.url, { headers: { 'Accept': 'application/json' } });
+            if (!response.ok) throw new Error(`Lỗi mạng: ${response.statusText}`);
+            const data = await response.json();
+
+            // Điền dữ liệu vào modal xem chi tiết
+            viewModalEl.querySelector('#viewModalPromoCodeStrong').textContent = data.code;
+            viewModalEl.querySelector('#viewDetailPromoCode').textContent = data.code;
+            viewModalEl.querySelector('#viewDetailPromoDescription').textContent = data.description || '(Không có mô tả)';
+            viewModalEl.querySelector('#viewDetailPromoDiscount').textContent = data.formatted_discount;
+            viewModalEl.querySelector('#viewDetailPromoStartDate').textContent = formatLocaleDateTime(data.start_date);
+            viewModalEl.querySelector('#viewDetailPromoEndDate').textContent = formatLocaleDateTime(data.end_date);
+            viewModalEl.querySelector('#viewDetailPromoMaxUses').textContent = data.max_uses || 'Không giới hạn';
+            viewModalEl.querySelector('#viewDetailPromoUsesCount').textContent = data.uses_count;
+            viewModalEl.querySelector('#viewDetailPromoStatusConfigText').innerHTML = `<span class="badge ${data.manual_status_badge_class}">${data.manual_status_text}</span>`;
+            viewModalEl.querySelector('#viewDetailPromoStatusDisplayBadge').innerHTML = `<span class="badge ${data.effective_status_badge_class}">${data.effective_status_text}</span>`;
+
+            // Gán data cho nút "Chỉnh sửa" bên trong modal xem
+            const editBtn = viewModalEl.querySelector('#editFromViewBtn');
+            editBtn.dataset.url = button.dataset.url;
+            editBtn.dataset.updateUrl = button.closest('tr').querySelector('.edit-promotion-btn')?.dataset.updateUrl;
+
+            viewModal.show();
+        } catch (error) {
+            console.error('Lỗi khi lấy dữ liệu xem chi tiết:', error);
+            showAppInfoModal('Không thể lấy dữ liệu chi tiết. Vui lòng thử lại.', 'error');
+        } finally {
+            hideAppLoader();
+        }
+    }
+
+    async function handleShowUpdateModal(button) {
+        showAppLoader();
+        try {
+            const response = await fetch(button.dataset.url, { headers: { 'Accept': 'application/json' } });
+            if (!response.ok) throw new Error(`Lỗi mạng: ${response.statusText}`);
+            const data = await response.json();
+
+            const form = updateModalEl.querySelector('form');
+            form.action = button.dataset.updateUrl; // Lấy URL update từ nút sửa
+
+            // Điền dữ liệu vào form cập nhật
+            form.querySelector('#promoCodeUpdate').value = data.code;
+            form.querySelector('#promoDescriptionUpdate').value = data.description || '';
+            form.querySelector('#promoDiscountUpdate').value = parseFloat(data.discount_percentage);
+            form.querySelector('#promoStartDateUpdate').value = formatForInput(data.start_date);
+            form.querySelector('#promoEndDateUpdate').value = formatForInput(data.end_date);
+            form.querySelector('#promoMaxUsesUpdate').value = data.max_uses || '';
+            form.querySelector('#promoStatusUpdate').value = data.status;
+
+            updateModal.show();
+        } catch (error) {
+            console.error('Lỗi khi lấy dữ liệu cập nhật:', error);
+            showAppInfoModal('Không thể lấy dữ liệu để sửa. Vui lòng thử lại.', 'error');
+        } finally {
+            hideAppLoader();
+        }
+    }
+
+    function handleShowDeleteModal(button) {
+        const form = deleteModalEl.querySelector('form');
+        form.action = button.dataset.deleteUrl;
+        deleteModalEl.querySelector('#deletePromotionCode').textContent = button.dataset.code;
+        deleteModal.show();
+    }
+
+    // -----------------------------------------------------------------------------
+    // SECTION 4: GẮN KẾT SỰ KIỆN (EVENT LISTENERS)
+    // -----------------------------------------------------------------------------
+
+    // Sử dụng Event Delegation trên body để xử lý tất cả các click
+    document.body.addEventListener('click', async function (event) {
+        const button = event.target.closest('button');
+        if (!button) return;
+
+        // Xử lý nút mở Modal Xem Chi Tiết
+        if (button.classList.contains('view-promotion-btn')) {
+            event.preventDefault();
+            await handleShowViewModal(button);
+        }
+
+        // Xử lý nút mở Modal Chỉnh Sửa
+        if (button.classList.contains('edit-promotion-btn')) {
+            event.preventDefault();
+            await handleShowUpdateModal(button);
+        }
+
+        // Xử lý nút mở Modal Xóa
+        if (button.classList.contains('delete-promotion-btn')) {
+            event.preventDefault();
+            handleShowDeleteModal(button);
+        }
+
+        // Xử lý nút "Chỉnh sửa" từ bên trong Modal Xem
+        if (button.id === 'editFromViewBtn') {
+            viewModal.hide();
+            // Đợi một chút để modal cũ đóng hẳn rồi mới mở modal mới
+            setTimeout(() => handleShowUpdateModal(button), 200);
+        }
+
+        // Xử lý nút Bật/Tắt trạng thái
+        if (button.classList.contains('toggle-status-btn')) {
             event.preventDefault();
             showAppLoader();
-
-            const submitButton = formElement.querySelector('button[type="submit"]');
-            const originalButtonText = submitButton ? submitButton.innerHTML : '';
-            if (submitButton) {
-                submitButton.disabled = true;
-                submitButton.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Đang xử lý...`;
-            }
-
-            formElement.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
-            formElement.querySelectorAll('.invalid-feedback[id$="Error"]').forEach(el => {
-                el.textContent = '';
-                el.style.display = 'none';
-            });
-
-            const formData = new FormData(formElement);
-            if (httpMethod.toUpperCase() !== 'POST') {
-                formData.append('_method', httpMethod.toUpperCase());
-            }
-
-            let response; // Khai báo response ở ngoài try-catch để finally có thể truy cập
             try {
-                response = await fetch(formElement.action, { // Gán giá trị cho response
+                const response = await fetch(button.dataset.url, {
                     method: 'POST',
-                    body: formData,
-                    headers: {
-                        'X-CSRF-TOKEN': csrfToken,
-                        'Accept': 'application/json',
-                    }
+                    headers: { 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' }
                 });
-
                 const result = await response.json();
+                if (!response.ok) throw new Error(result.message || "Lỗi không xác định");
 
-                if (!response.ok) {
-                    if (response.status === 422 && result.errors) {
-                        const formType = formElement.id.includes('update') ? 'Update' : (formElement.id.includes('delete') ? 'Delete' : 'Create');
-                        displayValidationErrors(formElement, result.errors, formType);
-                        showAppInfoModal('Vui lòng kiểm tra lại các trường dữ liệu.', 'validation_error', `Lỗi nhập liệu ${sectionTitle}`);
-                    } else {
-                        showAppInfoModal(result.message || `Đã có lỗi xảy ra khi xử lý ${sectionTitle}.`, 'error', 'Lỗi!');
-                    }
-                    throw new Error(result.message || `Server error ${response.status}`);
-                }
-
-                if (successCallback && typeof successCallback === 'function') {
-                    successCallback(result);
-                } else {
-                    const modalInstance = bootstrap.Modal.getInstance(modalElement);
-                    if (modalInstance) modalInstance.hide();
-                    showAppInfoModal(result.message || `${sectionTitle} thành công!`, 'success', 'Thành công!');
-                    setTimeout(() => window.location.reload(), 1200);
-                }
-
+                showAppInfoModal(result.message, 'success');
+                // Tải lại trang để cập nhật trạng thái một cách đồng bộ nhất
+                setTimeout(() => window.location.reload(), 1000);
             } catch (error) {
-                console.error(`Lỗi khi submit form ${formElement.id}:`, error);
-                // Kiểm tra response tồn tại và không phải lỗi validation đã xử lý
-                if (response && response.status !== 422 && response.status !== 200) {
-                    showAppInfoModal(error.message || `Không thể xử lý yêu cầu cho ${sectionTitle}. Vui lòng thử lại.`, 'error', 'Lỗi Hệ Thống');
-                } else if (!response) { // Nếu response không tồn tại (lỗi mạng)
-                    showAppInfoModal('Không thể kết nối đến máy chủ. Vui lòng kiểm tra lại kết nối mạng.', 'error', 'Lỗi Mạng');
-                }
-            } finally {
-                if (submitButton) {
-                    submitButton.disabled = false;
-                    submitButton.innerHTML = originalButtonText;
-                }
-                hideAppLoader();
-            }
-        });
-    }
-
-    // --- CREATE PROMOTION ---
-    // Form Create sử dụng submit truyền thống của Laravel, JS chỉ xử lý việc đóng modal sau khi submit
-    // hoặc reset nếu modal bị đóng ngang.
-    const createModalElement = document.getElementById('createPromotionModal');
-    if (createModalElement) {
-        const createForm = createModalElement.querySelector('#createPromotionForm');
-        // Reset form khi modal bị ẩn (do nhấn nút X, Esc, hoặc nút "Đóng")
-        createModalElement.addEventListener('hidden.bs.modal', function () {
-            if (createForm) {
-                createForm.reset();
-                createForm.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
-                createForm.querySelectorAll('.invalid-feedback').forEach(el => {
-                    el.textContent = '';
-                    el.style.display = 'none';
-                });
-            }
-        });
-        // Logic disable nút submit khi form đang được submit (để tránh double click)
-        if (createForm) {
-            const submitButton = createForm.querySelector('button[type="submit"]');
-            createForm.addEventListener('submit', function () {
-                if (submitButton) {
-                    submitButton.disabled = true;
-                    submitButton.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Đang lưu...`;
-                }
-                // Không preventDefault() để form được submit theo cách truyền thống
-            });
-        }
-    }
-
-    // --- UPDATE PROMOTION ---
-    const updateModalElement = document.getElementById('updatePromotionModal');
-    const updateFormElement = document.getElementById('updatePromotionForm');
-
-    // Hàm này có thể được gọi từ script trong Blade nếu có lỗi validation server-side
-    window.populateUpdateModalPromotion = function (promotionData) {
-        if (!updateModalElement || !updateFormElement || !promotionData) return;
-
-        updateFormElement.action = promotionData.update_url;
-        updateFormElement.querySelector('#promoCodeUpdate').value = promotionData.code || '';
-        updateFormElement.querySelector('#promoDescriptionUpdate').value = promotionData.description || '';
-        updateFormElement.querySelector('#promoDiscountUpdate').value = promotionData.discount_percentage || '';
-        updateFormElement.querySelector('#promoMaxUsesUpdate').value = promotionData.max_uses || '';
-        updateFormElement.querySelector('#promoStartDateUpdate').value = promotionData.start_date_form || '';
-        updateFormElement.querySelector('#promoEndDateUpdate').value = promotionData.end_date_form || '';
-        updateFormElement.querySelector('#promoStatusUpdate').value = promotionData.manual_status || 'inactive';
-
-        // Xóa lỗi validation cũ
-        updateFormElement.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
-        updateFormElement.querySelectorAll('.invalid-feedback[id$="Error"]').forEach(el => { el.textContent = ''; el.style.display = 'none'; });
-    }
-
-    if (updateModalElement && updateFormElement) {
-        updateModalElement.addEventListener('show.bs.modal', function (event) {
-            const button = event.relatedTarget; // Nút đã kích hoạt modal
-            if (button && button.dataset.promotionData) {
-                try {
-                    const promotionData = JSON.parse(button.dataset.promotionData);
-                    window.populateUpdateModalPromotion(promotionData);
-                } catch (e) {
-                    console.error("Lỗi parse JSON data cho modal update:", e);
-                    showAppInfoModal('Không thể tải dữ liệu khuyến mãi để cập nhật.', 'error', 'Lỗi Dữ Liệu');
-                }
-            }
-        });
-
-        handleAjaxFormSubmit(updateFormElement, updateModalElement, "Mã Khuyến mãi", (result) => {
-            const modalInstance = bootstrap.Modal.getInstance(updateModalElement);
-            if (modalInstance) modalInstance.hide();
-            showAppInfoModal(result.message || 'Cập nhật Mã Khuyến mãi thành công!', 'success', 'Thành công!');
-            setTimeout(() => window.location.reload(), 1200); // Reload để cập nhật bảng
-        }, 'PUT');
-    }
-
-
-    // --- VIEW PROMOTION ---
-    const viewModalElement = document.getElementById('viewPromotionModal');
-    if (viewModalElement) {
-        viewModalElement.addEventListener('show.bs.modal', function (event) {
-            const button = event.relatedTarget;
-            if (!button || !button.dataset.promotionData) return;
-
-            try {
-                const data = JSON.parse(button.dataset.promotionData);
-                viewModalElement.querySelector('#viewModalPromoCodeStrong').textContent = data.code || 'N/A';
-                viewModalElement.querySelector('#viewDetailPromoCode').textContent = data.code || 'N/A';
-                viewModalElement.querySelector('#viewDetailPromoDescription').textContent = data.description || 'Không có';
-                viewModalElement.querySelector('#viewDetailPromoDiscount').textContent = data.discount_percentage + '%' || 'N/A';
-                viewModalElement.querySelector('#viewDetailPromoStartDate').textContent = data.start_date_display || 'N/A';
-                viewModalElement.querySelector('#viewDetailPromoEndDate').textContent = data.end_date_display || 'N/A';
-                viewModalElement.querySelector('#viewDetailPromoMaxUses').textContent = data.max_uses ? data.max_uses : 'Không giới hạn';
-                viewModalElement.querySelector('#viewDetailPromoUsesCount').textContent = data.uses_count || '0';
-                viewModalElement.querySelector('#viewDetailPromoStatusConfigText').textContent = data.status_config_text || 'N/A';
-
-                const statusDisplayBadgeSpan = viewModalElement.querySelector('#viewDetailPromoStatusDisplayBadgeSpan');
-                statusDisplayBadgeSpan.className = `badge ${data.status_display_badge || 'bg-secondary'}`;
-                statusDisplayBadgeSpan.textContent = data.status_display || 'N/A';
-
-                // Setup "Edit from View" button
-                const editFromViewButton = viewModalElement.querySelector('#editFromViewModalBtn');
-                if (editFromViewButton) {
-                    // Truyền toàn bộ data cho nút edit để nó có thể populate modal update
-                    editFromViewButton.dataset.promotionDataForUpdate = JSON.stringify(data);
-                }
-            } catch (e) {
-                console.error("Lỗi parse JSON data cho modal view:", e);
-                showAppInfoModal('Không thể tải chi tiết khuyến mãi.', 'error', 'Lỗi Dữ Liệu');
-            }
-        });
-
-        const editFromViewButton = viewModalElement.querySelector('#editFromViewModalBtn');
-        if (editFromViewButton && updateModalElement) {
-            editFromViewButton.addEventListener('click', function () {
-                if (this.dataset.promotionDataForUpdate) {
-                    try {
-                        const promotionData = JSON.parse(this.dataset.promotionDataForUpdate);
-                        window.populateUpdateModalPromotion(promotionData); // Gọi hàm populate
-                        // Đóng modal view đã được xử lý bằng data-bs-dismiss="modal" trên nút
-                        const updateModalInstance = bootstrap.Modal.getInstance(updateModalElement) || new bootstrap.Modal(updateModalElement);
-                        updateModalInstance.show();
-                    } catch (e) {
-                        console.error("Lỗi parse JSON data khi edit từ view modal:", e);
-                        showAppInfoModal('Không thể mở form cập nhật.', 'error', 'Lỗi');
-                    }
-                }
-            });
-        }
-    }
-
-
-    // --- DELETE PROMOTION ---
-    const deleteModalElement = document.getElementById('deletePromotionModal');
-    const deleteFormElement = document.getElementById('deletePromotionForm');
-
-    // Hàm này có thể được gọi từ script trong Blade nếu có lỗi validation server-side
-    window.populateDeleteModalPromotion = function (triggerButton) {
-        if (!deleteModalElement || !deleteFormElement || !triggerButton) return;
-
-        const code = triggerButton.dataset.code || 'N/A';
-        const deleteUrl = triggerButton.dataset.deleteUrl;
-        const usesCount = parseInt(triggerButton.dataset.usesCount || '0');
-
-        deleteFormElement.action = deleteUrl;
-        deleteModalElement.querySelector('#promoCodeNameToDelete').textContent = code;
-
-        const warningElement = deleteModalElement.querySelector('#deleteWarningUsesCount');
-        const usesCountDisplay = deleteModalElement.querySelector('#promoUsesCountDisplayForDelete');
-        if (warningElement && usesCountDisplay) {
-            if (usesCount > 0) {
-                usesCountDisplay.textContent = usesCount;
-                warningElement.style.display = 'block';
-            } else {
-                warningElement.style.display = 'none';
-            }
-        }
-        // Reset password field và lỗi (nếu có)
-        const passwordInput = deleteModalElement.querySelector('#adminPasswordDeletePromotion');
-        const passwordErrorDiv = deleteModalElement.querySelector('#admin_password_delete_promotionError');
-        if (passwordInput) {
-            passwordInput.value = '';
-            passwordInput.classList.remove('is-invalid');
-        }
-        if (passwordErrorDiv) {
-            passwordErrorDiv.textContent = '';
-            passwordErrorDiv.style.display = 'none';
-        }
-    }
-
-    if (deleteModalElement && deleteFormElement) {
-        deleteModalElement.addEventListener('show.bs.modal', function (event) {
-            const button = event.relatedTarget;
-            if (button) {
-                window.populateDeleteModalPromotion(button);
-            }
-        });
-
-        handleAjaxFormSubmit(deleteFormElement, deleteModalElement, "Mã Khuyến mãi", (result) => {
-            const modalInstance = bootstrap.Modal.getInstance(deleteModalElement);
-            if (modalInstance) modalInstance.hide();
-            showAppInfoModal(result.message || 'Xóa Mã Khuyến mãi thành công!', 'success', 'Thành công!');
-            setTimeout(() => window.location.reload(), 1200);
-        }, 'DELETE');
-    }
-
-    // --- TOGGLE STATUS ---
-    document.querySelectorAll('.toggle-status-btn').forEach(button => {
-        button.addEventListener('click', async function () {
-            const promotionId = this.dataset.id;
-            const url = this.dataset.url;
-            const currentButton = this;
-
-            showAppLoader();
-            try {
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRF-TOKEN': csrfToken,
-                        'Accept': 'application/json',
-                    }
-                });
-
-                const result = await response.json();
-
-                if (!response.ok) {
-                    throw new Error(result.message || `Lỗi HTTP ${response.status}`);
-                }
-
-                if (result.success) {
-                    // Cập nhật ô Trạng thái Cài đặt
-                    const statusConfigCell = document.getElementById(`promotion-status-config-${promotionId}`);
-                    if (statusConfigCell) {
-                        statusConfigCell.innerHTML = `<span class="badge ${result.config_status_badge_class}">${result.config_status_text}</span>`;
-                    }
-                    // Cập nhật ô Trạng thái Hiện tại (Hiệu lực)
-                    const statusDisplayCell = document.getElementById(`promotion-status-display-${promotionId}`);
-                    if (statusDisplayCell) {
-                        statusDisplayCell.innerHTML = `<span class="badge ${result.effective_badge_class}">${result.effective_display_text}</span>`;
-                    }
-
-                    // Cập nhật nút toggle
-                    currentButton.innerHTML = `<i class="bi ${result.button_icon_class}"></i>`;
-                    currentButton.title = result.button_title;
-
-                    // Cập nhật class cho row nếu cần (dựa trên manual_status)
-                    const row = document.getElementById(`promotion-row-${promotionId}`);
-                    if (row) {
-                        if (result.new_manual_status === 'inactive') {
-                            row.classList.add('row-inactive');
-                        } else {
-                            row.classList.remove('row-inactive');
-                        }
-                    }
-                    // Disable nút nếu mã hết hạn và đang được bật
-                    if (result.is_disabled_by_date !== undefined) {
-                        currentButton.disabled = result.is_disabled_by_date;
-                    }
-
-                    // showAppInfoModal(result.message, 'success', 'Thành công'); // Có thể bỏ qua để tránh quá nhiều thông báo
-                } else {
-                    showAppInfoModal(result.message || 'Lỗi cập nhật trạng thái.', 'error', 'Lỗi!');
-                }
-            } catch (error) {
-                console.error('Lỗi toggle status promotion:', error);
-                showAppInfoModal(error.message || 'Không thể cập nhật trạng thái.', 'error', 'Lỗi!');
+                console.error('Lỗi khi bật/tắt trạng thái:', error);
+                showAppInfoModal(error.message, 'error');
             } finally {
                 hideAppLoader();
             }
-        });
+        }
     });
 
-} // End initializePromotionsPage
+    // Reset form khi modal được đóng để tránh giữ lại dữ liệu cũ
+    createModalEl.addEventListener('hidden.bs.modal', () => {
+        const form = createModalEl.querySelector('form');
+        form.reset();
+        clearValidationErrors(form);
+    });
+    updateModalEl.addEventListener('hidden.bs.modal', () => {
+        const form = updateModalEl.querySelector('form');
+        form.reset();
+        clearValidationErrors(form);
+    });
 
-// Script để Blade gọi nếu có lỗi validation server-side (đã được khai báo global)
-// window.populateUpdateModalPromotion = function(promotionData) { ... }
-// window.populateDeleteModalPromotion = function(triggerButton) { ... }
+    // -----------------------------------------------------------------------------
+    // SECTION 5: THIẾT LẬP FORM AJAX
+    // -----------------------------------------------------------------------------
+    // Sử dụng hàm setupAjaxForm toàn cục từ admin_layout.js
+    if (typeof window.setupAjaxForm === 'function') {
+        const reloadCallback = () => setTimeout(() => window.location.reload(), 1200);
+
+        window.setupAjaxForm('createPromotionForm', 'createPromotionModal', reloadCallback);
+        window.setupAjaxForm('updatePromotionForm', 'updatePromotionModal', reloadCallback);
+        window.setupAjaxForm('deletePromotionForm', 'deletePromotionModal', reloadCallback);
+    } else {
+        console.error("Hàm setupAjaxForm() không tồn tại. Các form sẽ không hoạt động bằng AJAX.");
+    }
+
+    console.log("Module Quản lý Mã Khuyến Mãi đã được khởi tạo thành công.");
+});

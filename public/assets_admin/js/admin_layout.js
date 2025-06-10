@@ -93,7 +93,6 @@
 
         try {
             const appModalInstance = bootstrap.Modal.getInstance(modalElement) || new bootstrap.Modal(modalElement);
-            // Đóng tất cả modal khác trước khi mở modal mới
             document.querySelectorAll('.modal').forEach(modalEl => {
                 if (modalEl !== modalElement) {
                     const modalInstance = bootstrap.Modal.getInstance(modalEl);
@@ -134,17 +133,13 @@
                 }
             }
         }
-
-        // Làm mới selectpicker sau khi hiển thị lỗi
-        try {
-            $(form).find('.selectpicker').selectpicker('refresh');
-        } catch (error) {
-            console.error('Lỗi khi làm mới selectpicker sau validation:', error);
-        }
     };
 
     /**
      * A.5. Gắn sự kiện submit AJAX cho một form.
+     * === ĐÃ SỬA LỖI QUAN TRỌNG ===
+     * Logic này giờ linh hoạt hơn để xử lý cả PUT/PATCH (qua _method) và POST.
+     * Nó đọc phương thức từ form.method hoặc từ trường ẩn _method trong FormData.
      */
     window.setupAjaxForm = function (formId, modalId = null, successCallback = null, errorCallback = null) {
         const form = document.getElementById(formId);
@@ -157,10 +152,14 @@
             e.preventDefault();
             window.showAppLoader();
             try {
-                const method = form.querySelector('input[name="_method"]')?.value || form.method;
+                const formData = new FormData(form);
+
+                // Xác định phương thức HTTP thực tế. Ưu tiên _method (nếu có), nếu không thì dùng phương thức của form.
+                const httpMethod = (formData.get('_method') || form.method).toUpperCase();
+
                 const response = await fetch(form.action, {
-                    method: method.toUpperCase() === 'POST' ? 'POST' : method.toUpperCase(),
-                    body: new FormData(form),
+                    method: httpMethod, // Sử dụng phương thức được xác định
+                    body: formData, // Gửi FormData trực tiếp
                     headers: {
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
                         'Accept': 'application/json'
@@ -185,12 +184,6 @@
                 }
 
                 form.reset();
-                // Làm mới selectpicker sau khi reset form
-                try {
-                    $(form).find('.selectpicker').selectpicker('val', '').selectpicker('refresh');
-                } catch (error) {
-                    console.error('Lỗi khi làm mới selectpicker sau reset form:', error);
-                }
 
                 window.showAppInfoModal(result.message, 'success', 'Thành công');
 
@@ -205,6 +198,35 @@
                 if (errorCallback) errorCallback(error);
             } finally {
                 window.hideAppLoader();
+            }
+        });
+    };
+
+    /**
+     * A.6. Thiết lập xem trước ảnh (Image Preview) cho input file
+     */
+    window.setupImagePreviews = (inputEl, previewContainerEl) => {
+        if (!inputEl || !previewContainerEl) {
+            console.warn('Input hoặc container xem trước ảnh không hợp lệ.');
+            return;
+        }
+        inputEl.addEventListener('change', function (event) {
+            previewContainerEl.querySelectorAll('.new-preview').forEach(el => el.remove());
+            const files = event.target.files;
+            if (!files) return;
+            for (const file of files) {
+                if (!file.type.startsWith('image/')) continue;
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const previewWrapper = document.createElement('div');
+                    previewWrapper.className = 'img-preview-wrapper new-preview';
+                    previewWrapper.innerHTML = `
+                        <img src="${e.target.result}" class="img-preview" alt="${file.name}">
+                        <button type="button" class="img-preview-remove" title="Xóa ảnh này">×</button>
+                    `;
+                    previewContainerEl.appendChild(previewWrapper);
+                };
+                reader.readAsDataURL(file);
             }
         });
     };
@@ -307,9 +329,12 @@
 
     /**
      * B.3. Khởi tạo chức năng Xem trước ảnh (Image Preview).
+     * Hàm này được gọi bởi runPageSpecificInitializers
+     * Nó cấu hình các input file để hiển thị ảnh preview.
      */
     function initializeImagePreviews() {
         const imagePreviewPairs = [
+            // Các cặp input và preview ID (ví dụ: inputId: 'myInput', previewId: 'myPreviewImg')
             { inputId: 'vbLogoCreate', previewId: 'vbLogoPreviewCreate' },
             { inputId: 'vbLogoUpdate', previewId: 'vbLogoPreviewUpdate' },
             { inputId: 'categoryLogoCreate', previewId: 'categoryLogoPreviewCreate' },
@@ -343,10 +368,10 @@
                         previewElement.onload = () => URL.revokeObjectURL(objectURL);
                         previewElement.onerror = () => {
                             console.error(`[ImagePreview] Lỗi tải ảnh cho ${previewId}`);
-                            previewElement.src = defaultSrc;
+                            previewElement.src = defaultSrc; // Quay lại ảnh mặc định
                         };
                     } else {
-                        previewElement.src = defaultSrc;
+                        previewElement.src = defaultSrc; // Quay lại ảnh mặc định
                     }
                 });
             }
@@ -354,9 +379,10 @@
         imagePreviewPairs.forEach(pair => setupPreview(pair.inputId, pair.previewId));
     }
 
+
     /**
      * ===============================================================
-     * C. HÀM KHỞI TẠO VÀ ĐIỀU PHỐI
+     * C. HÀM KHỞI TẠO VÀ ĐIỀU PHỐI CHUNG
      * ===============================================================
      */
 
@@ -370,10 +396,13 @@
 
     /**
      * Hàm này điều phối việc gọi các script của TỪNG TRANG CỤ THỂ.
+     * Các hàm khởi tạo trang cụ thể (ví dụ: initializeCustomersPage)
+     * phải được định nghĩa toàn cục hoặc trong phạm vi mà hàm này có thể truy cập.
      */
     function runPageSpecificInitializers() {
-        initializeImagePreviews(); // An toàn để chạy trên mọi trang
+        initializeImagePreviews(); // Cấu hình preview ảnh cho tất cả các trang
 
+        // Các hàm khởi tạo cho từng trang cụ thể
         if (typeof initializeDashboardChart === 'function' && document.querySelector('.dashboard-page-identifier')) {
             initializeDashboardChart();
         }
@@ -390,6 +419,7 @@
             initializeCategoriesPage();
         }
         if (typeof initializeBrandsPage === 'function' && document.getElementById('adminBrandsPage')) {
+            // Có thể truyền tham số nếu cần thiết
             const hasValidationErrors = window.brandValidationErrors || false;
             const formMarker = window.brandFormMarker || null;
             initializeBrandsPage(hasValidationErrors, formMarker);
@@ -413,34 +443,38 @@
 
     /**
      * ===============================================================
-     * D. ĐIỂM BẮT ĐẦU THỰC THI
+     * D. ĐIỂM BẮT ĐẦU THỰC THI (ĐÃ SỬA LỖI)
      * ===============================================================
      */
-    document.addEventListener('DOMContentLoaded', () => {
-        window.showAppLoader();
 
-        // Kiểm tra sự tồn tại của #sidebar để quyết định có phải là trang admin không
+    // Hàm này chứa tất cả logic khởi tạo chính của ứng dụng
+    function initializeApp() {
+        console.log("App initializing...");
+        window.showAppLoader(); // Hiển thị loader ngay khi bắt đầu
+
+        // Khởi tạo các thành phần layout admin (sidebar, notifications)
         if (document.getElementById('sidebar')) {
             initializeAdminLayoutComponents();
         }
 
-        // Luôn chạy các hàm khởi tạo cho từng trang cụ thể
+        // Chạy các script cụ thể cho từng trang
         runPageSpecificInitializers();
 
-        // Khởi tạo cho trang login nếu tìm thấy login form
+        // Xử lý logic đặc biệt cho trang login nếu có
         if (typeof window.initializeLoginPage === 'function' && document.getElementById('loginForm')) {
             window.initializeLoginPage();
         }
 
-        // Làm mới tất cả selectpicker sau khi DOM sẵn sàng
-        setTimeout(() => {
-            try {
-                $('.selectpicker').selectpicker('refresh');
-            } catch (error) {
-                console.error('Lỗi khi làm mới selectpicker:', error);
-            }
-            window.hideAppLoader();
-        }, 100);
-    });
+        window.hideAppLoader(); // Ẩn loader khi tất cả đã tải xong
+        console.log("App initialization complete.");
+    }
+
+    // Lắng nghe cả hai sự kiện để đảm bảo khởi tạo đúng lúc:
+    // 1. 'turbo:load': Được kích hoạt bởi Turbo (nếu bạn đang sử dụng Hotwired Laravel Turbo Laravel)
+    //    cho các lần điều hướng trang mềm mại (SPA-like).
+    // 2. 'DOMContentLoaded': Được kích hoạt khi DOM đã tải đầy đủ cho lần tải trang đầu tiên
+    //    hoặc khi không sử dụng Turbo.
+    document.addEventListener('turbo:load', initializeApp);
+    document.addEventListener('DOMContentLoaded', initializeApp);
 
 })();
