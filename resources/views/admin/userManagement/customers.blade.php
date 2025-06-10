@@ -104,6 +104,7 @@
                                                     <button class="btn btn-danger btn-sm btn-action btn-force-delete-customer" data-bs-toggle="modal" data-bs-target="#confirmForceDeleteModal" data-name="{{ $customer->name }}" data-delete-url="{{ route('admin.userManagement.customers.forceDelete', $customer->id) }}" title="Xóa vĩnh viễn"><i class="bi bi-trash-fill"></i></button>
                                                 @else
                                                     <button class="btn btn-info btn-sm btn-action btn-view-customer" data-bs-toggle="modal" data-bs-target="#customerDetailModal" data-customer='{{ json_encode($customer) }}' title="Xem chi tiết"><i class="bi bi-eye-fill"></i></button>
+                                                    {{-- Nút "Sửa" trong danh sách, có data-update-url --}}
                                                     <button class="btn btn-warning btn-sm btn-action btn-edit-customer" data-bs-toggle="modal" data-bs-target="#updateCustomerModal" data-customer='{{ json_encode($customer) }}' data-update-url="{{ route('admin.userManagement.customers.update', $customer->id) }}" title="Sửa"><i class="bi bi-pencil-square"></i></button>
                                                     <button class="btn btn-sm btn-action toggle-status-customer-btn {{ $customer->isActive() ? 'btn-secondary' : 'btn-success' }}" data-url="{{ route('admin.userManagement.customers.toggleStatus', $customer) }}" title="{{ $customer->isActive() ? 'Khóa' : 'Mở khóa' }}"><i class="bi {{ $customer->isActive() ? 'bi-lock-fill' : 'bi-unlock-fill' }}"></i></button>
                                                     <button class="btn btn-danger btn-sm btn-action btn-delete-customer" data-bs-toggle="modal" data-bs-target="#confirmDeleteModal" data-name="{{ $customer->name }}" data-delete-url="{{ route('admin.userManagement.customers.destroy', $customer->id) }}" title="Xóa"><i class="bi bi-trash"></i></button>
@@ -155,6 +156,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                    {{-- Nút "Chỉnh sửa" trong modal chi tiết, data-customer và data-update-url được gán bằng JS --}}
                     <button type="button" class="btn btn-warning" id="editFromDetailBtn" style="display: none;"> {{-- Ẩn mặc định --}}
                         <i class="bi bi-pencil-square"></i> Chỉnh sửa
                     </button>
@@ -192,7 +194,7 @@
         <div class="modal-dialog modal-lg">
             <form id="updateCustomerForm" method="POST" enctype="multipart/form-data">
                 @csrf
-                @method('PUT')
+                @method('PUT') {{-- Đảm bảo dòng này tồn tại và đúng cú pháp --}}
                 <div class="modal-content">
                     <div class="modal-header"><h5 class="modal-title" id="updateCustomerModalLabel">Cập nhật Khách hàng</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
                     <div class="modal-body">

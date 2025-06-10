@@ -1,10 +1,8 @@
-
 <div class="modal fade" id="createProductModal" tabindex="-1" aria-labelledby="createProductModalLabel"
     aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content">
-            <form id="createProductForm" action="{{ route('admin.productManagement.products.store') }}" method="POST"
-                enctype="multipart/form-data">
+            <form id="createProductForm" method="POST" enctype="multipart/form-data">
                 @csrf
                 <div class="modal-header">
                     <h5 class="modal-title" id="createProductModalLabel">
@@ -13,7 +11,7 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="row">
+                    <div class="row g-3">
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label for="productNameCreate" class="form-label">Tên Sản phẩm <span
@@ -24,8 +22,8 @@
                             </div>
                             <div class="mb-3">
                                 <label for="productDescriptionCreate" class="form-label">Mô tả chi tiết:</label>
-                                <textarea name="description" class="form-control" id="productDescriptionCreate"
-                                    rows="4"></textarea>
+                                <textarea name="description" class="form-control" id="productDescriptionCreate" rows="4"
+                                    placeholder="Nhập mô tả chi tiết"></textarea>
                                 <div class="invalid-feedback"></div>
                             </div>
                             <div class="mb-3">
@@ -54,14 +52,14 @@
                                 <label for="productPriceCreate" class="form-label">Giá bán (VNĐ) <span
                                         class="text-danger">*</span></label>
                                 <input type="number" name="price" class="form-control" id="productPriceCreate" min="0"
-                                    step="0.01" required>
+                                    step="0.01" placeholder="Nhập giá bán" required>
                                 <div class="invalid-feedback"></div>
                             </div>
                             <div class="mb-3">
                                 <label for="productStockCreate" class="form-label">Số lượng tồn kho <span
                                         class="text-danger">*</span></label>
                                 <input type="number" name="stock_quantity" class="form-control" id="productStockCreate"
-                                    min="0" required>
+                                    min="0" placeholder="Nhập số lượng" required>
                                 <div class="invalid-feedback"></div>
                             </div>
                         </div>
@@ -85,19 +83,21 @@
                             </div>
                             <div class="mb-3">
                                 <label for="productMaterialCreate" class="form-label">Chất liệu:</label>
-                                <input type="text" name="material" class="form-control" id="productMaterialCreate">
+                                <input type="text" name="material" class="form-control" id="productMaterialCreate"
+                                    placeholder="Nhập chất liệu">
                                 <div class="invalid-feedback"></div>
                             </div>
                             <div class="mb-3">
                                 <label for="productColorCreate" class="form-label">Màu sắc:</label>
-                                <input type="text" name="color" class="form-control" id="productColorCreate">
+                                <input type="text" name="color" class="form-control" id="productColorCreate"
+                                    placeholder="Nhập màu sắc">
                                 <div class="invalid-feedback"></div>
                             </div>
                             <div class="mb-3">
                                 <label for="productSpecificationsCreate" class="form-label">Thông số kỹ thuật
                                     (khác):</label>
                                 <textarea name="specifications" class="form-control" id="productSpecificationsCreate"
-                                    rows="4"></textarea>
+                                    rows="4" placeholder="Nhập thông số kỹ thuật"></textarea>
                                 <div class="invalid-feedback"></div>
                             </div>
                             <div class="mb-3 form-check">
@@ -106,11 +106,22 @@
                                 <label class="form-check-label" for="productIsActiveCreate">Hiển thị sản phẩm</label>
                             </div>
                             <div class="mb-3">
-                                <label for="productImagesCreate" class="form-label">Hình ảnh sản phẩm:</label>
-                                <input type="file" name="product_images[]" class="form-control" id="productImagesCreate"
-                                    multiple accept="image/*">
+                                <label class="form-label">Hình ảnh sản phẩm:</label>
+                                <div class="image-upload-container">
+                                    <input type="file" name="product_images[]" id="productImagesCreate" multiple
+                                        accept="image/*" class="d-none">
+
+                                    <label for="productImagesCreate" class="image-drop-zone">
+                                        <i class="bi bi-cloud-arrow-up-fill"></i>
+                                        <p>Kéo và thả file vào đây, hoặc nhấn để chọn ảnh</p>
+                                        <small>(Có thể chọn nhiều ảnh)</small>
+                                    </label>
+
+                                    <div id="productImagesPreviewCreate" class="mt-2 d-flex flex-wrap gap-2">
+                                        {{-- Các ảnh preview sẽ được hiển thị ở đây bằng JavaScript --}}
+                                    </div>
+                                </div>
                                 <div class="invalid-feedback"></div>
-                                <div id="productImagesPreviewCreate" class="mt-2"></div>
                             </div>
                         </div>
                     </div>

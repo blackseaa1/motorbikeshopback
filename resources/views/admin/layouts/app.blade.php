@@ -17,6 +17,8 @@
     <link rel="stylesheet" href="{{ asset('assets_admin/css/common/normalize.css') }}">
     <link rel="stylesheet" href="{{ asset('assets_admin/css/common/reset.css') }}">
     <link rel="stylesheet" href="{{ asset('assets_admin/css/common/style.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets_admin/css/library/bootstrap.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets_admin/css/library/bootstrap-select.min.css') }}">
 
     @yield('styles') {{-- Dành cho CSS riêng của từng trang --}}
 </head>
@@ -59,14 +61,11 @@
     </div>
 
     {{-- ================= SỬA ĐỔI 2: KHU VỰC NẠP SCRIPT ================= --}}
-    {{-- Thứ tự nạp script đúng để tránh lỗi "jQuery is not defined" --}}
-
-    {{-- 1. Nạp file JS chính được xử lý bởi Vite. File này sẽ public jQuery và các thư viện khác. --}}
-    @vite('resources/js/app.js')
-
-    {{-- 2. Nạp các file JS chung khác của bạn. --}}
+    <script src="{{ asset('assets_admin/js/library/jquery-3.6.0.min.js') }}"></script>
+    <script src="{{ asset('assets_admin/js/library/bootstrap.bundle.min.js') }}"></script>
+    <script src="{{ asset('assets_admin/js/library/bootstrap-select.min.js') }}"></script>
+    {{-- <script src="{{ asset('assets_admin/js/library/chart.js') }}"></script> --}}
     <script src="{{ asset('assets_admin/js/admin_layout.js') }}"></script>
-
     {{-- 3. Nạp các file JS của từng trang riêng lẻ (ví dụ: product_management.js). --}}
     @stack('scripts')
 </body>

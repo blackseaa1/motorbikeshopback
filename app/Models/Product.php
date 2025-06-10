@@ -4,11 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Number;
 
 class Product extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     const STATUS_ACTIVE = 'active';
     const STATUS_INACTIVE = 'inactive';
@@ -73,8 +74,7 @@ class Product extends Model
      */
     public function vehicleModels()
     {
-        return $this->belongsToMany(VehicleModel::class, 'product_vehicle_models', 'product_id', 'vehicle_model_id')
-            ->withTimestamps();
+        return $this->belongsToMany(VehicleModel::class, 'product_vehicle_models', 'product_id', 'vehicle_model_id');
     }
 
     /**
@@ -122,13 +122,18 @@ class Product extends Model
 
     public function getThumbnailUrlAttribute(): string
     {
-        // Để tối ưu, hãy eager load: Product::with('images')->find(1);
-        if ($this->relationLoaded('images') && $this->images->isNotEmpty()) {
-            return $this->images->first()->image_full_url;
-        } else if ($this->images()->exists()) { // Fallback query if not eager loaded
-            return $this->images()->first()->image_full_url;
+        // Lấy ảnh đầu tiên từ collection images đã được load
+        // Hoặc query nếu chưa được load
+        $firstImage = $this->relationLoaded('images')
+            ? $this->images->first()
+            : $this->images()->first();
+
+        // Kiểm tra xem $firstImage có thực sự tồn tại không trước khi truy cập thuộc tính
+        if ($firstImage) {
+            return $firstImage->image_full_url;
         }
 
+        // Nếu không có ảnh nào, trả về URL mặc định
         return 'https://placehold.co/400x400/EFEFEF/AAAAAA&text=Product';
     }
 

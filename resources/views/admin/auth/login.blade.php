@@ -15,6 +15,8 @@
     <link rel="stylesheet" href="{{ asset('assets_admin/css/common/normalize.css') }}">
     <link rel="stylesheet" href="{{ asset('assets_admin/css/common/reset.css') }}">
     <link rel="stylesheet" href="{{ asset('assets_admin/css/common/style.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets_admin/css/library/bootstrap.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets_admin/css/library/bootstrap-select.min.css') }}">
     {{-- Chứa CSS cho #loading-overlay
     --}}
 
@@ -118,6 +120,8 @@
             </div>
         </div>
     </div>
+    <script src="{{ asset('assets_admin/js/library/bootstrap.bundle.min.js') }}"></script>
+    <script src="{{ asset('assets_admin/js/library/bootstrap-select.min.js') }}"></script>
     <script src="{{ asset('assets_admin/js/admin_layout.js') }}"></script>
     <script src="{{ asset('assets_admin/js/login.js') }}"></script>
 
