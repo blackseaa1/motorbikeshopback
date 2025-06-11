@@ -141,7 +141,11 @@ function initializeStaffsPage() {
         form.querySelector('#staffIdForUpdateModalInput').value = data.id;
         form.querySelector('#staffNameUpdate').value = data.name || '';
         form.querySelector('#staffEmailUpdate').value = data.email || '';
-        form.querySelector('#staffPhoneUpdate').value = data.phone || '';
+        // <<< SỬA ĐỔI Ở ĐÂY
+        // Kiểm tra nếu dữ liệu là chuỗi "Chưa cập nhật" thì gán giá trị rỗng cho ô input
+        const phoneValue = data.phone === 'Chưa cập nhật' ? '' : (data.phone || '');
+        form.querySelector('#staffPhoneUpdate').value = phoneValue;
+        // <<< KẾT THÚC SỬA ĐỔI
         form.querySelector('#staffRoleUpdate').value = data.role || '';
         form.querySelector('#staffStatusUpdate').value = data.status || 'active';
         form.querySelector('#staffAvatarPreviewUpdate').src = data.avatarUrl || 'https://placehold.co/100x100';

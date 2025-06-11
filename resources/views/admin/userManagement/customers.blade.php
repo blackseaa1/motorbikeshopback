@@ -103,7 +103,12 @@
                                                     <button class="btn btn-success btn-sm btn-action btn-restore-customer" data-url="{{ route('admin.userManagement.customers.restore', $customer->id) }}" data-name="{{ $customer->name }}" title="Khôi phục"><i class="bi bi-arrow-counterclockwise"></i></button>
                                                     <button class="btn btn-danger btn-sm btn-action btn-force-delete-customer" data-bs-toggle="modal" data-bs-target="#confirmForceDeleteModal" data-name="{{ $customer->name }}" data-delete-url="{{ route('admin.userManagement.customers.forceDelete', $customer->id) }}" title="Xóa vĩnh viễn"><i class="bi bi-trash-fill"></i></button>
                                                 @else
-                                                    <button class="btn btn-info btn-sm btn-action btn-view-customer" data-bs-toggle="modal" data-bs-target="#customerDetailModal" data-customer='{{ json_encode($customer) }}' title="Xem chi tiết"><i class="bi bi-eye-fill"></i></button>
+                                                  <button class="btn btn-info btn-sm btn-action btn-view-customer"
+        data-bs-toggle="modal"
+        data-bs-target="#customerDetailModal"
+        data-customer='{{ json_encode($customer) }}'
+        data-update-url="{{ route('admin.userManagement.customers.update', $customer->id) }}"
+        title="Xem chi tiết"><i class="bi bi-eye-fill"></i></button>
                                                     {{-- Nút "Sửa" trong danh sách, có data-update-url --}}
                                                     <button class="btn btn-warning btn-sm btn-action btn-edit-customer" data-bs-toggle="modal" data-bs-target="#updateCustomerModal" data-customer='{{ json_encode($customer) }}' data-update-url="{{ route('admin.userManagement.customers.update', $customer->id) }}" title="Sửa"><i class="bi bi-pencil-square"></i></button>
                                                     <button class="btn btn-sm btn-action toggle-status-customer-btn {{ $customer->isActive() ? 'btn-secondary' : 'btn-success' }}" data-url="{{ route('admin.userManagement.customers.toggleStatus', $customer) }}" title="{{ $customer->isActive() ? 'Khóa' : 'Mở khóa' }}"><i class="bi {{ $customer->isActive() ? 'bi-lock-fill' : 'bi-unlock-fill' }}"></i></button>
@@ -204,7 +209,7 @@
                             <div class="col-md-6 mb-3"><label class="form-label">Email (Không đổi)</label><input type="email" class="form-control" name="email_display" readonly disabled></div>
                         </div>
                         <div class="row">
-                            <div class="col-md-6 mb-3"><label class="form-label">Điện thoại</label><input type="tel" class="form-control" name="phone"><div class="invalid-feedback"></div></div>
+                            <div class="col-md-6 mb-3"><label class="form-label">Điện thoại</label><input type="tel" class="form-control" name="phone" placeholder="Chưa cập nhật"><div class="invalid-feedback"></div></div>
                             <div class="col-md-6 mb-3"><label class="form-label">Trạng thái <span class="text-danger">*</span></label><select class="form-select" name="status" required><option value="active">Hoạt động</option><option value="suspended">Bị khóa</option></select><div class="invalid-feedback"></div></div>
                         </div>
                         <div class="mb-3"><label class="form-label">Ảnh đại diện mới</label><input type="file" class="form-control" name="img" accept="image/*" data-preview="customerAvatarPreviewUpdate"><div class="invalid-feedback"></div></div>

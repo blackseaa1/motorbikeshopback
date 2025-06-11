@@ -6,6 +6,7 @@ namespace App\Models;
 // Thêm use cho các Model có quan hệ
 use App\Models\BlogPost;
 use App\Models\Order;
+use Illuminate\Database\Eloquent\Casts\Attribute; // <-- THÊM MỚI
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -88,6 +89,17 @@ class Admin extends Authenticatable
             return Storage::url($this->img);
         }
         return 'https://placehold.co/100x100/EFEFEF/AAAAAA&text=AD';
+    }
+
+    /**
+     * Tự động chuyển đổi số điện thoại rỗng thành NULL khi lưu.
+     * @return \Illuminate\Database\Eloquent\Casts\Attribute
+     */
+    protected function phone(): Attribute // <-- THÊM MỚI
+    {
+        return Attribute::make(
+            set: fn($value) => empty($value) ? null : $value,
+        );
     }
 
     // Helper to get displayable role name

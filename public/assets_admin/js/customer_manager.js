@@ -43,7 +43,7 @@ function initializeCustomersPage() {
 
         const customer = JSON.parse(button.dataset.customer || '{}');
         form.action = button.dataset.updateUrl;
-        // Đặt phương thức POST để khớp với route
+        // Phương thức thực tế (PUT) được xác định bởi @method trong Blade
         form.setAttribute('method', 'POST');
 
         // Điền dữ liệu
@@ -278,7 +278,8 @@ function initializeCustomersPage() {
             if (!customer.deleted_at) {
                 editBtn.style.display = 'inline-block';
                 editBtn.dataset.customer = button.dataset.customer;
-                editBtn.dataset.updateUrl = `/admin/userManagement/customers/${customer.id}`;
+                // Lấy URL đúng trực tiếp từ nút đã click để mở modal
+                editBtn.dataset.updateUrl = button.dataset.updateUrl;
             } else {
                 editBtn.style.display = 'none';
             }

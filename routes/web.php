@@ -123,7 +123,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::get('/', 'index')->name('index');
                 Route::post('/', 'store')->name('store');
                 Route::get('/{product}', 'show')->name('show')->withTrashed();
-                Route::post('/{product}', 'update')->name('update')->withTrashed(); // Dùng POST để xử lý form, Laravel tự nhận PUT/PATCH
+                Route::post('/{product}', 'update')->name('update')->withTrashed(); // Dùng POST vì form này không dùng AJAX resource chuẩn
                 Route::delete('/{product}', 'destroy')->name('destroy');
                 Route::post('/{product}/toggle-status', 'toggleStatus')->name('toggleStatus')->withTrashed();
                 Route::post('/{product}/restore', 'restore')->name('restore')->withTrashed();

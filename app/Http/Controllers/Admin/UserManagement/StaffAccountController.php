@@ -55,7 +55,7 @@ class StaffAccountController extends Controller
         $validatedData = $request->validateWithBag($formIdentifier, [
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:admins,email',
-            'phone' => ['nullable', 'string', 'max:20', Rule::unique('admins', 'phone')->ignore($request->staff_id_for_update_modal, 'id')],
+            'phone' => ['nullable', 'string', 'max:20', Rule::unique('admins', 'phone')],
             'role' => ['required', 'string', Rule::in(array_keys($availableRolesForValidation))],
             'img' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg,webp|max:2048',
             'status' => ['required', Rule::in([Admin::STATUS_ACTIVE, Admin::STATUS_SUSPENDED])],
@@ -71,8 +71,8 @@ class StaffAccountController extends Controller
 
         try {
             $dataToCreate = $validatedData;
-            unset($dataToCreate['_form_identifier']); 
-            
+            unset($dataToCreate['_form_identifier']);
+
             $dataToCreate['password'] = Hash::make('12345');
             $dataToCreate['password_change_required'] = true;
 
@@ -93,7 +93,6 @@ class StaffAccountController extends Controller
                 ]);
             }
             return redirect()->route($this->routeName . '.index')->with('success', 'Tạo tài khoản nhân viên thành công!');
-
         } catch (\Exception $e) {
             Log::error('Lỗi khi tạo Nhân viên Admin: ' . $e->getMessage());
 

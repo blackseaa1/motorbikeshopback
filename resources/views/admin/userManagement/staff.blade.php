@@ -312,7 +312,7 @@
                             <div class="col-md-6 mb-3"><label for="staffEmailUpdate" class="form-label">Email: (Không thể thay đổi)</label><input type="email" class="form-control" id="staffEmailUpdate" name="email_display" readonly disabled></div>
                         </div>
                         <div class="row">
-                            <div class="col-md-6 mb-3"><label for="staffPhoneUpdate" class="form-label">Số điện thoại:</label><input type="tel" class="form-control" id="staffPhoneUpdate" name="phone"><div class="invalid-feedback" id="staffPhoneUpdateError"></div></div>
+                            <div class="col-md-6 mb-3"><label for="staffPhoneUpdate" class="form-label">Số điện thoại:</label><input type="tel" class="form-control" id="staffPhoneUpdate" name="phone" placeholder="Chưa cập nhật"><div class="invalid-feedback" id="staffPhoneUpdateError" ></div></div>
                             <div class="col-md-6 mb-3"><label for="staffRoleUpdate" class="form-label">Vai trò:<span class="text-danger">*</span></label><select class="form-select" id="staffRoleUpdate" name="role" required><option value="" disabled>Chọn vai trò...</option>@foreach($availableRoles as $roleKey => $roleName)<option value="{{ $roleKey }}">{{ $roleName }}</option>@endforeach</select><div class="invalid-feedback" id="staffRoleUpdateError"></div></div>
                         </div>
                         <div class="mb-3">
