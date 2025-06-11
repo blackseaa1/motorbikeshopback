@@ -103,12 +103,16 @@
                                                     <button class="btn btn-success btn-sm btn-action btn-restore-customer" data-url="{{ route('admin.userManagement.customers.restore', $customer->id) }}" data-name="{{ $customer->name }}" title="Khôi phục"><i class="bi bi-arrow-counterclockwise"></i></button>
                                                     <button class="btn btn-danger btn-sm btn-action btn-force-delete-customer" data-bs-toggle="modal" data-bs-target="#confirmForceDeleteModal" data-name="{{ $customer->name }}" data-delete-url="{{ route('admin.userManagement.customers.forceDelete', $customer->id) }}" title="Xóa vĩnh viễn"><i class="bi bi-trash-fill"></i></button>
                                                 @else
+<<<<<<< HEAD
                                                   <button class="btn btn-info btn-sm btn-action btn-view-customer"
         data-bs-toggle="modal"
         data-bs-target="#customerDetailModal"
         data-customer='{{ json_encode($customer) }}'
         data-update-url="{{ route('admin.userManagement.customers.update', $customer->id) }}"
         title="Xem chi tiết"><i class="bi bi-eye-fill"></i></button>
+=======
+                                                    <button class="btn btn-info btn-sm btn-action btn-view-customer" data-bs-toggle="modal" data-bs-target="#customerDetailModal" data-customer='{{ json_encode($customer) }}' title="Xem chi tiết"><i class="bi bi-eye-fill"></i></button>
+>>>>>>> f7dc4ddb373a90dec7b6c2f7e29c19b4fe17ed9a
                                                     {{-- Nút "Sửa" trong danh sách, có data-update-url --}}
                                                     <button class="btn btn-warning btn-sm btn-action btn-edit-customer" data-bs-toggle="modal" data-bs-target="#updateCustomerModal" data-customer='{{ json_encode($customer) }}' data-update-url="{{ route('admin.userManagement.customers.update', $customer->id) }}" title="Sửa"><i class="bi bi-pencil-square"></i></button>
                                                     <button class="btn btn-sm btn-action toggle-status-customer-btn {{ $customer->isActive() ? 'btn-secondary' : 'btn-success' }}" data-url="{{ route('admin.userManagement.customers.toggleStatus', $customer) }}" title="{{ $customer->isActive() ? 'Khóa' : 'Mở khóa' }}"><i class="bi {{ $customer->isActive() ? 'bi-lock-fill' : 'bi-unlock-fill' }}"></i></button>
