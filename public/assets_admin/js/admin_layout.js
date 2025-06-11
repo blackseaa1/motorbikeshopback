@@ -158,13 +158,8 @@
                 const httpMethod = (formData.get('_method') || form.method).toUpperCase();
 
                 const response = await fetch(form.action, {
-<<<<<<< HEAD
-                    method: 'POST', 
-                    body: formData,
-=======
                     method: httpMethod, // Sử dụng phương thức được xác định
                     body: formData, // Gửi FormData trực tiếp
->>>>>>> f7dc4ddb373a90dec7b6c2f7e29c19b4fe17ed9a
                     headers: {
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
                         'Accept': 'application/json'
