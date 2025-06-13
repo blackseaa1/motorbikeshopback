@@ -9,10 +9,12 @@ use Illuminate\Support\Facades\Route;
 | Sắp xếp theo thứ tự alphabet để dễ quản lý.
 |--------------------------------------------------------------------------
 */
+
+// --- ADMIN CONTROLLERS ---
 use App\Http\Controllers\Admin\Auth\LoginController as AdminLoginController;
 use App\Http\Controllers\Admin\Auth\PendingAuthorizationController;
 use App\Http\Controllers\Admin\Auth\RegisterController as AdminRegisterController;
-use App\Http\Controllers\Admin\Content\PostController;
+use App\Http\Controllers\Admin\Content\BlogController;
 use App\Http\Controllers\Admin\Content\ReviewController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\ProductManagement\BrandController;
@@ -35,6 +37,12 @@ use App\Http\Controllers\Admin\UserManagement\CustomerAccountController;
 use App\Http\Controllers\Admin\UserManagement\StaffAccountController;
 use App\Http\Controllers\Api\GeographyApiController;
 
+// --- CUSTOMER CONTROLLERS ---
+use App\Http\Controllers\Customer\AccountController;
+use App\Http\Controllers\Customer\AuthController;
+use App\Http\Controllers\Customer\HomeController;
+use App\Http\Controllers\Customer\ProductController as CustomerProductController;
+
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -46,58 +54,71 @@ use App\Http\Controllers\Api\GeographyApiController;
 |
 */
 
-// --- Chuyển hướng cho URL gốc (/) ---
-Route::get('/', function () {
-    if (Auth::guard('admin')->check()) {
-        $adminUser = Auth::guard('admin')->user();
-        if ($adminUser->role === null) {
-            return redirect()->route('admin.pending_authorization');
-        }
-        return redirect()->route('admin.dashboard');
-    }
-    return redirect()->route('admin.auth.login');
+// =========================================================================
+// == CUSTOMER FACING ROUTES (FRONT-END) ==
+// =========================================================================
+
+Route::get('/', [HomeController::class, 'index'])->name('home');
+
+// --- Authentication routes ---
+Route::controller(AuthController::class)->group(function () {
+    // SỬA ĐỔI 1: Áp dụng middleware kép để chặn Admin đã đăng nhập
+    Route::middleware(['guest', 'guest.admin'])->group(function () {
+        Route::get('login', 'showLoginForm')->name('login');
+        Route::post('login', 'login');
+        Route::get('register', 'showRegisterForm')->name('register');
+        Route::post('register', 'register');
+    });
+    // Route logout không đổi
+    Route::post('logout', 'logout')->name('logout')->middleware('auth');
+});
+
+// --- Các route khác của khách hàng không thay đổi ---
+Route::get('/products', [CustomerProductController::class, 'index'])->name('products.index');
+Route::get('/products/{slug}', [CustomerProductController::class, 'show'])->name('products.show');
+Route::get('/category/{slug}', [CustomerProductController::class, 'productsByCategory'])->name('products.category');
+
+Route::prefix('account')->name('account.')->middleware('auth')->group(function () {
+    Route::get('/', [AccountController::class, 'profile'])->name('profile');
+    Route::get('/orders', [AccountController::class, 'orders'])->name('orders');
+    Route::get('/addresses', [AccountController::class, 'addresses'])->name('addresses');
+    Route::patch('/update-profile', [AccountController::class, 'updateProfile'])->name('updateProfile');
+    Route::put('/update-password', [AccountController::class, 'updatePassword'])->name('updatePassword');
 });
 
 // =========================================================================
-// == NHÓM ROUTE CHO ADMIN ==
+// == ADMIN ROUTES ==
 // =========================================================================
 Route::prefix('admin')->name('admin.')->group(function () {
 
-    /*
-    |--------------------------------------------------------------------------
-    | 1. Nhóm Route Xác thực (Authentication)
-    |--------------------------------------------------------------------------
-    */
-    Route::controller(AdminLoginController::class)->group(function () {
-        Route::middleware('auth:admin')->group(function () {
+    // --- Admin Authentication ---
+    Route::middleware('auth:admin')->group(function () {
+        Route::controller(AdminLoginController::class)->group(function () {
             Route::get('/force-password-change', 'showForcePasswordChangeForm')->name('auth.showForcePasswordChangeForm');
             Route::post('/force-password-change', 'forcePasswordChange')->name('auth.forcePasswordChange');
             Route::post('/logout', 'logout')->name('logout');
         });
-        Route::middleware('guest:admin')->group(function () {
+        Route::get('/pending-authorization', [PendingAuthorizationController::class, 'show'])->name('pending_authorization');
+    });
+
+    // SỬA ĐỔI 2: Áp dụng middleware kép để chặn Customer đã đăng nhập
+    Route::middleware(['guest:admin', 'guest.customer'])->group(function () {
+        Route::controller(AdminLoginController::class)->group(function () {
             Route::get('login', 'showLoginForm')->name('auth.login');
             Route::post('login', 'login')->name('auth.login.perform');
         });
+        Route::controller(AdminRegisterController::class)->group(function () {
+            Route::get('register', 'showRegistrationForm')->name('auth.register');
+            Route::post('register', 'register')->name('auth.register.perform');
+        });
     });
 
-    Route::controller(AdminRegisterController::class)->middleware('guest:admin')->group(function () {
-        Route::get('register', 'showRegistrationForm')->name('auth.register');
-        Route::post('register', 'register')->name('auth.register.perform');
-    });
-
-    Route::get('/pending-authorization', [PendingAuthorizationController::class, 'show'])
-        ->middleware('auth:admin')->name('pending_authorization');
-
-    /*
-    |--------------------------------------------------------------------------
-    | 2. Nhóm Route cho Trang Quản Trị Chính
-    | Yêu cầu: Đã đăng nhập, đã đổi mật khẩu lần đầu, đã được phân quyền.
-    |--------------------------------------------------------------------------
-    */
+    // --- Main Admin Panel Routes ---
     Route::middleware(['auth:admin', 'password.changed', 'admin.hasrole'])->group(function () {
-
-        // --- Dashboard & Trang cá nhân ---
+        Route::get('/', fn() => redirect()->route('admin.dashboard'));
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+        // --- Profile Management ---
         Route::controller(AdminProfileController::class)->prefix('profile')->name('profile.')->group(function () {
             Route::get('/', 'showProfileForm')->name('show');
             Route::post('/update-info', 'updateInfo')->name('updateInfo');
@@ -105,7 +126,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('/update-avatar', 'updateAvatar')->name('updateAvatar');
         });
 
-        // --- Module: Quản lý Bán hàng ---
+        // --- Module: Sales Management ---
         Route::prefix('sales')->name('sales.')->group(function () {
             Route::controller(OrderController::class)->prefix('orders')->name('orders.')->group(function () {
                 Route::get('/', 'index')->name('index');
@@ -116,14 +137,14 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('promotions/{promotion}/toggle-status', [PromotionController::class, 'toggleStatus'])->name('promotions.toggleStatus');
         });
 
-        // --- Module: Quản lý Sản phẩm ---
+        // --- Module: Product Management ---
         Route::prefix('product-management')->name('productManagement.')->group(function () {
             // Products
             Route::controller(ProductController::class)->prefix('products')->name('products.')->group(function () {
                 Route::get('/', 'index')->name('index');
                 Route::post('/', 'store')->name('store');
                 Route::get('/{product}', 'show')->name('show')->withTrashed();
-                Route::post('/{product}', 'update')->name('update')->withTrashed(); // Dùng POST vì form này không dùng AJAX resource chuẩn
+                Route::post('/{product}', 'update')->name('update')->withTrashed();
                 Route::delete('/{product}', 'destroy')->name('destroy');
                 Route::post('/{product}/toggle-status', 'toggleStatus')->name('toggleStatus')->withTrashed();
                 Route::post('/{product}/restore', 'restore')->name('restore')->withTrashed();
@@ -143,9 +164,21 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('inventory', [InventoryController::class, 'index'])->name('inventory.index');
         });
 
-        // --- Module: Quản lý Nội dung ---
+        // --- Module: Content Management ---
         Route::prefix('content')->name('content.')->group(function () {
-            Route::resource('posts', PostController::class)->except(['show']);
+            // Blogs
+            Route::controller(BlogController::class)->prefix('blogs')->name('blogs.')->group(function () {
+                Route::get('/', 'index')->name('index')->middleware('can:viewAny,App\Models\BlogPost');
+                Route::post('/', 'store')->name('store')->middleware('can:create,App\Models\BlogPost');
+                Route::get('/{blog}', 'show')->name('show')->withTrashed()->middleware('can:view,blog');
+                Route::post('/{blog}', 'update')->name('update')->withTrashed()->middleware('can:update,blog');
+                Route::delete('/{blog}', 'destroy')->name('destroy')->middleware('can:delete,blog');
+                Route::post('/{blog}/toggle-status', 'toggleStatus')->name('toggleStatus')->withTrashed()->middleware('can:toggleStatus,blog');
+                Route::post('/{blog}/restore', 'restore')->name('restore')->withTrashed()->middleware('can:restore,blog');
+                Route::delete('/{blog}/force-delete', 'forceDelete')->name('forceDelete')->withTrashed()->middleware('can:forceDelete,blog');
+            });
+
+            // Reviews
             Route::controller(ReviewController::class)->prefix('reviews')->name('reviews.')->group(function () {
                 Route::get('/', 'index')->name('index');
                 Route::delete('/{review}', 'destroy')->name('destroy');
@@ -153,7 +186,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             });
         });
 
-        // --- Module: Quản lý Người dùng ---
+        // --- Module: User Management ---
         Route::prefix('user-management')->name('userManagement.')->group(function () {
             Route::resource('staff', StaffAccountController::class);
             Route::controller(StaffAccountController::class)->prefix('staff')->name('staff.')->group(function () {
@@ -169,16 +202,15 @@ Route::prefix('admin')->name('admin.')->group(function () {
             });
         });
 
-        // --- Module: Cấu hình Hệ thống & Báo cáo ---
+        // --- Module: System Configuration & Reports ---
         Route::prefix('system')->name('system.')->group(function () {
             Route::resource('delivery-services', DeliveryServiceController::class)->except(['create', 'edit', 'show'])->names('deliveryServices');
             Route::post('delivery-services/{delivery_service}/toggle-status', [DeliveryServiceController::class, 'toggleStatus'])->name('deliveryServices.toggleStatus');
 
-            // Nhóm tất cả route địa lý vào chung một group để có tên route đúng
+            // Geography routes
             Route::prefix('geography')->name('geography.')->group(function () {
                 Route::get('/', [GeographyController::class, 'index'])->name('index');
                 Route::post('/import', [GeographyController::class, 'import'])->name('import');
-                // Tên route sẽ là: admin.system.geography.provinces.store
                 Route::resource('provinces', ProvinceController::class)->only(['store', 'update', 'destroy']);
                 Route::resource('districts', DistrictController::class)->only(['store', 'update', 'destroy']);
                 Route::resource('wards', WardController::class)->only(['store', 'update', 'destroy']);
@@ -187,17 +219,15 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('settings', fn() => view('admin.system.settings'))->name('settings');
         });
 
-        // Thống kê & Báo cáo
+        // Reports
         Route::get('reports', [ReportsController::class, 'index'])->name('reports');
     });
 });
 
-
 // =========================================================================
-// == API ROUTES (Dùng cho Javascript trong Web App) ==
+// == API ROUTES ==
 // =========================================================================
 Route::prefix('api')->name('api.')->group(function () {
-    // API lấy danh sách quận/huyện theo tỉnh/thành
     Route::get('/provinces/{province}/districts', [GeographyApiController::class, 'getDistrictsByProvince'])->name('provinces.districts');
 
     // API lấy số thông báo chưa đọc

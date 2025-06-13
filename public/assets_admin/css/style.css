@@ -1148,3 +1148,81 @@
     outline: 0;
     box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
 }
+
+/* Trong file CSS tùy chỉnh của bạn (ví dụ: public/assets_admin/css/custom.css) */
+.bootstrap-select .dropdown-menu.show {
+    overflow: auto !important;
+    /* Đảm bảo thanh cuộn luôn xuất hiện nếu nội dung vượt quá */
+    /* Hoặc nếu bạn muốn loại bỏ giới hạn chiều cao: */
+    /* max-height: none !important; */
+}
+
+.bootstrap-select .dropdown-menu .inner.show {
+    overflow: hidden !important;
+    /* Đảm bảo thanh cuộn dọc */
+    /* max-height: none !important; */
+    /* Nếu bạn muốn nó mở rộng tùy theo nội dung */
+}
+
+/* public/assets_admin/css/custom.css */
+
+/* Custom scrollbar for Webkit browsers (Chrome, Safari, Edge) */
+.bootstrap-select .dropdown-menu .inner.show::-webkit-scrollbar {
+    width: 8px;
+    /* Chiều rộng của thanh cuộn */
+}
+
+.bootstrap-select .dropdown-menu .inner.show::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    /* Màu nền của track */
+    border-radius: 10px;
+}
+
+.bootstrap-select .dropdown-menu .inner.show::-webkit-scrollbar-thumb {
+    background: #888;
+    /* Màu của thanh cuộn */
+    border-radius: 10px;
+}
+
+.bootstrap-select .dropdown-menu .inner.show::-webkit-scrollbar-thumb:hover {
+    background: #555;
+    /* Màu khi hover */
+}
+
+/* Fallback/Generic styles for other browsers (less control) */
+.bootstrap-select .dropdown-menu .inner.show {
+    scrollbar-width: thin;
+    /* "auto" or "thin" for Firefox */
+    scrollbar-color: #888 #f1f1f1;
+    /* thumb color track color for Firefox */
+}
+
+/* Adjust padding/font-size for a cleaner look */
+.bootstrap-select .dropdown-item {
+    padding-top: 0.4rem;
+    padding-bottom: 0.4rem;
+    font-size: 0.95rem;
+    /* Slightly smaller font for items */
+}
+
+.bootstrap-select .dropdown-header {
+    padding-top: 0.5rem;
+    padding-bottom: 0.3rem;
+    font-size: 0.9rem;
+    /* Slightly smaller font for headers */
+    font-weight: 600;
+    /* Bolder header */
+    color: #343a40;
+    /* Darker color for headers */
+}
+
+.bootstrap-select .dropdown-divider {
+    margin: 0.25rem 0;
+    /* Reduce margin for dividers */
+}
+
+/* Adjust "Select all" / "Deselect all" buttons */
+.bootstrap-select .bs-actionsbox .btn {
+    font-size: 0.85rem;
+    padding: 0.3rem 0.6rem;
+}

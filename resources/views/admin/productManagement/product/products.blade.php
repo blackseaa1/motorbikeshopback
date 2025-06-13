@@ -22,10 +22,22 @@
 
 @section('content')
     <div id="adminProductsPage">
-        {{-- Header không đổi --}}
-        <header class="content-header">
-            <h1><i class="bi bi-tags-fill me-2"></i>Sản phẩm</h1>
-        </header>
+     <div class="content-header">
+            <div class="container-fluid">
+                <div class="row mb-2">
+                    <div class="col-sm-6">
+                        <h1 class="m-0"><i class="bi bi-tags-fill me-2"></i>Sản phẩm</h1>
+                    </div>
+                    <div class="col-sm-6">
+                        <ol class="breadcrumb float-sm-end">
+                            <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dashboard</a></li>
+                              <li class="breadcrumb-item">Quản lý sản phẩm</li>
+                            <li class="breadcrumb-item active">Danh sách sản phẩm</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <div class="container-fluid">
             <div class="card mb-4">

@@ -90,7 +90,7 @@
                                     @foreach ($vehicleBrands as $vehicleBrand)
                                         <optgroup label="{{ $vehicleBrand->name }}">
                                             @foreach ($vehicleBrand->vehicleModels as $model)
-                                                <option value="{{ $model->id }}">{{ $model->name }} ({{ $model->year }})
+                                                <option value="{{ $model->id }}">{{ $model->name }} {{ $model->year }}
                                                 </option>
                                             @endforeach
                                         </optgroup>

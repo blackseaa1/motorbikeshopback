@@ -10,10 +10,12 @@
     {{-- CSS (Sử dụng chung các file CSS với trang đăng ký) --}}
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <link rel="stylesheet" href="{{ asset('vendor/bootstrap/css/bootstrap.min.css') }}">
-    <link rel="stylesheet" href="{{ asset('assets_admin/css/common/base.css') }}">
-    <link rel="stylesheet" href="{{ asset('assets_admin/css/common/normalize.css') }}">
-    <link rel="stylesheet" href="{{ asset('assets_admin/css/common/reset.css') }}">
-    <link rel="stylesheet" href="{{ asset('assets_admin/css/common/style.css') }}">
+    <link rel="stylesheet" href="{{ asset('vendor/bootstrap/css/bootstrap-select.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('vendor/common/base.css') }}">
+    <link rel="stylesheet" href="{{ asset('vendor/common/normalize.css') }}">
+    <link rel="stylesheet" href="{{ asset('vendor/common/reset.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets_admin/css/style.css') }}">
+
 </head>
 
 <body class="bg-light">

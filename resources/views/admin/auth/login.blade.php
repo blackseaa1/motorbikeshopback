@@ -11,12 +11,13 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     {{-- Bootstrap CSS (nếu bạn không dùng bản từ Vite/npm) --}}
     {{-- Common Admin CSS --}}
-    <link rel="stylesheet" href="{{ asset('assets_admin/css/common/base.css') }}">
-    <link rel="stylesheet" href="{{ asset('assets_admin/css/common/normalize.css') }}">
-    <link rel="stylesheet" href="{{ asset('assets_admin/css/common/reset.css') }}">
-    <link rel="stylesheet" href="{{ asset('assets_admin/css/common/style.css') }}">
-    <link rel="stylesheet" href="{{ asset('assets_admin/css/library/bootstrap.min.css') }}">
-    <link rel="stylesheet" href="{{ asset('assets_admin/css/library/bootstrap-select.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('vendor/bootstrap/css/bootstrap.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('vendor/bootstrap/css/bootstrap-select.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('vendor/common/base.css') }}">
+    <link rel="stylesheet" href="{{ asset('vendor/common/normalize.css') }}">
+    <link rel="stylesheet" href="{{ asset('vendor/common/reset.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets_admin/css/style.css') }}">
+
     {{-- Chứa CSS cho #loading-overlay
     --}}
 
@@ -120,8 +121,11 @@
             </div>
         </div>
     </div>
-    <script src="{{ asset('assets_admin/js/library/bootstrap.bundle.min.js') }}"></script>
-    <script src="{{ asset('assets_admin/js/library/bootstrap-select.min.js') }}"></script>
+    <script src="{{ asset('vendor/bootstrap/js/jquery-3.6.0.min.js') }}"></script>
+    <script src="{{ asset('vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
+    <script src="{{ asset('vendor/bootstrap/js/bootstrap-select.min.js') }}"></script>
+    {{--
+    <script src="{{ asset('vendor/bootstrap/js/chart.js') }}"></script> --}}
     <script src="{{ asset('assets_admin/js/admin_layout.js') }}"></script>
     <script src="{{ asset('assets_admin/js/login.js') }}"></script>
 

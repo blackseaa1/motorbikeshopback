@@ -1,5 +1,6 @@
-{{-- resources/views/admin/layouts/sidebar.blade.php --}}
+{{-- resources/views/admin/layouts/partials/sidebar.blade.php --}}
 @php
+    // Lấy thông tin người dùng hiện tại một lần để tái sử dụng
     $currentUser = Auth::guard('admin')->user();
 @endphp
 
@@ -14,7 +15,7 @@
         </button>
     </div>
 
-    @if ($currentUser) {{-- Chỉ hiển thị menu nếu người dùng đã đăng nhập và có thông tin --}}
+    @if ($currentUser)
         <ul class="nav flex-column">
             {{-- =================== MAIN =================== --}}
             <li class="nav-item">
@@ -24,102 +25,76 @@
                 </a>
             </li>
 
-            {{-- Quản lý Bán Hàng --}}
-            @if ($currentUser->isSuperAdmin() || $currentUser->role === \App\Models\Admin::ROLE_STAFF)
-                @php
-                    $isSalesMenuActive = request()->routeIs('admin.sales.orders.index') ||
-                        request()->routeIs('admin.sales.promotions.index');
-                @endphp
+            {{-- Quản lý Bán Hàng: Dành cho Super Admin, Admin và Staff --}}
+            @if ($currentUser->isSuperAdmin() || $currentUser->role === \App\Models\Admin::ROLE_ADMIN || $currentUser->role === \App\Models\Admin::ROLE_STAFF)
+                @php $isSalesMenuActive = request()->routeIs('admin.sales.*'); @endphp
                 <li class="nav-item">
                     <a class="nav-link {{ $isSalesMenuActive ? 'active' : '' }}" href="#salesSubmenu" data-bs-toggle="collapse"
-                        role="button" aria-expanded="{{ $isSalesMenuActive ? 'true' : 'false' }}" aria-controls="salesSubmenu">
+                        role="button" aria-expanded="{{ $isSalesMenuActive ? 'true' : 'false' }}">
                         <i class="bi bi-receipt-cutoff"></i> Quản lý Bán Hàng <i class="bi bi-caret-down-fill ms-auto"></i>
                     </a>
                     <ul class="collapse list-unstyled ps-4 {{ $isSalesMenuActive ? 'show' : '' }}" id="salesSubmenu">
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('admin.sales.orders.index') ? 'active-submenu' : '' }}"
-                                href="{{ route('admin.sales.orders.index') }}">Đơn hàng</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('admin.sales.promotions.index') ? 'active-submenu' : '' }}"
-                                href="{{ route('admin.sales.promotions.index') }}">Mã Khuyến mãi</a>
-                        </li>
+                        <li class="nav-item"><a
+                                class="nav-link {{ request()->routeIs('admin.sales.orders.*') ? 'active-submenu' : '' }}"
+                                href="{{ route('admin.sales.orders.index') }}">Đơn hàng</a></li>
+                        <li class="nav-item"><a
+                                class="nav-link {{ request()->routeIs('admin.sales.promotions.*') ? 'active-submenu' : '' }}"
+                                href="{{ route('admin.sales.promotions.index') }}">Mã Khuyến mãi</a></li>
                     </ul>
                 </li>
             @endif
 
-            {{-- Quản lý Sản phẩm --}}
-            @if ($currentUser->isSuperAdmin() || $currentUser->role === \App\Models\Admin::ROLE_STAFF || $currentUser->role === \App\Models\Admin::ROLE_WAREHOUSE_STAFF)
-                @php
-                    $isProductMenuActive = request()->routeIs('admin.productManagement.products.index') ||
-                        request()->routeIs('admin.productManagement.categories.index') ||
-                        request()->routeIs('admin.productManagement.brands.index') ||
-                        request()->routeIs('admin.productManagement.vehicle.index') ||
-                        request()->routeIs('admin.productManagement.inventory.index');
-                @endphp
+            {{-- Quản lý Sản phẩm: Dành cho tất cả các vai trò liên quan --}}
+            @if ($currentUser->isSuperAdmin() || $currentUser->role === \App\Models\Admin::ROLE_ADMIN || $currentUser->role === \App\Models\Admin::ROLE_STAFF || $currentUser->role === \App\Models\Admin::ROLE_WAREHOUSE_STAFF)
+                @php $isProductMenuActive = request()->routeIs('admin.productManagement.*'); @endphp
                 <li class="nav-item">
                     <a class="nav-link {{ $isProductMenuActive ? 'active' : '' }}" href="#productSubmenu"
-                        data-bs-toggle="collapse" role="button" aria-expanded="{{ $isProductMenuActive ? 'true' : 'false' }}"
-                        aria-controls="productSubmenu">
+                        data-bs-toggle="collapse" role="button" aria-expanded="{{ $isProductMenuActive ? 'true' : 'false' }}">
                         <i class="bi bi-box-seam-fill"></i> Quản lý Sản phẩm <i class="bi bi-caret-down-fill ms-auto"></i>
                     </a>
                     <ul class="collapse list-unstyled ps-4 {{ $isProductMenuActive ? 'show' : '' }}" id="productSubmenu">
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('admin.productManagement.products.index') ? 'active-submenu' : '' }}"
-                                href="{{ route('admin.productManagement.products.index') }}">Danh sách Sản phẩm</a>
-                        </li>
-                        @if ($currentUser->isSuperAdmin() || $currentUser->role === \App\Models\Admin::ROLE_STAFF)
-                            <li class="nav-item">
-                                <a class="nav-link {{ request()->routeIs('admin.productManagement.categories.index') ? 'active-submenu' : '' }}"
-                                    href="{{ route('admin.productManagement.categories.index') }}">Danh mục</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link {{ request()->routeIs('admin.productManagement.brands.index') ? 'active-submenu' : '' }}"
-                                    href="{{ route('admin.productManagement.brands.index') }}">Thương hiệu</a>
-                            </li>
-                        @endif
-                        {{-- Cả Staff và Warehouse Staff có thể cần xem Hãng xe & Dòng xe, Tồn kho --}}
-                        @if ($currentUser->isSuperAdmin() || $currentUser->role === \App\Models\Admin::ROLE_STAFF || $currentUser->role === \App\Models\Admin::ROLE_WAREHOUSE_STAFF)
-                            <li class="nav-item">
-                                <a class="nav-link {{ request()->routeIs('admin.productManagement.vehicle.index') ? 'active-submenu' : '' }}"
-                                    href="{{ route('admin.productManagement.vehicle.index') }}">Hãng xe & Dòng xe</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link {{ request()->routeIs('admin.productManagement.inventory.index') ? 'active-submenu' : '' }}"
-                                    href="{{ route('admin.productManagement.inventory.index') }}">Tồn kho</a>
-                            </li>
-                        @endif
+                        {{-- Warehouse Staff thấy tất cả mục sản phẩm --}}
+                        <li class="nav-item"><a
+                                class="nav-link {{ request()->routeIs('admin.productManagement.products.*') ? 'active-submenu' : '' }}"
+                                href="{{ route('admin.productManagement.products.index') }}">Danh sách Sản phẩm</a></li>
+                        <li class="nav-item"><a
+                                class="nav-link {{ request()->routeIs('admin.productManagement.categories.*') ? 'active-submenu' : '' }}"
+                                href="{{ route('admin.productManagement.categories.index') }}">Danh mục</a></li>
+                        <li class="nav-item"><a
+                                class="nav-link {{ request()->routeIs('admin.productManagement.brands.*') ? 'active-submenu' : '' }}"
+                                href="{{ route('admin.productManagement.brands.index') }}">Thương hiệu</a></li>
+                        <li class="nav-item"><a
+                                class="nav-link {{ request()->routeIs('admin.productManagement.vehicle.*') ? 'active-submenu' : '' }}"
+                                href="{{ route('admin.productManagement.vehicle.index') }}">Hãng xe & Dòng xe</a></li>
+                        <li class="nav-item"><a
+                                class="nav-link {{ request()->routeIs('admin.productManagement.inventory.*') ? 'active-submenu' : '' }}"
+                                href="{{ route('admin.productManagement.inventory.index') }}">Tồn kho</a></li>
                     </ul>
                 </li>
             @endif
 
-            {{-- Quản lý Nội dung --}}
-            @if ($currentUser->isSuperAdmin() || $currentUser->role === \App\Models\Admin::ROLE_STAFF)
-                @php
-                    $isContentMenuActive = request()->routeIs('admin.content.posts.index') ||
-                        request()->routeIs('admin.content.reviews.index');
-                @endphp
-                <li class="nav-item">
-                    <a class="nav-link {{ $isContentMenuActive ? 'active' : '' }}" href="#contentSubmenu"
-                        data-bs-toggle="collapse" role="button" aria-expanded="{{ $isContentMenuActive ? 'true' : 'false' }}"
-                        aria-controls="contentSubmenu">
-                        <i class="bi bi-file-text-fill"></i> Quản lý Nội dung <i class="bi bi-caret-down-fill ms-auto"></i>
-                    </a>
-                    <ul class="collapse list-unstyled ps-4 {{ $isContentMenuActive ? 'show' : '' }}" id="contentSubmenu">
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('admin.content.posts.index') ? 'active-submenu' : '' }}"
-                                href="{{ route('admin.content.posts.index') }}">Blog/Bài viết</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('admin.content.reviews.index') ? 'active-submenu' : '' }}"
-                                href="{{ route('admin.content.reviews.index') }}">Đánh giá sản phẩm</a>
-                        </li>
-                    </ul>
-                </li>
-            @endif
+            {{-- Quản lý Nội dung: Tất cả các vai trò đều có thể truy cập để quản lý bài viết của mình --}}
+            @php $isContentMenuActive = request()->routeIs('admin.content.*'); @endphp
+            <li class="nav-item">
+                <a class="nav-link {{ $isContentMenuActive ? 'active' : '' }}" href="#contentSubmenu"
+                    data-bs-toggle="collapse" role="button" aria-expanded="{{ $isContentMenuActive ? 'true' : 'false' }}">
+                    <i class="bi bi-file-text-fill"></i> Quản lý Nội dung <i class="bi bi-caret-down-fill ms-auto"></i>
+                </a>
+                <ul class="collapse list-unstyled ps-4 {{ $isContentMenuActive ? 'show' : '' }}" id="contentSubmenu">
+                    <li class="nav-item"><a
+                            class="nav-link {{ request()->routeIs('admin.content.blogs.*') ? 'active-submenu' : '' }}"
+                            href="{{ route('admin.content.blogs.index') }}">Blog/Bài viết</a></li>
+                    {{-- Chỉ Super Admin và Admin mới quản lý được Đánh giá --}}
+                    @if ($currentUser->isSuperAdmin() || $currentUser->role === \App\Models\Admin::ROLE_ADMIN)
+                        <li class="nav-item"><a
+                                class="nav-link {{ request()->routeIs('admin.content.reviews.*') ? 'active-submenu' : '' }}"
+                                href="{{ route('admin.content.reviews.index') }}">Đánh giá sản phẩm</a></li>
+                    @endif
+                </ul>
+            </li>
 
-            {{-- Thống Kê & Báo Cáo --}}
-            @if ($currentUser->isSuperAdmin()) {{-- Chỉ Super Admin được xem Thống kê & Báo cáo --}}
+            {{-- Thống Kê & Báo Cáo: Super Admin, Admin và Staff --}}
+            @if ($currentUser->isSuperAdmin() || $currentUser->role === \App\Models\Admin::ROLE_ADMIN || $currentUser->role === \App\Models\Admin::ROLE_STAFF)
                 <li class="nav-item">
                     <a class="nav-link {{ request()->routeIs('admin.reports') ? 'active' : '' }}"
                         href="{{ route('admin.reports') }}">
@@ -128,88 +103,60 @@
                 </li>
             @endif
 
-            {{-- =================== HỆ THỐNG (Thường chỉ Super Admin) =================== --}}
-            @if ($currentUser->isSuperAdmin())
+            {{-- =================== HỆ THỐNG =================== --}}
+            {{-- Nhóm Hệ Thống chỉ hiển thị cho các vai trò có quyền truy cập --}}
+            @if ($currentUser->isSuperAdmin() || $currentUser->role === \App\Models\Admin::ROLE_ADMIN || $currentUser->role === \App\Models\Admin::ROLE_STAFF)
                 <li class="nav-item mt-3 pt-2 border-top border-secondary">
-                    <span class="nav-link disabled text-uppercase"
-                        style="color: #6c757d; font-size: 0.9rem; letter-spacing: 0.05em;">
+                    <span class="nav-link disabled text-uppercase" style="color: #6c757d; font-size: 0.9rem;">
                         Hệ Thống
                     </span>
                 </li>
 
-                {{-- Quản lý Người dùng --}}
-                @php
-                    // Điều chỉnh $isUserMenuActive để chỉ bao gồm route của khách hàng nếu nhân viên không phải là Super Admin
-                    // Super Admin sẽ thấy cả Nhân viên và Khách hàng
-                    // Staff sẽ chỉ thấy Khách hàng (theo ví dụ)
-                    $userManagementRoutes = ['admin.userManagement.customers.index'];
-                    if ($currentUser->isSuperAdmin()) {
-                        $userManagementRoutes[] = 'admin.userManagement.staff.index';
-                    }
-                    $isUserMenuActive = request()->routeIs($userManagementRoutes);
-                @endphp
+                {{-- Quản lý Người dùng: Hiển thị cho Super Admin, Admin và Staff --}}
+                @php $isUserMenuActive = request()->routeIs('admin.userManagement.*'); @endphp
                 <li class="nav-item">
                     <a class="nav-link {{ $isUserMenuActive ? 'active' : '' }}" href="#userManagementSubmenu"
-                        data-bs-toggle="collapse" role="button" aria-expanded="{{ $isUserMenuActive ? 'true' : 'false' }}"
-                        aria-controls="userManagementSubmenu">
+                        data-bs-toggle="collapse" role="button" aria-expanded="{{ $isUserMenuActive ? 'true' : 'false' }}">
                         <i class="bi bi-people-fill"></i> Quản lý Người dùng <i class="bi bi-caret-down-fill ms-auto"></i>
                     </a>
                     <ul class="collapse list-unstyled ps-4 {{ $isUserMenuActive ? 'show' : '' }}" id="userManagementSubmenu">
-                        @if ($currentUser->isSuperAdmin())
-                            <li class="nav-item">
-                                <a class="nav-link {{ request()->routeIs('admin.userManagement.staff.index') ? 'active-submenu' : '' }}"
-                                    href="{{ route('admin.userManagement.staff.index') }}">
-                                    <i class="bi bi-shield-lock-fill me-2"></i>Nhân viên
-                                </a>
-                            </li>
+                        {{-- Chỉ Super Admin và Admin mới quản lý được Nhân viên --}}
+                        @if ($currentUser->isSuperAdmin() || $currentUser->role === \App\Models\Admin::ROLE_ADMIN)
+                            <li class="nav-item"><a
+                                    class="nav-link {{ request()->routeIs('admin.userManagement.staff.*') ? 'active-submenu' : '' }}"
+                                    href="{{ route('admin.userManagement.staff.index') }}">Nhân viên</a></li>
                         @endif
-                        {{-- Nhân viên Hỗ trợ cũng có thể quản lý Khách hàng --}}
-                        @if ($currentUser->isSuperAdmin() || $currentUser->role === \App\Models\Admin::ROLE_STAFF)
-                            <li class="nav-item">
-                                <a class="nav-link {{ request()->routeIs('admin.userManagement.customers.index') ? 'active-submenu' : '' }}"
-                                    href="{{ route('admin.userManagement.customers.index') }}">
-                                    <i class="bi bi-person-lines-fill me-2"></i>Khách hàng
-                                </a>
-                            </li>
-                        @endif
+                        {{-- Super Admin, Admin và Staff đều có thể quản lý Khách hàng --}}
+                        <li class="nav-item"><a
+                                class="nav-link {{ request()->routeIs('admin.userManagement.customers.*') ? 'active-submenu' : '' }}"
+                                href="{{ route('admin.userManagement.customers.index') }}">Khách hàng</a></li>
                     </ul>
                 </li>
 
-                {{-- Cấu hình Hệ thống (Chỉ Super Admin) --}}
+                {{-- Cấu hình Hệ thống: Chỉ Super Admin --}}
                 @if ($currentUser->isSuperAdmin())
-                    @php
-                        $isSystemMenuActive = request()->routeIs('admin.system.deliveryServices.index') ||
-                            request()->routeIs('admin.system.geography.*') || // Sử dụng wildcard cho route địa lý
-                            request()->routeIs('admin.system.settings');
-                    @endphp
+                    @php $isSystemMenuActive = request()->routeIs('admin.system.*'); @endphp
                     <li class="nav-item">
                         <a class="nav-link {{ $isSystemMenuActive ? 'active' : '' }}" href="#configSubmenu"
-                            data-bs-toggle="collapse" role="button" aria-expanded="{{ $isSystemMenuActive ? 'true' : 'false' }}"
-                            aria-controls="configSubmenu">
+                            data-bs-toggle="collapse" role="button" aria-expanded="{{ $isSystemMenuActive ? 'true' : 'false' }}">
                             <i class="bi bi-gear-fill"></i> Cấu hình Hệ thống <i class="bi bi-caret-down-fill ms-auto"></i>
                         </a>
                         <ul class="collapse list-unstyled ps-4 {{ $isSystemMenuActive ? 'show' : '' }}" id="configSubmenu">
-                            <li class="nav-item">
-                                <a class="nav-link {{ request()->routeIs('admin.system.deliveryServices.index') ? 'active-submenu' : '' }}"
-                                    href="{{ route('admin.system.deliveryServices.index') }}">Đơn vị Giao hàng</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link {{ request()->routeIs('admin.system.geography.index') || request()->routeIs('admin.system.geography.*') ? 'active-submenu' : '' }}"
-                                    href="{{ route('admin.system.geography.index') }}">
-                                    <i class="bi bi-globe-americas me-2"></i> Quản lý Địa lý
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link {{ request()->routeIs('admin.system.settings') ? 'active-submenu' : '' }}"
-                                    href="{{ route('admin.system.settings') }}">Cài đặt chung</a>
-                            </li>
+                            <li class="nav-item"><a
+                                    class="nav-link {{ request()->routeIs('admin.system.deliveryServices.*') ? 'active-submenu' : '' }}"
+                                    href="{{ route('admin.system.deliveryServices.index') }}">Đơn vị Giao hàng</a></li>
+                            <li class="nav-item"><a
+                                    class="nav-link {{ request()->routeIs('admin.system.geography.*') ? 'active-submenu' : '' }}"
+                                    href="{{ route('admin.system.geography.index') }}">Quản lý Địa lý</a></li>
+                            <li class="nav-item"><a
+                                    class="nav-link {{ request()->routeIs('admin.system.settings') ? 'active-submenu' : '' }}"
+                                    href="{{ route('admin.system.settings') }}">Cài đặt chung</a></li>
                         </ul>
                     </li>
-                @endif {{-- Kết thúc Cấu hình Hệ thống (Chỉ Super Admin) --}}
-            @endif {{-- Kết thúc Mục Hệ Thống (Chỉ Super Admin) --}}
+                @endif
+            @endif
         </ul>
-    @endif {{-- Kết thúc if ($currentUser) --}}
-
+    @endif
 
     <div class="sidebar-footer">
         @if ($currentUser)
@@ -218,16 +165,7 @@
                     style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; margin-right: 10px;">
                 <div>
                     <strong>{{ $currentUser->name }}</strong><br>
-                    <small>{{ $currentUser->role_name }}</small> {{-- Sử dụng accessor đã tạo --}}
-                </div>
-            </div>
-        @else
-            <div class="user-info">
-                <img src="https://placehold.co/40x40/001529/FFF?text=N/A" alt="Not Logged In Avatar"
-                    style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; margin-right: 10px;">
-                <div>
-                    <strong>Khách</strong><br>
-                    <small>Chưa đăng nhập</small>
+                    <small>{{ $currentUser->role_name }}</small>
                 </div>
             </div>
         @endif

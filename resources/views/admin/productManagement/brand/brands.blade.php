@@ -14,6 +14,7 @@
                     <div class="col-sm-6">
                         <ol class="breadcrumb float-sm-end">
                             <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dashboard</a></li>
+                            <li class="breadcrumb-item">Quản lý sản phẩm</li>
                             <li class="breadcrumb-item active">Thương hiệu</li>
                         </ol>
                     </div>
@@ -138,7 +139,8 @@
 
 @push('scripts')
     <script src="{{ asset('assets_admin/js/brand_manager.js') }}"></script>
-    {{-- <script>
+    {{--
+    <script>
         document.addEventListener('DOMContentLoaded', function () {
             // Khởi tạo tất cả các xử lý JS cho trang này
             if (typeof initializeBrandPage === 'function') {
@@ -148,15 +150,15 @@
             }
 
             // Script để mở lại modal "Create" nếu có lỗi validation từ server
-            @if ($errors->any() && old('_form_marker') === 'create_brand')
+            @if ($errors -> any() && old('_form_marker') === 'create_brand')
                 const createModalElement = document.getElementById('createBrandModal');
-                if (createModalElement) {
-                    const createModalInstance = new bootstrap.Modal(createModalElement);
-                    if (createModalInstance) {
-                        createModalInstance.show();
-                    }
+            if (createModalElement) {
+                const createModalInstance = new bootstrap.Modal(createModalElement);
+                if (createModalInstance) {
+                    createModalInstance.show();
                 }
+            }
             @endif
-                    });
+        });
     </script> --}}
 @endpush

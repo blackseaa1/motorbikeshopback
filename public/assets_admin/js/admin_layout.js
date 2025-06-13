@@ -406,6 +406,9 @@
         if (typeof initializeDashboardChart === 'function' && document.querySelector('.dashboard-page-identifier')) {
             initializeDashboardChart();
         }
+        if (typeof initializeBlogsPage === 'function' && document.getElementById('adminBlogsPage')) {
+            initializeBlogsPage();
+        }
         if (typeof initializePromotionsPage === 'function' && document.getElementById('adminPromotionsPage')) {
             initializePromotionsPage();
         }

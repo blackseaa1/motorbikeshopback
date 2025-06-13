@@ -13,12 +13,13 @@
     @vite(['resources/css/app.css'])
 
     {{-- Các file CSS tùy chỉnh khác --}}
-    <link rel="stylesheet" href="{{ asset('assets_admin/css/common/base.css') }}">
-    <link rel="stylesheet" href="{{ asset('assets_admin/css/common/normalize.css') }}">
-    <link rel="stylesheet" href="{{ asset('assets_admin/css/common/reset.css') }}">
-    <link rel="stylesheet" href="{{ asset('assets_admin/css/common/style.css') }}">
-    <link rel="stylesheet" href="{{ asset('assets_admin/css/library/bootstrap.min.css') }}">
-    <link rel="stylesheet" href="{{ asset('assets_admin/css/library/bootstrap-select.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('vendor/bootstrap/css/bootstrap.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('vendor/bootstrap/css/bootstrap-select.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('vendor/common/base.css') }}">
+    <link rel="stylesheet" href="{{ asset('vendor/common/normalize.css') }}">
+    <link rel="stylesheet" href="{{ asset('vendor/common/reset.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets_admin/css/style.css') }}">
+
 
     @yield('styles') {{-- Dành cho CSS riêng của từng trang --}}
 </head>
@@ -61,10 +62,11 @@
     </div>
 
     {{-- ================= SỬA ĐỔI 2: KHU VỰC NẠP SCRIPT ================= --}}
-    <script src="{{ asset('assets_admin/js/library/jquery-3.6.0.min.js') }}"></script>
-    <script src="{{ asset('assets_admin/js/library/bootstrap.bundle.min.js') }}"></script>
-    <script src="{{ asset('assets_admin/js/library/bootstrap-select.min.js') }}"></script>
-    {{-- <script src="{{ asset('assets_admin/js/library/chart.js') }}"></script> --}}
+    <script src="{{ asset('vendor/bootstrap/js/jquery-3.6.0.min.js') }}"></script>
+    <script src="{{ asset('vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
+    <script src="{{ asset('vendor/bootstrap/js/bootstrap-select.min.js') }}"></script>
+    {{--
+    <script src="{{ asset('vendor/bootstrap/js/chart.js') }}"></script> --}}
     <script src="{{ asset('assets_admin/js/admin_layout.js') }}"></script>
     {{-- 3. Nạp các file JS của từng trang riêng lẻ (ví dụ: product_management.js). --}}
     @stack('scripts')

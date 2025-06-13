@@ -15,6 +15,7 @@
                     <div class="col-sm-6">
                         <ol class="breadcrumb float-sm-end">
                             <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dashboard</a></li>
+                            <li class="breadcrumb-item">Quản lý sản phẩm</li>
                             <li class="breadcrumb-item active">Danh mục</li>
                         </ol>
                     </div>
