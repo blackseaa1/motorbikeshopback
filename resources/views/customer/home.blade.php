@@ -3,6 +3,7 @@
 @section('title', 'Trang chủ - MotoToys Store')
 
 @section('content')
+    {{-- Main Carousel --}}
     <div id="mainCarousel" class="carousel slide" data-bs-ride="carousel">
         <div class="carousel-indicators">
             <button type="button" data-bs-target="#mainCarousel" data-bs-slide-to="0" class="active"></button>
@@ -47,6 +48,7 @@
         <button class="carousel-control-next" type="button" data-bs-target="#mainCarousel" data-bs-slide="next"><span class="carousel-control-next-icon"></span></button>
     </div>
 
+    {{-- Categories Section --}}
     <section id="categories" class="py-5 bg-light">
         <div class="container">
             <div class="text-center mb-5">
@@ -54,14 +56,30 @@
                 <p class="lead text-muted">Khám phá các loại phụ tùng và đồ chơi xe máy</p>
             </div>
             <div class="row g-4">
-                {{-- Dùng @foreach để lặp qua dữ liệu thật từ Controller --}}
-                <div class="col-lg-4 col-md-6"><div class="card category-card h-100 border-0 shadow-sm"><img src="https://placehold.co/400x250/EEEEEE/333333?text=Engine+Parts" class="card-img-top" alt="Engine Parts"><div class="card-body text-center"><h5 class="card-title fw-bold">Phụ tùng máy</h5><p class="card-text text-muted">Phụ tùng hiệu suất cao</p><a href="#" class="btn btn-outline-primary">Xem ngay</a></div></div></div>
-                <div class="col-lg-4 col-md-6"><div class="card category-card h-100 border-0 shadow-sm"><img src="https://placehold.co/400x250/EEEEEE/333333?text=Body+Parts" class="card-img-top" alt="Body & Frame"><div class="card-body text-center"><h5 class="card-title fw-bold">Dàn áo & Khung sườn</h5><p class="card-text text-muted">Đồ bảo vệ và phụ kiện</p><a href="#" class="btn btn-outline-primary">Xem ngay</a></div></div></div>
-                <div class="col-lg-4 col-md-6"><div class="card category-card h-100 border-0 shadow-sm"><img src="https://placehold.co/400x250/EEEEEE/333333?text=Electrical" class="card-img-top" alt="Electrical"><div class="card-body text-center"><h5 class="card-title fw-bold">Hệ thống điện</h5><p class="card-text text-muted">Đèn, dây điện và linh kiện</p><a href="#" class="btn btn-outline-primary">Xem ngay</a></div></div></div>
+                @forelse ($categories as $category)
+                    <div class="col-lg-4 col-md-6">
+                        <div class="card category-card h-100 border-0 shadow-sm">
+                             {{-- Giả sử Category có trường image_url, nếu không sẽ dùng ảnh mặc định --}}
+                            <a href="{{ route('products.category', ['slug' => $category->slug ?? $category->id]) }}">
+                                <img src="{{ $category->image_url ?? 'https://placehold.co/400x250/EEEEEE/333333?text=' . urlencode($category->name) }}" class="card-img-top" alt="{{ $category->name }}">
+                            </a>
+                            <div class="card-body text-center">
+                                <h5 class="card-title fw-bold">{{ $category->name }}</h5>
+                                <p class="card-text text-muted">{{ Str::limit($category->description, 50) }}</p>
+                                <a href="{{ route('products.category', ['slug' => $category->slug ?? $category->id]) }}" class="btn btn-outline-primary">Xem ngay</a>
+                            </div>
+                        </div>
+                    </div>
+                @empty
+                    <div class="col-12">
+                        <p class="text-center text-muted">Chưa có danh mục nào để hiển thị.</p>
+                    </div>
+                @endforelse
             </div>
         </div>
     </section>
 
+    {{-- Featured Products Section --}}
     <section id="products" class="py-5">
         <div class="container">
             <div class="text-center mb-5">
@@ -69,11 +87,45 @@
                 <p class="lead text-muted">Các mặt hàng bán chạy và được đánh giá cao</p>
             </div>
             <div class="row g-4">
-                {{-- Dùng @foreach để lặp qua sản phẩm thật --}}
-                <div class="col-lg-3 col-md-6"><div class="card product-card h-100 border-0 shadow-sm"><div class="position-relative"><img src="https://placehold.co/300x250/EEEEEE/333333?text=Product+1" class="card-img-top" alt="Premium Helmet"><span class="badge bg-danger position-absolute top-0 end-0 m-2">20% OFF</span></div><div class="card-body d-flex flex-column"><div class="d-flex justify-content-between align-items-start mb-2"><small class="text-muted">Honda</small><div class="text-warning"><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star"></i></div></div><h6 class="card-title">Mũ bảo hiểm cao cấp</h6><p class="card-text text-muted small flex-grow-1">Đạt chuẩn an toàn, thoáng khí.</p><div class="d-flex justify-content-between align-items-center mt-auto"><div><span class="text-decoration-line-through text-muted">1.999.000đ</span><span class="fw-bold text-primary ms-1">1.599.000đ</span></div><span class="badge bg-success">Còn hàng</span></div></div><div class="card-footer bg-transparent border-0"><div class="d-grid gap-2"><button class="btn btn-primary btn-sm"><i class="bi bi-cart-plus me-1"></i>Thêm vào giỏ</button><button class="btn btn-outline-secondary btn-sm">Xem chi tiết</button></div></div></div></div>
-                <div class="col-lg-3 col-md-6"><div class="card product-card h-100 border-0 shadow-sm"><div class="position-relative"><img src="https://placehold.co/300x250/EEEEEE/333333?text=Product+2" class="card-img-top" alt="LED Headlight"><span class="badge bg-info position-absolute top-0 end-0 m-2">MỚI</span></div><div class="card-body d-flex flex-column"><div class="d-flex justify-content-between align-items-start mb-2"><small class="text-muted">Yamaha</small><div class="text-warning"><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i></div></div><h6 class="card-title">Bộ đèn pha LED</h6><p class="card-text text-muted small flex-grow-1">Siêu sáng, dễ dàng lắp đặt.</p><div class="d-flex justify-content-between align-items-center mt-auto"><span class="fw-bold text-primary">899.000đ</span><span class="badge bg-success">Còn hàng</span></div></div><div class="card-footer bg-transparent border-0"><div class="d-grid gap-2"><button class="btn btn-primary btn-sm"><i class="bi bi-cart-plus me-1"></i>Thêm vào giỏ</button><button class="btn btn-outline-secondary btn-sm">Xem chi tiết</button></div></div></div></div>
-                <div class="col-lg-3 col-md-6"><div class="card product-card h-100 border-0 shadow-sm"><img src="https://placehold.co/300x250/EEEEEE/333333?text=Product+3" class="card-img-top" alt="Performance Exhaust"><div class="card-body d-flex flex-column"><div class="d-flex justify-content-between align-items-start mb-2"><small class="text-muted">Kawasaki</small><div class="text-warning"><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star"></i></div></div><h6 class="card-title">Pô tăng hiệu suất</h6><p class="card-text text-muted small flex-grow-1">Thép không gỉ, âm thanh uy lực.</p><div class="d-flex justify-content-between align-items-center mt-auto"><span class="fw-bold text-primary">2.999.000đ</span><span class="badge bg-warning text-dark">Sắp hết</span></div></div><div class="card-footer bg-transparent border-0"><div class="d-grid gap-2"><button class="btn btn-primary btn-sm"><i class="bi bi-cart-plus me-1"></i>Thêm vào giỏ</button><button class="btn btn-outline-secondary btn-sm">Xem chi tiết</button></div></div></div></div>
-                <div class="col-lg-3 col-md-6"><div class="card product-card h-100 border-0 shadow-sm"><img src="https://placehold.co/300x250/EEEEEE/333333?text=Product+4" class="card-img-top" alt="Motorcycle Toy"><div class="card-body d-flex flex-column"><div class="d-flex justify-content-between align-items-start mb-2"><small class="text-muted">Ducati</small><div class="text-warning"><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i></div></div><h6 class="card-title">Mô hình xe tỉ lệ 1:12</h6><p class="card-text text-muted small flex-grow-1">Mô hình kim loại chi tiết cao.</p><div class="d-flex justify-content-between align-items-center mt-auto"><span class="fw-bold text-primary">499.000đ</span><span class="badge bg-success">Còn hàng</span></div></div><div class="card-footer bg-transparent border-0"><div class="d-grid gap-2"><button class="btn btn-primary btn-sm"><i class="bi bi-cart-plus me-1"></i>Thêm vào giỏ</button><button class="btn btn-outline-secondary btn-sm">Xem chi tiết</button></div></div></div></div>
+                @forelse ($featuredProducts as $product)
+                    <div class="col-lg-3 col-md-6">
+                         <div class="card product-card h-100 border-0 shadow-sm">
+                            <div class="position-relative">
+                                <a href="{{ route('products.show', $product->slug ?? $product->id) }}">
+                                    <img src="{{ $product->thumbnail_url }}" class="card-img-top" alt="{{ $product->name }}">
+                                </a>
+                                {{-- (Tùy chọn) Thêm badge cho khuyến mãi --}}
+                            </div>
+                            <div class="card-body d-flex flex-column">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <small class="text-muted">{{ $product->brand->name ?? 'N/A' }}</small>
+                                    {{-- (Tùy chọn) Thêm hiển thị đánh giá sao --}}
+                                </div>
+                                <h6 class="card-title">
+                                     <a href="{{ route('products.show', $product->slug ?? $product->id) }}" class="text-decoration-none text-dark">{{ $product->name }}</a>
+                                </h6>
+                                <p class="card-text text-muted small flex-grow-1">{{ Str::limit($product->description, 50) }}</p>
+                                <div class="d-flex justify-content-between align-items-center mt-auto">
+                                    <div>
+                                        {{-- (Tùy chọn) Hiển thị giá gốc và giá khuyến mãi --}}
+                                        <span class="fw-bold text-primary">{{ $product->formatted_price }}</span>
+                                    </div>
+                                    <span class="badge {{ $product->status_badge_class }}">{{ $product->status_text }}</span>
+                                </div>
+                            </div>
+                            <div class="card-footer bg-transparent border-0">
+                                <div class="d-grid gap-2">
+                                    <button class="btn btn-primary btn-sm"><i class="bi bi-cart-plus me-1"></i>Thêm vào giỏ</button>
+                                    <a href="{{ route('products.show', $product->slug ?? $product->id) }}" class="btn btn-outline-secondary btn-sm">Xem chi tiết</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                @empty
+                     <div class="col-12">
+                        <p class="text-center text-muted">Chưa có sản phẩm nổi bật nào.</p>
+                    </div>
+                @endforelse
             </div>
             <div class="text-center mt-5">
                 <a href="{{ route('products.index') }}" class="btn btn-outline-primary btn-lg">Xem tất cả sản phẩm <i class="bi bi-arrow-right ms-2"></i></a>
@@ -81,6 +133,7 @@
         </div>
     </section>
 
+    {{-- Newsletter Subscription Section --}}
     <section class="py-5 bg-primary text-white">
         <div class="container">
             <div class="row justify-content-center">

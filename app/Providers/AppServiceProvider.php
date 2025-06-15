@@ -2,11 +2,9 @@
 
 namespace App\Providers;
 
-use App\Models\BlogPost;
-use App\Policies\BlogPostPolicy;
-use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Facades\Route; // Thêm dòng này để sử dụng Route facade
+use Illuminate\Support\Facades\View; // <-- Thêm dòng này
 use Illuminate\Support\ServiceProvider;
+use App\Models\Category; // <-- Thêm dòng này
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -23,15 +21,12 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // 1. Đăng ký Policy một cách tường minh
-        Gate::policy(BlogPost::class, BlogPostPolicy::class);
-
-        // 2. Tùy chỉnh cách Laravel tìm model 'blog'
-        // Lệnh này yêu cầu Laravel: "Khi gặp route parameter {blog}, hãy dùng
-        // logic này để tìm BlogPost, bao gồm cả những bài đã xóa mềm (withTrashed)".
-        // Đây là chìa khóa để middleware 'can' hoạt động đúng.
-        Route::bind('blog', function ($value) {
-            return BlogPost::withTrashed()->find($value) ?? abort(404);
+        // SỬA ĐỔI: Chia sẻ dữ liệu danh mục với một view cụ thể (header)
+        View::composer('customer.layouts.partials._header', function ($view) {
+            $navbarCategories = Category::where('status', Category::STATUS_ACTIVE)
+                ->orderBy('name', 'asc')
+                ->get();
+            $view->with('navbarCategories', $navbarCategories);
         });
     }
 }

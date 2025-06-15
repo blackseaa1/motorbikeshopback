@@ -42,6 +42,7 @@ use App\Http\Controllers\Customer\AccountController;
 use App\Http\Controllers\Customer\AuthController;
 use App\Http\Controllers\Customer\HomeController;
 use App\Http\Controllers\Customer\ProductController as CustomerProductController;
+use App\Http\Controllers\Customer\CategoryController as CustomerCategoryController;
 
 /*
 |--------------------------------------------------------------------------
@@ -59,6 +60,7 @@ use App\Http\Controllers\Customer\ProductController as CustomerProductController
 // =========================================================================
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
+Route::get('/categories', [CustomerCategoryController::class, 'index'])->name('categories.index');
 
 // --- Authentication routes ---
 Route::controller(AuthController::class)->group(function () {
