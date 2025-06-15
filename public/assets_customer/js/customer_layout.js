@@ -37,117 +37,89 @@
     /**
      * A.3. Hiển thị Modal Thông Báo Chung
      * Điều khiển Bootstrap Modal #appInfoModal trong file app.blade.php.
+     * @param {string} message - Nội dung thông báo.
+     * @param {string} type - 'success', 'error', 'warning', 'info'.
+     * @param {string} title - Tiêu đề của modal.
      */
-    window.showAppInfoModal = function (message, type = 'info', title = 'Thông báo') {
+    window.showAppInfoModal = (message, type = 'info', title = 'Thông báo') => {
         const modalElement = document.getElementById('appInfoModal');
-        if (!modalElement) {
-            console.error('Không tìm thấy #appInfoModal. Quay về dùng alert().');
-            alert(`${title}: ${message.html || message}`);
-            return;
+        if (!modalElement) return;
+
+        const modalTitle = modalElement.querySelector('.modal-title');
+        const modalBody = modalElement.querySelector('.modal-body');
+        const modalHeader = modalElement.querySelector('.modal-header');
+
+        modalTitle.textContent = title;
+        modalBody.innerHTML = message; // Dùng innerHTML để có thể render HTML nếu cần
+
+        // Reset class
+        modalHeader.className = 'modal-header';
+        switch (type) {
+            case 'success':
+                modalHeader.classList.add('bg-success', 'text-white');
+                break;
+            case 'error':
+                modalHeader.classList.add('bg-danger', 'text-white');
+                break;
+            case 'warning':
+                modalHeader.classList.add('bg-warning', 'text-dark');
+                break;
+            default:
+                modalHeader.classList.add('bg-primary', 'text-white');
         }
 
-        const modalTitleElement = modalElement.querySelector('#appInfoModalLabel');
-        const modalBodyElement = modalElement.querySelector('#appInfoModalBody');
-        const modalHeaderElement = modalElement.querySelector('.modal-header');
-
-        if (modalTitleElement) modalTitleElement.textContent = title;
-
-        if (modalBodyElement) {
-            if (typeof message === 'object' && message.html) {
-                modalBodyElement.innerHTML = message.html;
-            } else {
-                modalBodyElement.textContent = String(message);
-            }
-        }
-
-        if (modalHeaderElement) {
-            modalHeaderElement.className = 'modal-header text-white'; // Reset classes
-            let headerBgClass = 'bg-primary';
-            switch (type) {
-                case 'success':
-                    headerBgClass = 'bg-success';
-                    break;
-                case 'error':
-                case 'validation_error':
-                    headerBgClass = 'bg-danger';
-                    break;
-                case 'warning':
-                    headerBgClass = 'bg-warning';
-                    modalHeaderElement.classList.remove('text-white');
-                    break;
-                case 'info':
-                default:
-                    headerBgClass = 'bg-info';
-                    modalHeaderElement.classList.remove('text-white');
-                    break;
-            }
-            modalHeaderElement.classList.add(headerBgClass);
-        }
-
-        try {
-            const appModalInstance = bootstrap.Modal.getInstance(modalElement) || new bootstrap.Modal(modalElement);
-            appModalInstance.show();
-        } catch (e) {
-            console.error("Lỗi khi hiển thị Bootstrap modal: ", e);
-            alert(`${title}: ${message.html || message}`);
-        }
+        const modalInstance = new bootstrap.Modal(modalElement);
+        modalInstance.show();
     };
 
-    /**
-     * A.4. Hiển thị lỗi validation trên một form AJAX.
-     */
-    window.displayValidationErrors = function (form, errors) {
-        if (!form || !errors) return;
-        form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
-        form.querySelectorAll('.invalid-feedback').forEach(el => el.textContent = '');
-
-        for (const field in errors) {
-            const inputField = form.querySelector(`[name="${field}"]`);
-            if (inputField) {
-                inputField.classList.add('is-invalid');
-                const errorDiv = inputField.parentElement.querySelector('.invalid-feedback');
-                if (errorDiv) {
-                    errorDiv.textContent = errors[field][0];
-                }
-            }
-        }
-    };
 
     /**
-     * A.5. Gắn sự kiện submit AJAX cho một form.
+     * A.4. Thiết lập Form AJAX
+     * Cấu hình một form để submit qua AJAX thay vì tải lại trang.
+     * @param {string} formId - ID của form.
+     * @param {function} successCallback - Hàm gọi lại khi thành công.
+     * @param {function} errorCallback - Hàm gọi lại khi thất bại.
      */
-    window.setupAjaxForm = function (formId, successCallback = null, errorCallback = null) {
+    window.setupAjaxForm = (formId, successCallback, errorCallback) => {
         const form = document.getElementById(formId);
         if (!form) return;
 
-        form.addEventListener('submit', async function (e) {
-            e.preventDefault();
+        form.addEventListener('submit', async function (event) {
+            event.preventDefault();
             window.showAppLoader();
+
             try {
                 const formData = new FormData(form);
-                const httpMethod = (formData.get('_method') || form.method).toUpperCase();
-
                 const response = await fetch(form.action, {
-                    method: httpMethod,
+                    method: 'POST',
                     body: formData,
                     headers: {
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
                         'Accept': 'application/json'
                     }
                 });
+
                 const result = await response.json();
 
                 if (!response.ok) {
                     if (response.status === 422 && result.errors) {
-                        window.displayValidationErrors(form, result.errors);
-                        window.showAppInfoModal('Vui lòng kiểm tra lại các trường dữ liệu.', 'validation_error', 'Lỗi Nhập Liệu');
-                    } else {
-                        throw new Error(result.message || 'Có lỗi không xác định xảy ra.');
+                        // Xóa các lỗi cũ
+                        form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+                        form.querySelectorAll('.invalid-feedback').forEach(el => el.textContent = '');
+
+                        // Hiển thị lỗi mới
+                        for (const field in result.errors) {
+                            const input = form.querySelector(`[name="${field}"]`);
+                            const errorContainer = form.querySelector(`#${field}-error`);
+                            if (input) input.classList.add('is-invalid');
+                            if (errorContainer) errorContainer.textContent = result.errors[field][0];
+                        }
                     }
-                    if (errorCallback) errorCallback(result);
-                    return;
+                    // Throw một lỗi để catch block bên dưới xử lý và hiển thị modal
+                    throw new Error(result.message || 'Có lỗi xảy ra, vui lòng thử lại.');
                 }
 
+                // Nếu thành công, xóa các trạng thái lỗi
                 form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
                 form.querySelectorAll('.invalid-feedback').forEach(el => el.textContent = '');
 
@@ -175,6 +147,15 @@
         // Gọi hàm khởi tạo cho trang Tài khoản nếu tồn tại
         if (typeof window.initializeAccountPage === 'function') {
             window.initializeAccountPage();
+        }
+
+        // =============================================================
+        //  THÊM LỆNH GỌI CHO TRANG DANH MỤC TẠI ĐÂY
+        // =============================================================
+        // Nếu hàm initializeCategoriesPage tồn tại (tức là file categories.js đã được tải),
+        // thì gọi nó.
+        if (typeof window.initializeCategoriesPage === 'function') {
+            window.initializeCategoriesPage();
         }
     }
 

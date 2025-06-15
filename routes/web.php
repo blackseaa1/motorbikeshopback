@@ -60,7 +60,7 @@ use App\Http\Controllers\Customer\CategoryController as CustomerCategoryControll
 // =========================================================================
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
-Route::get('/categories', [CustomerCategoryController::class, 'index'])->name('categories.index');
+
 
 // --- Authentication routes ---
 Route::controller(AuthController::class)->group(function () {
@@ -76,6 +76,7 @@ Route::controller(AuthController::class)->group(function () {
 });
 
 // --- Các route khác của khách hàng không thay đổi ---
+Route::get('/categories', [CustomerCategoryController::class, 'index'])->name('categories.index');
 Route::get('/products', [CustomerProductController::class, 'index'])->name('products.index');
 Route::get('/products/{slug}', [CustomerProductController::class, 'show'])->name('products.show');
 Route::get('/category/{slug}', [CustomerProductController::class, 'productsByCategory'])->name('products.category');
