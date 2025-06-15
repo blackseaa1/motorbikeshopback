@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'MotoToys Store')</title>
+    <link rel="icon" type="image/x-icon" href="{{ asset('assets_admin/images/logo.ico') }}">
     {{-- Meta tags from new index.html for SEO --}}
     <meta name="description"
         content="Discover premium motorcycle accessories, toys, and parts. Free shipping on orders over $50. Shop Honda, Yamaha, Kawasaki parts with 20% off using code SUMMER25.">

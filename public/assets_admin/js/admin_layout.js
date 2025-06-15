@@ -284,15 +284,35 @@
             }
         });
 
+        // Quản lý submenu: Đóng submenu khác khi mở một submenu
         const allSubmenus = sidebar.querySelectorAll('ul.collapse');
         if (allSubmenus.length > 0) {
             allSubmenus.forEach(submenu => {
-                submenu.addEventListener('show.bs.collapse', function () {
+                const parentLink = submenu.closest('.nav-item').querySelector('.nav-link[data-bs-toggle="collapse"]');
+                if (parentLink) {
+                    parentLink.addEventListener('click', function (e) {
+                        const isExpanded = parentLink.getAttribute('aria-expanded') === 'true';
+                        if (!isExpanded) {
+                            // Đóng tất cả các submenu khác trước khi mở submenu này
+                            allSubmenus.forEach(otherSubmenu => {
+                                if (otherSubmenu !== submenu) {
+                                    const bsCollapseInstance = bootstrap.Collapse.getInstance(otherSubmenu) || new bootstrap.Collapse(otherSubmenu, { toggle: false });
+                                    if (otherSubmenu.classList.contains('show')) {
+                                        bsCollapseInstance.hide();
+                                    }
+                                }
+                            });
+                        }
+                    });
+                }
+
+                // Ngăn sự kiện show.bs.collapse lặp lại không cần thiết
+                submenu.addEventListener('show.bs.collapse', function (e) {
                     const currentOpeningSubmenu = this;
                     allSubmenus.forEach(otherSubmenu => {
                         if (otherSubmenu !== currentOpeningSubmenu) {
-                            const bsCollapseInstance = bootstrap.Collapse.getInstance(otherSubmenu);
-                            if (bsCollapseInstance && otherSubmenu.classList.contains('show')) {
+                            const bsCollapseInstance = bootstrap.Collapse.getInstance(otherSubmenu) || new bootstrap.Collapse(otherSubmenu, { toggle: false });
+                            if (otherSubmenu.classList.contains('show')) {
                                 bsCollapseInstance.hide();
                             }
                         }
@@ -378,7 +398,6 @@
         }
         imagePreviewPairs.forEach(pair => setupPreview(pair.inputId, pair.previewId));
     }
-
 
     /**
      * ===============================================================

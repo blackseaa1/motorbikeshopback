@@ -7,7 +7,8 @@
 <nav class="sidebar" id="sidebar">
     <div class="sidebar-header">
         <div class="logo">
-            <i class="bi bi-shield-lock-fill"></i> Admin Panel
+            <a href="dashboard" style="color:#fff;font-size:20px"><img src="{{ asset('assets_admin/images/thanhdo_shop_logo.png') }}"
+                    alt="Thành Đô Shop Logo" style="width:26%; height: auto;"> Thành Đô Shop</a>
         </div>
         <button class="btn btn-sm sidebar-close-button d-lg-none" type="button" id="sidebarCloseButton"
             aria-label="Close sidebar">
@@ -157,17 +158,17 @@
             @endif
         </ul>
     @endif
-
+    {{--
     <div class="sidebar-footer">
         @if ($currentUser)
-            <div class="user-info">
-                <img src="{{ $currentUser->avatar_url }}" alt="{{ $currentUser->name }} Avatar"
-                    style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; margin-right: 10px;">
-                <div>
-                    <strong>{{ $currentUser->name }}</strong><br>
-                    <small>{{ $currentUser->role_name }}</small>
-                </div>
+        <div class="user-info">
+            <img src="{{ $currentUser->avatar_url }}" alt="{{ $currentUser->name }} Avatar"
+                style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; margin-right: 10px;">
+            <div>
+                <strong>{{ $currentUser->name }}</strong><br>
+                <small>{{ $currentUser->role_name }}</small>
             </div>
+        </div>
         @endif
-    </div>
+    </div> --}}
 </nav>
