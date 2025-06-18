@@ -6,7 +6,7 @@
             </a>
 
             <div class="d-none d-md-flex flex-grow-1 mx-4">
-                <form class="input-group" action="#"> {{-- Bạn có thể thay action="#" bằng route xử lý tìm kiếm --}}
+                <form class="input-group" action="#">
                     <input type="text" class="form-control" placeholder="Tìm kiếm sản phẩm, thương hiệu...">
                     <button class="btn btn-primary" type="submit">
                         <i class="bi bi-search"></i>
@@ -24,7 +24,6 @@
                         <a class="nav-link" href="{{ route('home') }}">Trang Chủ</a>
                     </li>
 
-                    {{-- SỬA ĐỔI: Chuyển "Danh mục" thành dropdown --}}
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="{{ route('categories.index') }}"
                             id="navbarDropdownCategories" role="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -36,8 +35,9 @@
                                     @foreach ($sharedCategories->chunk(5) as $chunk)
                                         <div class="category-column">
                                             @foreach ($chunk as $category)
-                                                <a class="dropdown-item" href="#">{{-- Thay bằng route xem danh mục cụ thể, ví dụ:
-                                                    {{ route('categories.show', $category->slug) }} --}}
+                                                {{-- SỬA ĐỔI: Dùng route 'products.category' và truyền id --}}
+                                                <a class="dropdown-item"
+                                                    href="{{ route('products.category', ['category' => $category->id]) }}">
                                                     {{ $category->name }}
                                                 </a>
                                             @endforeach
@@ -50,7 +50,6 @@
                         </div>
                     </li>
 
-                    {{-- THÊM MỚI: Trang Blog và Liên hệ --}}
                     <li class="nav-item">
                         <a class="nav-link" href="{{ route('blog') }}">Blog</a>
                     </li>
@@ -72,12 +71,12 @@
                         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdownAccount">
                             @guest
                                 <li><a class="dropdown-item" href="{{ route('login') }}">Đăng nhập</a></li>
-                                <li><a class="dropdown-item" href="#">Đăng ký</a></li>
+                                <li><a class="dropdown-item" href="{{ route('register') }}">Đăng ký</a></li>
                             @endguest
                             @auth
-                                <li><a class="dropdown-item" href="#">Tài khoản của tôi</a>
+                                <li><a class="dropdown-item" href="{{ route('account.profile') }}">Tài khoản của tôi</a>
                                 </li>
-                                <li><a class="dropdown-item" href="#">Đơn hàng của tôi</a></li>
+                                <li><a class="dropdown-item" href="{{ route('account.orders') }}">Đơn hàng của tôi</a></li>
                                 <li>
                                     <hr class="dropdown-divider">
                                 </li>
@@ -96,7 +95,6 @@
             </div>
         </div>
     </nav>
-
     <div class="d-md-none bg-light p-3">
         <form class="input-group" action="#">
             <input type="text" class="form-control" placeholder="Tìm kiếm sản phẩm...">

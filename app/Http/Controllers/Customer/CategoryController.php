@@ -17,7 +17,6 @@ class CategoryController extends Controller
             ->withCount('products') // Đếm số sản phẩm trong mỗi category
             ->orderBy('name')
             ->paginate(9);
-
         // Truy vấn các brands
         $brands = Brand::where('status', Brand::STATUS_ACTIVE)
             ->withCount('products')

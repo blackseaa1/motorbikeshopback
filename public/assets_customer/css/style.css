@@ -186,10 +186,22 @@ img[loading="lazy"] {
 }
 
 /* Custom CSS for category dropdown */
+/* CSS cho menu xổ xuống khi hover */
+.category-nav-item:hover .dropdown-menu {
+  display: block;
+  margin-top: 0;
+  /* Xóa khoảng trống thừa nếu có */
+}
+
+/* Custom CSS for category dropdown (giữ nguyên từ trước) */
 .category-dropdown-menu {
   width: 450px;
-  /* Điều chỉnh độ rộng của dropdown nếu cần */
   padding: 1rem;
+  border-radius: 0.5rem;
+  /* Thêm bo góc cho đẹp */
+  border: none;
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, .15);
+  /* Thêm đổ bóng */
 }
 
 .category-dropdown-columns {
@@ -206,6 +218,12 @@ img[loading="lazy"] {
 
 .category-dropdown-menu .dropdown-item {
   white-space: normal;
-  padding-top: 0.5rem;
-  padding-bottom: 0.5rem;
+  padding: 0.5rem 1rem;
+  /* Chỉnh lại padding */
+  border-radius: 0.25rem;
+}
+
+.category-dropdown-menu .dropdown-item:hover {
+  background-color: #f8f9fa;
+  /* Thêm màu nền khi hover */
 }
