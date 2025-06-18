@@ -2,9 +2,10 @@
 
 namespace App\Providers;
 
-use Illuminate\Support\Facades\View; // <-- Thêm dòng này
 use Illuminate\Support\ServiceProvider;
-use App\Models\Category; // <-- Thêm dòng này
+use Illuminate\Pagination\Paginator;
+use Illuminate\Support\Facades\View; // Thêm dòng này
+use App\Models\Category; // Thêm dòng này
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -21,12 +22,15 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // SỬA ĐỔI: Chia sẻ dữ liệu danh mục với một view cụ thể (header)
-        View::composer('customer.layouts.partials._header', function ($view) {
-            $navbarCategories = Category::where('status', Category::STATUS_ACTIVE)
-                ->orderBy('name', 'asc')
-                ->get();
-            $view->with('navbarCategories', $navbarCategories);
-        });
+        Paginator::useBootstrapFive();
+
+        // Chia sẻ biến $categories với tất cả các view
+        try {
+            $sharedCategories = Category::where('is_active', true)->select('id', 'name', 'slug')->get();
+            View::share('sharedCategories', $sharedCategories);
+        } catch (\Exception $e) {
+            // Xử lý trường hợp không có kết nối DB khi chạy migrate/composer install
+            View::share('sharedCategories', collect());
+        }
     }
 }

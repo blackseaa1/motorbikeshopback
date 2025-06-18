@@ -23,44 +23,61 @@
                     <li class="nav-item">
                         <a class="nav-link" href="{{ route('home') }}">Trang Chủ</a>
                     </li>
+
+                    {{-- SỬA ĐỔI: Chuyển "Danh mục" thành dropdown --}}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="{{ route('categories.index') }}"
+                            id="navbarDropdownCategories" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            Danh mục
+                        </a>
+                        <div class="dropdown-menu category-dropdown-menu" aria-labelledby="navbarDropdownCategories">
+                            <div class="category-dropdown-columns">
+                                @if($sharedCategories->isNotEmpty())
+                                    @foreach ($sharedCategories->chunk(5) as $chunk)
+                                        <div class="category-column">
+                                            @foreach ($chunk as $category)
+                                                <a class="dropdown-item" href="#">{{-- Thay bằng route xem danh mục cụ thể, ví dụ:
+                                                    {{ route('categories.show', $category->slug) }} --}}
+                                                    {{ $category->name }}
+                                                </a>
+                                            @endforeach
+                                        </div>
+                                    @endforeach
+                                @else
+                                    <a class="dropdown-item" href="#">Không có danh mục nào</a>
+                                @endif
+                            </div>
+                        </div>
+                    </li>
+
+                    {{-- THÊM MỚI: Trang Blog và Liên hệ --}}
                     <li class="nav-item">
-                        {{-- SỬA ĐỔI: "Danh mục" là một liên kết đến trang liệt kê tất cả danh mục --}}
-                        <a class="nav-link" href="{{ route('categories.index') }}">Danh mục</a>
+                        <a class="nav-link" href="{{ route('blog') }}">Blog</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ route('contact') }}">Liên hệ</a>
                     </li>
 
                     <li class="nav-item">
-                        {{-- Liên kết này có thể trỏ đến trang Blog trong tương lai --}}
-                        <a class="nav-link" href="#">Blog</a>
-                    </li>
-                    <li class="nav-item">
-                        {{-- Liên kết này trỏ đến footer --}}
-                        <a class="nav-link" href="#contact">Liên hệ</a>
-                    </li>
-                    <li class="nav-item">
-                        {{-- Logic giỏ hàng --}}
-                        <a class="nav-link position-relative" href="#">
-                            <i class="bi bi-cart3"></i>
-                            <span
-                                class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                                3 {{-- Số lượng sản phẩm trong giỏ hàng sẽ được cập nhật động sau --}}
-                            </span>
+                        <a class="nav-link" href="#">
+                            <i class="bi bi-cart-fill"></i>
+                            <span class="badge bg-danger">3</span>
                         </a>
                     </li>
-                    {{-- Dropdown tài khoản --}}
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button"
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownAccount" role="button"
                             data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="bi bi-person-circle"></i> Tài khoản
+                            <i class="bi bi-person-circle"></i>
                         </a>
-                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdownAccount">
                             @guest
                                 <li><a class="dropdown-item" href="{{ route('login') }}">Đăng nhập</a></li>
-                                <li><a class="dropdown-item" href="{{ route('register') }}">Đăng ký</a></li>
+                                <li><a class="dropdown-item" href="#">Đăng ký</a></li>
                             @endguest
                             @auth
-                                <li><a class="dropdown-item" href="{{ route('account.profile') }}">Tài khoản của tôi</a>
+                                <li><a class="dropdown-item" href="#">Tài khoản của tôi</a>
                                 </li>
-                                <li><a class="dropdown-item" href="{{ route('account.orders') }}">Đơn hàng của tôi</a></li>
+                                <li><a class="dropdown-item" href="#">Đơn hàng của tôi</a></li>
                                 <li>
                                     <hr class="dropdown-divider">
                                 </li>
@@ -81,7 +98,7 @@
     </nav>
 
     <div class="d-md-none bg-light p-3">
-        <form class="input-group" action="#"> {{-- Bạn có thể thay action="#" bằng route xử lý tìm kiếm --}}
+        <form class="input-group" action="#">
             <input type="text" class="form-control" placeholder="Tìm kiếm sản phẩm...">
             <button class="btn btn-primary" type="button">
                 <i class="bi bi-search"></i>

@@ -184,3 +184,28 @@ img[loading="lazy"] {
     transform: rotate(360deg);
   }
 }
+
+/* Custom CSS for category dropdown */
+.category-dropdown-menu {
+  width: 450px;
+  /* Điều chỉnh độ rộng của dropdown nếu cần */
+  padding: 1rem;
+}
+
+.category-dropdown-columns {
+  display: flex;
+  flex-direction: row;
+  gap: 1rem;
+}
+
+.category-column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.category-dropdown-menu .dropdown-item {
+  white-space: normal;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+}

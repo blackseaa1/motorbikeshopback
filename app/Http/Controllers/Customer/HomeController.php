@@ -33,4 +33,15 @@ class HomeController extends Controller
         // Trả về view 'customer.home' và truyền cả 2 biến: categories và featuredProducts
         return view('customer.home', compact('categories', 'featuredProducts'));
     }
+    public function blog()
+    {
+        // Sau này bạn có thể lấy các bài blog từ DB và truyền vào view
+        return view('customer.blog');
+    }
+
+    // Thêm phương thức mới cho trang Liên hệ
+    public function contact()
+    {
+        return view('customer.contact');
+    }
 }

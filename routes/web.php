@@ -80,6 +80,8 @@ Route::get('/categories', [CustomerCategoryController::class, 'index'])->name('c
 Route::get('/products', [CustomerProductController::class, 'index'])->name('products.index');
 Route::get('/products/{slug}', [CustomerProductController::class, 'show'])->name('products.show');
 Route::get('/category/{slug}', [CustomerProductController::class, 'productsByCategory'])->name('products.category');
+Route::get('/blog', [HomeController::class, 'blog'])->name('blog');
+Route::get('/contact', [HomeController::class, 'contact'])->name('contact');
 
 Route::prefix('account')->name('account.')->middleware('auth')->group(function () {
     Route::get('/', [AccountController::class, 'profile'])->name('profile');
