@@ -61,7 +61,7 @@
                                                 <td class="text-center">
                                                     <img src="{{ $brand->logo_full_url }}" alt="{{ $brand->name }}"
                                                         class="img-thumbnail"
-                                                        style="max-width: 50px; max-height: 50px; object-fit: contain;">
+                                                        style="width: 50px; height: 50px; object-fit: contain;">
                                                 </td>
                                                 <td>{{ $brand->name }}</td>
                                                 <td>{{ Str::limit($brand->description, 60) ?? 'Không có mô tả' }}</td>

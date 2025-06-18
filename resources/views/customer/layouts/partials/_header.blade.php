@@ -27,26 +27,7 @@
                     {{-- === MODIFIED CATEGORY DROPDOWN START === --}}
                     <li class="nav-item dropdown category-nav-item">
                         {{-- Link này sẽ điều hướng đến trang lọc sản phẩm --}}
-                        <a class="nav-link" href="{{ route('products.index') }}">Danh mục</a>
-
-                        {{-- Dropdown menu này được kích hoạt bằng CSS --}}
-                        <div class="dropdown-menu category-dropdown-menu">
-                            <div class="category-dropdown-columns">
-                                @if(isset($sharedCategories) && $sharedCategories->isNotEmpty())
-                                    @foreach ($sharedCategories->chunk(5) as $chunk)
-                                        <div class="category-column">
-                                            @foreach ($chunk as $category)
-                                                <a class="dropdown-item" href="{{ route('categories.show', $category->id) }}">
-                                                    {{ $category->name }}
-                                                </a>
-                                            @endforeach
-                                        </div>
-                                    @endforeach
-                                @else
-                                    <a class="dropdown-item disabled" href="#">Không có danh mục</a>
-                                @endif
-                            </div>
-                        </div>
+                        <a class="nav-link" href="{{ route('products.index') }}">Sản phẩm</a>
                     </li>
                     {{-- === MODIFIED CATEGORY DROPDOWN END === --}}
 

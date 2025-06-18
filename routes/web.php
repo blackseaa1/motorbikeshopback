@@ -33,8 +33,7 @@ use App\Http\Controllers\Api\GeographyApiController;
 use App\Http\Controllers\Customer\AccountController;
 use App\Http\Controllers\Customer\AuthController;
 use App\Http\Controllers\Customer\HomeController;
-use App\Http\Controllers\Customer\ProductController as CustomerProductController;
-use App\Http\Controllers\Customer\CategoryController as CustomerCategoryController;
+use App\Http\Controllers\Customer\ShopController as CustomerShopController;
 
 /*
 |--------------------------------------------------------------------------
@@ -61,10 +60,11 @@ Route::controller(AuthController::class)->group(function () {
 });
 
 // --- Trang sản phẩm và danh mục ---
-Route::get('/products', [CustomerProductController::class, 'index'])->name('products.index');
-Route::get('/products/{product}', [CustomerProductController::class, 'show'])->name('products.show');
-Route::get('/categories', [CustomerCategoryController::class, 'index'])->name('categories.index');
-Route::get('/categories/{category}', [CustomerCategoryController::class, 'show'])->name('categories.show');
+Route::get('/products', [CustomerShopController::class, 'index'])->name('products.index');
+Route::get('/products/{product}', [CustomerShopController::class, 'show'])->name('products.show');
+
+// Route này để khi click vào danh mục từ trang chủ, sẽ trỏ đến trang lọc sản phẩm và chọn sẵn danh mục đó
+Route::get('/categories/{category}', [CustomerShopController::class, 'index'])->name('categories.show');
 
 
 // --- Các trang tĩnh khác ---

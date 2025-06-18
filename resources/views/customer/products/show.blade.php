@@ -52,5 +52,25 @@
                 </div>
             </div>
         </div>
+        {{-- ... sau phần mô tả sản phẩm ... --}}
+        {{-- <div class="row mt-5">
+            <div class="col-12">
+                <h3>Đánh giá sản phẩm</h3>
+                @if($reviews->count() > 0)
+                    @foreach($reviews as $review)
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <h5 class="card-title">{{ $review->customer->name }}</h5>
+                                <p class="card-text">{{ $review->comment }}</p>
+                                <small class="text-muted">Đánh giá: {{ $review->rating }} sao - Ngày:
+                                    {{ $review->created_at->format('d/m/Y') }}</small>
+                            </div>
+                        </div>
+                    @endforeach
+                @else
+                    <p>Chưa có đánh giá nào cho sản phẩm này.</p>
+                @endif
+            </div>
+        </div> --}}
     </main>
 @endsection
