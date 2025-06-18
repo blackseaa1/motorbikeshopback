@@ -21,12 +21,13 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item">
+                        <a class="nav-link" href="{{ route('home') }}">Trang Chủ</a>
+                    </li>
+                    <li class="nav-item">
                         {{-- SỬA ĐỔI: "Danh mục" là một liên kết đến trang liệt kê tất cả danh mục --}}
                         <a class="nav-link" href="{{ route('categories.index') }}">Danh mục</a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ route('products.index') }}">Sản phẩm</a>
-                    </li>
+
                     <li class="nav-item">
                         {{-- Liên kết này có thể trỏ đến trang Blog trong tương lai --}}
                         <a class="nav-link" href="#">Blog</a>
