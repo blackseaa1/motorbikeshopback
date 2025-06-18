@@ -4,32 +4,38 @@ namespace App\Http\Controllers\Customer;
 
 use App\Http\Controllers\Controller;
 use App\Models\Category;
-use App\Models\Brand;
-use App\Models\VehicleBrand; // <-- Thêm dòng này
+use App\Models\Product; // Đảm bảo đã import Product
 use Illuminate\Http\Request;
 
 class CategoryController extends Controller
 {
+    /**
+     * Hiển thị trang liệt kê tất cả danh mục.
+     * Xử lý cho route('categories.index')
+     */
     public function index()
     {
-        // Sử dụng withCount('products') để lấy số lượng sản phẩm hiệu quả
-        $categories = Category::where('status', Category::STATUS_ACTIVE)
-            ->withCount('products') // Đếm số sản phẩm trong mỗi category
-            ->orderBy('name')
-            ->paginate(9);
-        // Truy vấn các brands
-        $brands = Brand::where('status', Brand::STATUS_ACTIVE)
+        // Lấy danh sách các danh mục, kèm theo số lượng sản phẩm
+        $categories = Category::where('status', 'active')
             ->withCount('products')
-            ->orderBy('name')
-            ->get();
+            ->paginate(12);
 
-        // Truy vấn thêm các vehicleBrands
-        $vehicleBrands = VehicleBrand::where('status', VehicleBrand::STATUS_ACTIVE)
-            ->withCount('vehicleModels')
-            ->orderBy('name')
-            ->get(); // <-- Thêm đoạn này
+        return view('customer.categories.index', compact('categories'));
+    }
 
-        // Truyền tất cả các biến cần thiết cho view
-        return view('customer.categories.index', compact('categories', 'brands', 'vehicleBrands')); // <-- Cập nhật lại dòng này
+    /**
+     * Hiển thị trang chi tiết một danh mục và các sản phẩm thuộc về nó.
+     * Sử dụng Route Model Binding, Laravel tự tìm Category từ ID.
+     * Xử lý cho route('categories.show')
+     *
+     * @param  \App\Models\Category $category
+     * @return \Illuminate\View\View
+     */
+    public function show(Category $category)
+    {
+        // Lấy các sản phẩm thuộc về danh mục này
+        $products = $category->products()->where('status', 'active')->paginate(9);
+
+        return view('customer.categories.show', compact('category', 'products'));
     }
 }

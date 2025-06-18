@@ -4,8 +4,8 @@ namespace App\Http\Controllers\Customer;
 
 use App\Http\Controllers\Controller;
 use App\Models\Category;
-use App\Models\Product; // <-- Thêm dòng này để sử dụng Product Model
-use Illuminate\Http\Request;
+use App\Models\Product;
+use App\Models\Brand; // <-- THÊM DÒNG NÀY
 
 class HomeController extends Controller
 {
@@ -16,30 +16,39 @@ class HomeController extends Controller
      */
     public function index()
     {
-        // Lấy 6 danh mục đang ở trạng thái hoạt động, sắp xếp theo thứ tự mới nhất
-        $categories = Category::where('status', Category::STATUS_ACTIVE)
-            ->latest()
-            ->take(6)
-            ->get();
+        // Lấy 4 danh mục đang hoạt động
+        // Code mới: Lấy tất cả danh mục, sắp xếp theo mới nhất
+        $categories = Category::where('status', 'active')->latest()->get();
 
-        // (PHẦN BỔ SUNG)
-        // Lấy 8 sản phẩm đang bán làm sản phẩm nổi bật
-        // Bạn có thể thay đổi logic ở đây, ví dụ: lấy sản phẩm được xem nhiều nhất, bán chạy nhất, v.v.
-        $featuredProducts = Product::where('status', Product::STATUS_ACTIVE)
-            ->inRandomOrder() // Lấy ngẫu nhiên để trang chủ luôn mới mẻ
-            ->take(8)
-            ->get();
+        // Lấy 8 sản phẩm mới nhất
+        $newProducts = Product::where('status', 'active')->latest()->take(8)->get();
 
-        // Trả về view 'customer.home' và truyền cả 2 biến: categories và featuredProducts
-        return view('customer.home', compact('categories', 'featuredProducts'));
+        // Lấy 8 sản phẩm ngẫu nhiên làm sản phẩm nổi bật
+        $featuredProducts = Product::where('status', 'active')->inRandomOrder()->take(8)->get();
+
+        // --- THÊM MỚI: LẤY 4 THƯƠNG HIỆU NGẪU NHIÊN ---
+        $brands = Brand::where('status', 'active')->inRandomOrder()->take(6)->get();
+        // ------------------------------------------
+
+        // Truyền tất cả dữ liệu qua view
+        return view('customer.home', compact('categories', 'newProducts', 'featuredProducts', 'brands'));
     }
+
+    /**
+     * Hiển thị trang Blog.
+     *
+     * @return \Illuminate\View\View
+     */
     public function blog()
     {
-        // Sau này bạn có thể lấy các bài blog từ DB và truyền vào view
         return view('customer.blog');
     }
 
-    // Thêm phương thức mới cho trang Liên hệ
+    /**
+     * Hiển thị trang Liên hệ.
+     *
+     * @return \Illuminate\View\View
+     */
     public function contact()
     {
         return view('customer.contact');

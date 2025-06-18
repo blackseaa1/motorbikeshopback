@@ -227,3 +227,155 @@ img[loading="lazy"] {
   background-color: #f8f9fa;
   /* Thêm màu nền khi hover */
 }
+
+/*
+    |--------------------------------------------------------------------------
+    | I. CSS cho Carousel Danh mục
+    |--------------------------------------------------------------------------
+    */
+.category-text-card {
+  background-color: #e1eaf5;
+  border: 1px solid #e9ecef;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  text-align: center;
+  height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease-in-out;
+}
+
+.category-text-card:hover {
+  background-color: var(--bs-primary, #0d6efd);
+  border-color: var(--bs-primary, #0d6efd);
+  transform: translateY(-5px);
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+.category-text-card h6 {
+  color: #212529;
+  font-weight: 600;
+  transition: color 0.3s ease-in-out;
+}
+
+.category-text-card:hover h6 {
+  color: #ffffff;
+}
+
+/*
+    |--------------------------------------------------------------------------
+    | II. CSS cho Card Thương hiệu
+    |--------------------------------------------------------------------------
+    */
+.brand-card {
+  border: 1px solid #eee;
+  border-radius: 0.5rem;
+  background-color: #ffffff;
+  transition: all 0.3s ease-in-out;
+}
+
+.brand-card:hover {
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+  transform: translateY(-5px);
+}
+
+/*
+    |--------------------------------------------------------------------------
+    | III. CSS cho Nút Điều khiển và Chỉ báo của Carousel
+    |--------------------------------------------------------------------------
+    */
+.carousel-wrapper {
+  position: relative;
+}
+
+/* --- Nút điều khiển trên Desktop --- */
+.carousel-control-desktop {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background-color: #ffffff;
+  border: 1px solid #ddd;
+  border-radius: 50%;
+  width: 45px;
+  height: 45px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  transition: all .2s ease-in-out;
+
+  /* === THÊM 4 DÒNG NÀY ĐỂ CĂN GIỮA ICON === */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  /* Bỏ đi padding mặc định của nút */
+  /* ======================================= */
+}
+
+.carousel-control-desktop:hover {
+  background-color: #f8f9fa;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.carousel-control-desktop.prev {
+  left: -60px;
+}
+
+.carousel-control-desktop.next {
+  right: -60px;
+}
+
+.carousel-control-desktop .carousel-control-prev-icon,
+.carousel-control-desktop .carousel-control-next-icon {
+  background-color: transparent;
+  filter: invert(1);
+  opacity: 0.7;
+  background-size: 50% 50%;
+}
+
+/* --- Chỉ báo (Indicators) --- */
+.carousel-indicators {
+  bottom: -45px;
+}
+
+.carousel-indicators [data-bs-target] {
+  background-color: #ccc;
+  width: 10px;
+  height: 10px;
+  border-radius: 100%;
+  opacity: 1;
+  border-top: 0;
+  border-bottom: 0;
+}
+
+.carousel-indicators .active {
+  background-color: var(--bs-primary, #0d6efd);
+}
+
+/*
+    |--------------------------------------------------------------------------
+    | IV. Ghi đè Bootstrap (nếu cần) cho các nút điều khiển
+    |--------------------------------------------------------------------------
+    */
+.category-carousel-section .carousel-control-prev,
+.category-carousel-section .carousel-control-next {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: auto;
+}
+
+.category-carousel-section .carousel-control-prev {
+  left: -60px;
+}
+
+.category-carousel-section .carousel-control-next {
+  right: -60px;
+}
+
+.category-carousel-section .carousel-control-prev-icon,
+.category-carousel-section .carousel-control-next-icon {
+  background-color: rgba(0, 0, 0, 0.5);
+  border-radius: 50%;
+  padding: 1.2rem;
+  background-size: 50% 50%;
+}

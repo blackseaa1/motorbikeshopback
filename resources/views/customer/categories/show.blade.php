@@ -1,70 +1,47 @@
 @extends('customer.layouts.app')
 
-@section('title', 'Sản phẩm ' . $category->name)
+@section('title', 'Tất cả Danh mục')
 
 @section('content')
-<div class="container py-5">
-    <div class="row">
-        <aside class="col-lg-3">
-            <h4><i class="bi bi-tags-fill"></i> {{ $category->name }}</h4>
-            <p>{{ $category->description }}</p>
-            <hr>
-            <a href="{{ route('categories.index') }}" class="btn btn-light w-100 mb-4">&larr; Quay lại tất cả danh mục</a>
-            
-            {{-- TODO: Thêm các bộ lọc khác nếu cần --}}
-        </aside>
-
-        <main class="col-lg-9">
-            <h1 class="mb-4">Sản phẩm trong danh mục: {{ $category->name }}</h1>
-            
-            @if($products->isNotEmpty())
-                <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
-                    @foreach($products as $product)
-                        <div class="col">
-                            <div class="card h-100 product-card">
-                                {{-- Giả sử Product có route 'products.show' và có image_url --}}
-                                <a href="{{ route('products.show', $product->slug) }}">
-                                    <img src="{{ $product->image_url ?? 'https://via.placeholder.com/300x200' }}" class="card-img-top" alt="{{ $product->name }}">
-                                </a>
-                                <div class="card-body">
-                                    <h5 class="card-title">
-                                        <a href="{{ route('products.show', $product->slug) }}">{{ $product->name }}</a>
-                                    </h5>
-                                    <p class="card-text text-danger fw-bold fs-5">
-                                        {{ number_format($product->price, 0, ',', '.') }}₫
-                                    </p>
-                                </div>
-                                <div class="card-footer bg-transparent border-top-0 p-3">
-                                     <a href="#" class="btn btn-primary w-100">Thêm vào giỏ</a>
-                                </div>
+    <div class="container py-5">
+        <h1 class="mb-4 text-center">Tất cả danh mục</h1>
+        @if(isset($categories) && $categories->isNotEmpty())
+            <div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-4">
+                @foreach($categories as $category)
+                    <div class="col">
+                        <div class="card h-100 category-card text-center">
+                            <div class="card-body d-flex flex-column justify-content-center align-items-center">
+                                <h5 class="card-title">{{ $category->name }}</h5>
+                                @if($category->products_count > 0)
+                                    <p class="card-text text-muted">({{ $category->products_count }} sản phẩm)</p>
+                                @endif
+                                {{-- Sửa lỗi: Tên route đúng là 'categories.show' --}}
+                                <a href="{{ route('categories.show', $category->id) }}"
+                                    class="btn btn-sm btn-outline-primary mt-auto">Xem sản phẩm</a>
                             </div>
                         </div>
-                    @endforeach
-                </div>
-                
-                {{-- Phân trang --}}
-                <div class="mt-5 d-flex justify-content-center">
-                    {{ $products->links() }}
-                </div>
-            @else
-                <div class="alert alert-warning">
-                    Chưa có sản phẩm nào trong danh mục này.
-                </div>
-            @endif
-        </main>
+                    </div>
+                @endforeach
+            </div>
+
+            <div class="mt-5 d-flex justify-content-center">
+                {{ $categories->links() }}
+            </div>
+        @else
+            <div class="alert alert-warning text-center">Chưa có danh mục nào.</div>
+        @endif
     </div>
-</div>
 @endsection
 
 @push('styles')
-<style>
-    .product-card a {
-        color: inherit;
-        text-decoration: none;
-    }
-    .product-card .card-title {
-        height: 3em;
-        overflow: hidden;
-    }
-</style>
+    <style>
+        .category-card {
+            transition: transform .2s ease-in-out, box-shadow .2s ease-in-out;
+        }
+
+        .category-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 .5rem 1rem rgba(0, 0, 0, .15) !important;
+        }
+    </style>
 @endpush

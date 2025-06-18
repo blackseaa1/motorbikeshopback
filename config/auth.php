@@ -7,15 +7,14 @@ return [
     | Authentication Defaults
     |--------------------------------------------------------------------------
     |
-    | Tùy chọn này xác định "guard" xác thực mặc định và "broker" đặt lại
-    | mật khẩu cho ứng dụng của bạn. 'web' là lựa chọn mặc định
-    | cho các ứng dụng web thông thường.
+    | Cấu hình này xác định guard và password broker mặc định.
+    | 'web' được đặt làm guard mặc định cho trang khách hàng.
     |
     */
 
     'defaults' => [
         'guard' => 'web',
-        'passwords' => 'users',
+        'passwords' => 'customers',
     ],
 
     /*
@@ -23,20 +22,26 @@ return [
     | Authentication Guards
     |--------------------------------------------------------------------------
     |
-    | Tại đây, bạn có thể định nghĩa mọi guard xác thực cho ứng dụng.
-    | Chúng ta sẽ định nghĩa 'web' cho Customer và 'admin' cho Admin.
+    | Định nghĩa các "cổng" xác thực cho ứng dụng.
+    | - 'web' và 'customer' dùng cho Khách hàng.
+    | - 'admin' dùng cho Quản trị viên.
     |
     */
 
     'guards' => [
         'web' => [
             'driver' => 'session',
-            'provider' => 'users', // <<< 'web' guard sẽ sử dụng provider tên là 'users'
+            'provider' => 'customers',
+        ],
+
+        'customer' => [
+            'driver' => 'session',
+            'provider' => 'customers',
         ],
 
         'admin' => [
             'driver' => 'session',
-            'provider' => 'admins', // <<< 'admin' guard sẽ sử dụng provider tên là 'admins'
+            'provider' => 'admins',
         ],
     ],
 
@@ -45,21 +50,21 @@ return [
     | User Providers
     |--------------------------------------------------------------------------
     |
-    | Tất cả các guard xác thực đều có một user provider. Provider định nghĩa
-    | cách người dùng được lấy ra từ cơ sở dữ liệu.
-    | Đây là nơi chúng ta giải quyết lỗi "User not found".
+    | Provider định nghĩa cách Laravel lấy dữ liệu người dùng từ database.
+    | - 'customers' trỏ tới model Customer.
+    | - 'admins' trỏ tới model Admin.
     |
     */
 
     'providers' => [
-        'users' => [
+        'customers' => [
             'driver' => 'eloquent',
-            'model' => App\Models\Customer::class, // <<< Quan trọng: provider 'users' trỏ đến model Customer
+            'model' => App\Models\Customer::class,
         ],
 
         'admins' => [
             'driver' => 'eloquent',
-            'model' => App\Models\Admin::class, // <<< Quan trọng: provider 'admins' trỏ đến model Admin
+            'model' => App\Models\Admin::class,
         ],
     ],
 
@@ -68,22 +73,22 @@ return [
     | Resetting Passwords
     |--------------------------------------------------------------------------
     |
-    | Cấu hình cho chức năng "Quên mật khẩu". Chúng ta cũng định nghĩa
-    | hai broker riêng biệt cho Customer và Admin.
+    | Cấu hình cho chức năng "Quên mật khẩu" cho từng loại người dùng.
     |
     */
 
     'passwords' => [
-        'users' => [
-            'provider' => 'users',
+        'customers' => [
+            'provider' => 'customers',
             'table' => 'password_reset_tokens',
             'expire' => 60,
             'throttle' => 60,
         ],
+
         'admins' => [
             'provider' => 'admins',
-            'table' => 'password_reset_tokens', // Có thể dùng chung bảng token
-            'expire' => 15, // Thời gian hết hạn cho admin có thể ngắn hơn để tăng bảo mật
+            'table' => 'password_reset_tokens',
+            'expire' => 60,
             'throttle' => 60,
         ],
     ],
@@ -93,11 +98,10 @@ return [
     | Password Confirmation Timeout
     |--------------------------------------------------------------------------
     |
-    | Thời gian (giây) mà người dùng cần nhập lại mật khẩu để xác nhận
-    | thực hiện một hành động nhạy cảm.
+    | Thời gian (giây) mà session xác nhận mật khẩu sẽ tồn tại.
     |
     */
 
-    'password_timeout' => 10800, // 3 giờ
+    'password_timeout' => 10800,
 
 ];

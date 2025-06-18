@@ -24,59 +24,66 @@
                         <a class="nav-link" href="{{ route('home') }}">Trang Chủ</a>
                     </li>
 
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="{{ route('categories.index') }}"
-                            id="navbarDropdownCategories" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            Danh mục
-                        </a>
-                        <div class="dropdown-menu category-dropdown-menu" aria-labelledby="navbarDropdownCategories">
+                    {{-- === MODIFIED CATEGORY DROPDOWN START === --}}
+                    <li class="nav-item dropdown category-nav-item">
+                        {{-- Link này sẽ điều hướng đến trang lọc sản phẩm --}}
+                        <a class="nav-link" href="{{ route('products.index') }}">Danh mục</a>
+
+                        {{-- Dropdown menu này được kích hoạt bằng CSS --}}
+                        <div class="dropdown-menu category-dropdown-menu">
                             <div class="category-dropdown-columns">
-                                @if($sharedCategories->isNotEmpty())
+                                @if(isset($sharedCategories) && $sharedCategories->isNotEmpty())
                                     @foreach ($sharedCategories->chunk(5) as $chunk)
                                         <div class="category-column">
                                             @foreach ($chunk as $category)
-                                                {{-- SỬA ĐỔI: Dùng route 'products.category' và truyền id --}}
-                                                <a class="dropdown-item"
-                                                    href="{{ route('products.category', ['category' => $category->id]) }}">
+                                                <a class="dropdown-item" href="{{ route('categories.show', $category->id) }}">
                                                     {{ $category->name }}
                                                 </a>
                                             @endforeach
                                         </div>
                                     @endforeach
                                 @else
-                                    <a class="dropdown-item" href="#">Không có danh mục nào</a>
+                                    <a class="dropdown-item disabled" href="#">Không có danh mục</a>
                                 @endif
                             </div>
                         </div>
                     </li>
+                    {{-- === MODIFIED CATEGORY DROPDOWN END === --}}
 
+                    {{-- === NEW LINKS START === --}}
                     <li class="nav-item">
                         <a class="nav-link" href="{{ route('blog') }}">Blog</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="{{ route('contact') }}">Liên hệ</a>
                     </li>
+                    {{-- === NEW LINKS END === --}}
 
                     <li class="nav-item">
-                        <a class="nav-link" href="#">
-                            <i class="bi bi-cart-fill"></i>
-                            <span class="badge bg-danger">3</span>
+                        {{-- Logic giỏ hàng --}}
+                        <a class="nav-link position-relative" href="#">
+                            <i class="bi bi-cart3"></i>
+                            <span
+                                class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                3 {{-- Số lượng sản phẩm trong giỏ hàng sẽ được cập nhật động sau --}}
+                            </span>
                         </a>
                     </li>
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownAccount" role="button"
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button"
                             data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="bi bi-person-circle"></i>
+                            <i class="bi bi-person-circle"></i> Tài khoản
                         </a>
-                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdownAccount">
-                            @guest
+                        <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark"
+                            aria-labelledby="navbarDropdownUser">
+                            @guest('customer')
                                 <li><a class="dropdown-item" href="{{ route('login') }}">Đăng nhập</a></li>
                                 <li><a class="dropdown-item" href="{{ route('register') }}">Đăng ký</a></li>
                             @endguest
-                            @auth
-                                <li><a class="dropdown-item" href="{{ route('account.profile') }}">Tài khoản của tôi</a>
+                            @auth('customer')
+                                <li><a class="dropdown-item" href="#">Tài khoản của tôi</a>
                                 </li>
-                                <li><a class="dropdown-item" href="{{ route('account.orders') }}">Đơn hàng của tôi</a></li>
+                                <li><a class="dropdown-item" href="#">Đơn hàng của tôi</a></li>
                                 <li>
                                     <hr class="dropdown-divider">
                                 </li>

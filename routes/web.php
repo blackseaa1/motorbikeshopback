@@ -61,15 +61,11 @@ Route::controller(AuthController::class)->group(function () {
 });
 
 // --- Trang sản phẩm và danh mục ---
-Route::get('/categories', [CustomerCategoryController::class, 'index'])->name('categories.index');
 Route::get('/products', [CustomerProductController::class, 'index'])->name('products.index');
+Route::get('/products/{product}', [CustomerProductController::class, 'show'])->name('products.show');
+Route::get('/categories', [CustomerCategoryController::class, 'index'])->name('categories.index');
+Route::get('/categories/{category}', [CustomerCategoryController::class, 'show'])->name('categories.show');
 
-// SỬA ĐỔI: Sử dụng {product} để Laravel tự động tìm Product theo ID.
-Route::get('/product/{product}', [CustomerProductController::class, 'show'])->name('products.show');
-
-// SỬA ĐỔI: Sử dụng {category} để Laravel tự động tìm Category theo ID.
-// SỬA ĐỔI: Đổi tên phương thức thành 'getProductsByCategory' cho khớp với Controller.
-Route::get('/category/{category}', [CustomerProductController::class, 'getProductsByCategory'])->name('products.category');
 
 // --- Các trang tĩnh khác ---
 Route::get('/blog', [HomeController::class, 'blog'])->name('blog');

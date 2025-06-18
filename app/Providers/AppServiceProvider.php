@@ -2,10 +2,11 @@
 
 namespace App\Providers;
 
-use Illuminate\Support\ServiceProvider;
+use App\Models\Category;
 use Illuminate\Pagination\Paginator;
-use Illuminate\Support\Facades\View; // Đảm bảo đã import
-use App\Models\Category;             // Đảm bảo đã import
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\View;
+use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -22,22 +23,18 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Sử dụng Bootstrap 5 cho phân trang
         Paginator::useBootstrapFive();
 
-        // SỬA ĐỔI: Dùng View::share để chia sẻ biến $sharedCategories cho TOÀN BỘ các view.
-        // Đây là cách khắc phục lỗi "Undefined variable $sharedCategories".
         try {
-            // Lấy các danh mục đang hoạt động và chỉ chọn các cột cần thiết (id, name).
-            $sharedCategories = Category::where('is_active', true)
-                ->select('id', 'name') // Bỏ 'slug' để thống nhất với việc không dùng slug nữa
+            // Lấy danh mục đang hoạt động để chia sẻ với tất cả view (cho header)
+            $sharedCategories = Category::where('status', 'active')
+                ->select('id', 'name')
                 ->orderBy('name', 'asc')
                 ->get();
 
             View::share('sharedCategories', $sharedCategories);
         } catch (\Exception $e) {
-            // Xử lý trường hợp không thể kết nối database (ví dụ khi chạy lệnh artisan)
-            // Chia sẻ một collection rỗng để tránh lỗi.
+            Log::error('Could not share categories with views: ' . $e->getMessage());
             View::share('sharedCategories', collect());
         }
     }

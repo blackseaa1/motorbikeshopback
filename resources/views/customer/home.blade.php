@@ -8,7 +8,6 @@
         <div class="carousel-indicators">
             <button type="button" data-bs-target="#mainCarousel" data-bs-slide-to="0" class="active"></button>
             <button type="button" data-bs-target="#mainCarousel" data-bs-slide-to="1"></button>
-            <button type="button" data-bs-target="#mainCarousel" data-bs-slide-to="2"></button>
         </div>
         <div class="carousel-inner">
             <div class="carousel-item active">
@@ -54,41 +53,116 @@
                 class="carousel-control-next-icon"></span></button>
     </div>
 
-    {{-- Categories Section --}}
-    <section id="categories" class="py-5 bg-light">
+    {{-- Featured Categories Section --}}
+    <section class="py-5"> {{-- Đã bỏ nền xám bg-light --}}
         <div class="container">
             <div class="text-center mb-5">
-                <h2 class="display-5 fw-bold mb-3">Mua sắm theo danh mục</h2>
-                <p class="lead text-muted">Khám phá các loại phụ tùng và đồ chơi xe máy</p>
+                <h2 class="fw-bold">Mua sắm theo danh mục</h2>
+                <p class="lead text-muted">Tìm kiếm phụ tùng hoàn hảo cho chiếc xe của bạn.</p>
             </div>
-            <div class="row g-4">
-                @forelse ($categories as $category)
-                    <div class="col-lg-4 col-md-6">
-                        <div class="card category-card h-100 border-0 shadow-sm">
-                            {{-- SỬA ĐỔI: Cả 2 link đều dùng 'products.category' và truyền id --}}
-                            <a href="{{ route('products.category', ['category' => $category->id]) }}">
-                                <img src="{{ $category->image_url ?? 'https://placehold.co/400x250/EEEEEE/333333?text=' . urlencode($category->name) }}"
-                                    class="card-img-top" alt="{{ $category->name }}">
-                            </a>
-                            <div class="card-body text-center">
-                                <h5 class="card-title fw-bold">{{ $category->name }}</h5>
-                                <p class="card-text text-muted">{{ Str::limit($category->description, 50) }}</p>
-                                <a href="{{ route('products.category', ['category' => $category->id]) }}"
-                                    class="btn btn-outline-primary">Xem ngay</a>
-                            </div>
+
+            @if(isset($categories) && $categories->isNotEmpty())
+
+                {{-- =============================================================== --}}
+                {{-- ================ CAROUSEL CHO MÀN HÌNH LỚN (DESKTOP) ============== --}}
+                {{-- =============================================================== --}}
+                <div class="carousel-wrapper d-none d-lg-block">
+                    <div id="categoryCarouselDesktop" class="carousel slide" data-bs-ride="false">
+
+                        {{-- Nút chỉ báo (Indicators) --}}
+                        <div class="carousel-indicators">
+                            @foreach($categories->chunk(4) as $index => $chunk)
+                                <button type="button" data-bs-target="#categoryCarouselDesktop" data-bs-slide-to="{{ $index }}"
+                                    class="{{ $index == 0 ? 'active' : '' }}"></button>
+                            @endforeach
                         </div>
+
+                        <div class="carousel-inner">
+                            @foreach($categories->chunk(4) as $index => $chunk)
+                                <div class="carousel-item {{ $index == 0 ? 'active' : '' }}">
+                                    <div class="row g-4">
+                                        @foreach($chunk as $category)
+                                            <div class="col-lg-3"> {{-- Luôn là 4 cột --}}
+                                                <a href="{{ route('categories.show', $category->id) }}" class="text-decoration-none">
+                                                    <div class="category-text-card">
+                                                        <h6 class="mb-0 text-truncate">{{ $category->name }}</h6>
+                                                    </div>
+                                                </a>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+
+                        {{-- Nút điều khiển --}}
+                        <button class="carousel-control-desktop prev" type="button" data-bs-target="#categoryCarouselDesktop"
+                            data-bs-slide="prev">
+                            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                        </button>
+                        <button class="carousel-control-desktop next" type="button" data-bs-target="#categoryCarouselDesktop"
+                            data-bs-slide="next">
+                            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                        </button>
                     </div>
-                @empty
-                    <div class="col-12">
-                        <p class="text-center text-muted">Chưa có danh mục nào để hiển thị.</p>
+                </div>
+
+                {{-- =============================================================== --}}
+                {{-- ================= CAROUSEL CHO MÀN HÌNH NHỎ (MOBILE) =============== --}}
+                {{-- =============================================================== --}}
+                <div class="d-block d-lg-none">
+                    <div id="categoryCarouselMobile" class="carousel slide" data-bs-ride="false">
+
+                        {{-- Nút chỉ báo (Indicators) --}}
+                        <div class="carousel-indicators">
+                            @foreach($categories->chunk(2) as $index => $chunk)
+                                <button type="button" data-bs-target="#categoryCarouselMobile" data-bs-slide-to="{{ $index }}"
+                                    class="{{ $index == 0 ? 'active' : '' }}"></button>
+                            @endforeach
+                        </div>
+
+                        <div class="carousel-inner">
+                            @foreach($categories->chunk(2) as $index => $chunk)
+                                <div class="carousel-item {{ $index == 0 ? 'active' : '' }}">
+                                    <div class="row g-3">
+                                        @foreach($chunk as $category)
+                                            <div class="col-6"> {{-- Luôn là 2 cột --}}
+                                                <a href="{{ route('categories.show', $category->id) }}" class="text-decoration-none">
+                                                    <div class="category-text-card">
+                                                        <h6 class="mb-0 text-truncate">{{ $category->name }}</h6>
+                                                    </div>
+                                                </a>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+
+                        {{-- Trên mobile, nút điều khiển sẽ đè lên nội dung mặc định --}}
+                        <button class="carousel-control-prev" type="button" data-bs-target="#categoryCarousel"
+                            data-bs-slide="prev">
+                            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                            <span class="visually-hidden">Previous</span>
+                        </button>
+                        <button class="carousel-control-next" type="button" data-bs-target="#categoryCarousel"
+                            data-bs-slide="next">
+                            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                            <span class="visually-hidden">Next</span>
+                        </button>
                     </div>
-                @endforelse
-            </div>
+                </div>
+
+            @else
+                <div class="col">
+                    <p class="text-center text-muted">Chưa có danh mục nào.</p>
+                </div>
+            @endif
         </div>
     </section>
 
     {{-- Featured Products Section --}}
-    <section id="products" class="py-5">
+    <section id="products" class="py-5 bg-light">
         <div class="container">
             <div class="text-center mb-5">
                 <h2 class="display-5 fw-bold mb-3">Sản phẩm nổi bật</h2>
@@ -145,7 +219,34 @@
             </div>
         </div>
     </section>
+    {{-- Featured Brands Section --}}
+    <section class="py-5">
+        <div class="container">
+            <div class="text-center mb-5">
+                <h2 class="fw-bold">Thương hiệu nổi bật</h2>
+                <p class="lead text-muted">Những đối tác chất lượng hàng đầu của chúng tôi.</p>
+            </div>
+            <div class="row g-4 justify-content-center align-items-center">
+                @if(isset($brands) && $brands->isNotEmpty())
+                    @foreach($brands as $brand)
+                        {{-- SỬA LỖI: Đổi col-4 thành col-6 để hiển thị 2 item trên mobile --}}
+                        <div class="col-lg-2 col-md-3 col-6">
+                            <a href="#" title="{{ $brand->name }}" class="text-decoration-none text-dark">
+                                <div class="brand-card text-center p-3">
+                                    <img src="{{ $brand->logo_full_url }}" alt="{{ $brand->name }}" class="img-fluid mb-2"
+                                        style="height: 60px; object-fit: contain;">
 
+                                    <h6 class="mb-0 text-truncate">{{ $brand->name }}</h6>
+                                </div>
+                            </a>
+                        </div>
+                    @endforeach
+                @else
+                    <p class="text-center text-muted">Chưa có thương hiệu nào.</p>
+                @endif
+            </div>
+        </div>
+    </section>
     {{-- Newsletter Subscription Section --}}
     <section class="py-5 bg-primary text-white">
         <div class="container">
