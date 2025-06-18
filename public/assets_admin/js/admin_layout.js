@@ -136,11 +136,13 @@
     };
 
     /**
-     * A.5. Gắn sự kiện submit AJAX cho một form.
-     * === ĐÃ SỬA LỖI QUAN TRỌNG ===
-     * Logic này giờ linh hoạt hơn để xử lý cả PUT/PATCH (qua _method) và POST.
-     * Nó đọc phương thức từ form.method hoặc từ trường ẩn _method trong FormData.
-     */
+      * A.5. Gắn sự kiện submit AJAX cho một form.
+      * === PHIÊN BẢN SỬA LỖI HOÀN CHỈNH ===
+      * Logic này giờ sử dụng phương thức POST cho tất cả các request,
+      * và dựa vào trường ẩn `_method` (ví dụ: <input name="_method" value="DELETE">)
+      * để server Laravel có thể định tuyến chính xác.
+      * Điều này đảm bảo FormData được gửi đi một cách nhất quán và đáng tin cậy.
+      */
     window.setupAjaxForm = function (formId, modalId = null, successCallback = null, errorCallback = null) {
         const form = document.getElementById(formId);
         if (!form) {
@@ -150,27 +152,33 @@
 
         form.addEventListener('submit', async function (e) {
             e.preventDefault();
+            const submitButton = form.querySelector('button[type="submit"]');
+            const spinner = submitButton ? submitButton.querySelector('.spinner-border') : null;
+
+            if (submitButton) submitButton.disabled = true;
+            if (spinner) spinner.classList.remove('d-none');
             window.showAppLoader();
+
             try {
                 const formData = new FormData(form);
 
-                // Xác định phương thức HTTP thực tế. Ưu tiên _method (nếu có), nếu không thì dùng phương thức của form.
-                const httpMethod = (formData.get('_method') || form.method).toUpperCase();
-
+                // **THAY ĐỔI CỐT LÕI**: Luôn gửi bằng POST. Laravel sẽ tự xử lý
+                // các phương thức PUT/PATCH/DELETE thông qua trường `_method` có trong formData.
                 const response = await fetch(form.action, {
-                    method: httpMethod, // Sử dụng phương thức được xác định
-                    body: formData, // Gửi FormData trực tiếp
+                    method: 'POST', // Luôn sử dụng POST
+                    body: formData,   // FormData sẽ chứa _method nếu có
                     headers: {
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
                         'Accept': 'application/json'
                     }
                 });
+
                 const result = await response.json();
 
                 if (!response.ok) {
                     if (response.status === 422 && result.errors) {
                         window.displayValidationErrors(form, result.errors);
-                        window.showAppInfoModal('Vui lòng kiểm tra lại dữ liệu.', 'validation_error', 'Lỗi Nhập liệu');
+                        window.showAppInfoModal(result.message || 'Vui lòng kiểm tra lại dữ liệu.', 'validation_error', 'Lỗi Nhập liệu');
                     } else {
                         throw new Error(result.message || 'Có lỗi không xác định.');
                     }
@@ -180,23 +188,40 @@
 
                 if (modalId) {
                     const modalEl = document.getElementById(modalId);
-                    if (modalEl) bootstrap.Modal.getInstance(modalEl)?.hide();
+                    if (modalEl) {
+                        const modalInstance = bootstrap.Modal.getInstance(modalEl);
+                        if (modalInstance) modalInstance.hide();
+                    }
                 }
 
-                form.reset();
+                // Chỉ reset form nếu không phải là form tìm kiếm hoặc filter
+                if (!form.classList.contains('form-search') && !form.classList.contains('form-filter')) {
+                    form.reset();
+                }
 
                 window.showAppInfoModal(result.message, 'success', 'Thành công');
 
                 if (successCallback) {
                     successCallback(result);
                 } else {
-                    setTimeout(() => window.location.reload(), 1200);
+                    // Nếu không có callback thành công cụ thể, thực hiện tải lại trang
+                    // để đảm bảo dữ liệu luôn được cập nhật.
+                    setTimeout(() => {
+                        if (typeof Turbo !== 'undefined') {
+                            Turbo.visit(window.location.href, { action: 'replace' });
+                        } else {
+                            window.location.reload();
+                        }
+                    }, 1200);
                 }
+
             } catch (error) {
                 console.error(`Lỗi khi submit form ${formId}:`, error);
                 window.showAppInfoModal(error.message, 'error', 'Lỗi Hệ thống');
                 if (errorCallback) errorCallback(error);
             } finally {
+                if (submitButton) submitButton.disabled = false;
+                if (spinner) spinner.classList.add('d-none');
                 window.hideAppLoader();
             }
         });

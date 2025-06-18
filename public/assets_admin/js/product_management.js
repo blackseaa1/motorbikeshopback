@@ -233,7 +233,13 @@ function initializeProductsPage() {
     const handleShowForceDeleteModal = (deleteUrl, productName) => {
         const form = document.getElementById('forceDeleteProductForm');
         form.action = deleteUrl;
-        document.getElementById('customerNameToForceDelete').textContent = productName || 'Sản phẩm này';
+        // SỬA ĐỔI: Thêm dòng này để đảm bảo form gửi đi bằng phương thức POST
+        form.setAttribute('method', 'POST');
+        // SỬA LỖI NHỎ: Đổi 'customerNameToForceDelete' thành 'productNameToForceDelete' cho đúng ngữ cảnh
+        const nameElement = document.getElementById('productNameToForceDelete');
+        if (nameElement) {
+            nameElement.textContent = productName || 'Sản phẩm này';
+        }
         const modal = bootstrap.Modal.getInstance(forceDeleteModalEl) || new bootstrap.Modal(forceDeleteModalEl);
         modal.show();
     };
