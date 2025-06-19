@@ -47,6 +47,7 @@ use App\Http\Controllers\Customer\ReviewController as CustomerReviewController;
 use App\Http\Controllers\Customer\BlogController as CustomerPublicBlogController;
 
 
+
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -103,6 +104,7 @@ Route::prefix('account')->name('account.')->middleware('auth:customer')->group(f
 Route::post('/products/{product}/reviews', [CustomerReviewController::class, 'store'])
     ->name('reviews.store')
     ->middleware('auth:customer');
+
 
 // =========================================================================
 // == ADMIN ROUTES ==

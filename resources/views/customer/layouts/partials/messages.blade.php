@@ -1,4 +1,4 @@
-@php
+{{-- @php
     $sessionMessage = null;
     $messageType = '';
     $messageTitle = 'Thông báo'; // Tiêu đề mặc định
@@ -59,4 +59,4 @@
             }
         });
     </script>
-@endif
+@endif --}}
