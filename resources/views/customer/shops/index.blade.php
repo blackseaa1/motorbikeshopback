@@ -127,7 +127,6 @@
 
 {{-- Thêm JS cho bootstrap-select và logic dropdown phụ thuộc (xem Bước 4) --}}
 @push('scripts')
-    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
 
     <script>
         $(function() {

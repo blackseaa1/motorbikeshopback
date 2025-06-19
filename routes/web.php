@@ -1,6 +1,14 @@
 <?php
 
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
+
+/*
+|--------------------------------------------------------------------------
+| Controller Imports
+| Sắp xếp theo thứ tự alphabet để dễ quản lý.
+|--------------------------------------------------------------------------
+*/
 
 // --- ADMIN CONTROLLERS ---
 use App\Http\Controllers\Admin\Auth\LoginController as AdminLoginController;
@@ -10,9 +18,9 @@ use App\Http\Controllers\Admin\Content\BlogController;
 use App\Http\Controllers\Admin\Content\ReviewController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\ProductManagement\BrandController;
-use App\Http\Controllers\Admin\ProductManagement\CategoryController as AdminCategoryController;
+use App\Http\Controllers\Admin\ProductManagement\CategoryController;
 use App\Http\Controllers\Admin\ProductManagement\InventoryController;
-use App\Http\Controllers\Admin\ProductManagement\ProductController as AdminProductController;
+use App\Http\Controllers\Admin\ProductManagement\ProductController;
 use App\Http\Controllers\Admin\ProductManagement\VehicleBrandController;
 use App\Http\Controllers\Admin\ProductManagement\VehicleManagementController;
 use App\Http\Controllers\Admin\ProductManagement\VehicleModelController;
@@ -32,14 +40,20 @@ use App\Http\Controllers\Api\GeographyApiController;
 // --- CUSTOMER CONTROLLERS ---
 use App\Http\Controllers\Customer\AccountController;
 use App\Http\Controllers\Customer\AuthController;
+use App\Http\Controllers\Customer\CartController as CustomerCartController;
 use App\Http\Controllers\Customer\HomeController;
 use App\Http\Controllers\Customer\ShopController as CustomerShopController;
+
 
 /*
 |--------------------------------------------------------------------------
 | Web Routes
 |--------------------------------------------------------------------------
-| Mỗi khi bạn thay đổi file này, hãy chạy lệnh: php artisan route:clear
+|
+| Quan trọng: Mỗi khi bạn thay đổi file này, hãy chạy lệnh sau trong
+| terminal để hệ thống cập nhật:
+| php artisan route:clear
+|
 */
 
 // =========================================================================
@@ -81,11 +95,12 @@ Route::prefix('account')->name('account.')->middleware('auth')->group(function (
 });
 
 
+
 // =========================================================================
 // == ADMIN ROUTES ==
 // =========================================================================
 Route::prefix('admin')->name('admin.')->group(function () {
-    // ... (Toàn bộ các route admin giữ nguyên không thay đổi) ...
+
     // --- Admin Authentication ---
     Route::middleware('auth:admin')->group(function () {
         Route::controller(AdminLoginController::class)->group(function () {
@@ -96,6 +111,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/pending-authorization', [PendingAuthorizationController::class, 'show'])->name('pending_authorization');
     });
 
+    // SỬA ĐỔI 2: Áp dụng middleware kép để chặn Customer đã đăng nhập
     Route::middleware(['guest:admin', 'guest.customer'])->group(function () {
         Route::controller(AdminLoginController::class)->group(function () {
             Route::get('login', 'showLoginForm')->name('auth.login');
@@ -133,13 +149,21 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         // --- Module: Product Management ---
         Route::prefix('product-management')->name('productManagement.')->group(function () {
-            Route::resource('products', AdminProductController::class)->except(['create', 'edit']);
-            Route::post('products/{product}/toggle-status', [AdminProductController::class, 'toggleStatus'])->name('products.toggleStatus')->withTrashed();
-            Route::post('products/{product}/restore', [AdminProductController::class, 'restore'])->name('products.restore')->withTrashed();
-            Route::delete('products/{product}/force-delete', [AdminProductController::class, 'forceDelete'])->name('products.forceDelete')->withTrashed();
+            // Products
+            Route::controller(ProductController::class)->prefix('products')->name('products.')->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::post('/', 'store')->name('store');
+                Route::get('/{product}', 'show')->name('show')->withTrashed();
+                Route::post('/{product}', 'update')->name('update')->withTrashed();
+                Route::delete('/{product}', 'destroy')->name('destroy');
+                Route::post('/{product}/toggle-status', 'toggleStatus')->name('toggleStatus')->withTrashed();
+                Route::post('/{product}/restore', 'restore')->name('restore')->withTrashed();
+                Route::delete('/{product}/force-delete', 'forceDelete')->name('forceDelete')->withTrashed();
+            });
 
-            Route::resource('categories', AdminCategoryController::class)->except(['create', 'edit', 'show']);
-            Route::post('categories/{category}/toggle-status', [AdminCategoryController::class, 'toggleStatus'])->name('categories.toggleStatus');
+            // Categories, Brands, Vehicle
+            Route::resource('categories', CategoryController::class)->except(['create', 'edit', 'show']);
+            Route::post('categories/{category}/toggle-status', [CategoryController::class, 'toggleStatus'])->name('categories.toggleStatus');
             Route::resource('brands', BrandController::class)->except(['create', 'edit', 'show']);
             Route::post('brands/{brand}/toggle-status', [BrandController::class, 'toggleStatus'])->name('brands.toggleStatus');
             Route::get('vehicles', [VehicleManagementController::class, 'index'])->name('vehicle.index');
@@ -152,11 +176,19 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         // --- Module: Content Management ---
         Route::prefix('content')->name('content.')->group(function () {
-            Route::resource('blogs', BlogController::class)->withTrashed();
-            Route::post('blogs/{blog}/toggle-status', [BlogController::class, 'toggleStatus'])->name('blogs.toggleStatus')->withTrashed();
-            Route::post('blogs/{blog}/restore', [BlogController::class, 'restore'])->name('blogs.restore')->withTrashed();
-            Route::delete('blogs/{blog}/force-delete', [BlogController::class, 'forceDelete'])->name('blogs.forceDelete')->withTrashed();
+            // Blogs
+            Route::controller(BlogController::class)->prefix('blogs')->name('blogs.')->group(function () {
+                Route::get('/', 'index')->name('index')->middleware('can:viewAny,App\Models\BlogPost');
+                Route::post('/', 'store')->name('store')->middleware('can:create,App\Models\BlogPost');
+                Route::get('/{blog}', 'show')->name('show')->withTrashed()->middleware('can:view,blog');
+                Route::post('/{blog}', 'update')->name('update')->withTrashed()->middleware('can:update,blog');
+                Route::delete('/{blog}', 'destroy')->name('destroy')->middleware('can:delete,blog');
+                Route::post('/{blog}/toggle-status', 'toggleStatus')->name('toggleStatus')->withTrashed()->middleware('can:toggleStatus,blog');
+                Route::post('/{blog}/restore', 'restore')->name('restore')->withTrashed()->middleware('can:restore,blog');
+                Route::delete('/{blog}/force-delete', 'forceDelete')->name('forceDelete')->withTrashed()->middleware('can:forceDelete,blog');
+            });
 
+            // Reviews
             Route::controller(ReviewController::class)->prefix('reviews')->name('reviews.')->group(function () {
                 Route::get('/', 'index')->name('index');
                 Route::delete('/{review}', 'destroy')->name('destroy');
@@ -214,4 +246,16 @@ Route::prefix('api')->name('api.')->group(function () {
         // 'count' => Auth::guard('admin')->check() ? Auth::guard('admin')->user()->unreadNotifications()->count() : 0
         // ]);
     })->middleware('auth:admin')->name('notifications.unreadCount');
+    // --- CUSTOMER API ---
+    Route::prefix('customer')->name('customer.')->group(function () {
+        // API để lấy danh sách sản phẩm (có lọc, phân trang)
+        Route::get('/products', [CustomerShopController::class, 'getProductsApi'])->name('products.index');
+
+        // API cho giỏ hàng
+        Route::controller(CustomerCartController::class)->prefix('cart')->name('cart.')->group(function () {
+            Route::post('/add', 'add')->name('add');
+            Route::get('/info', 'getCartInfo')->name('info');
+            // Thêm các route khác: update, remove, clear...
+        });
+    });
 });

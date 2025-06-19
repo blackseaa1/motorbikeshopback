@@ -44,7 +44,7 @@
                         {{-- Logic giỏ hàng --}}
                         <a class="nav-link position-relative" href="#">
                             <i class="bi bi-cart3"></i>
-                            <span
+                            <span id="header-cart-count"
                                 class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
                                 3 {{-- Số lượng sản phẩm trong giỏ hàng sẽ được cập nhật động sau --}}
                             </span>
