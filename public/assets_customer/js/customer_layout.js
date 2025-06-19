@@ -72,13 +72,9 @@
         modalInstance.show();
     };
 
-
     /**
      * A.4. Thiết lập Form AJAX
-     * Cấu hình một form để submit qua AJAX thay vì tải lại trang.
-     * @param {string} formId - ID của form.
-     * @param {function} successCallback - Hàm gọi lại khi thành công.
-     * @param {function} errorCallback - Hàm gọi lại khi thất bại.
+     * === PHIÊN BẢN MỚI: CHỈ HIỂN THỊ MODAL VỚI TIÊU ĐỀ LÀ LỖI CỤ THỂ ===
      */
     window.setupAjaxForm = (formId, successCallback, errorCallback) => {
         const form = document.getElementById(formId);
@@ -87,6 +83,10 @@
         form.addEventListener('submit', async function (event) {
             event.preventDefault();
             window.showAppLoader();
+
+            // Xóa lỗi cũ nếu có (an toàn)
+            form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+            form.querySelectorAll('.invalid-feedback').forEach(el => el.textContent = '');
 
             try {
                 const formData = new FormData(form);
@@ -103,32 +103,29 @@
 
                 if (!response.ok) {
                     if (response.status === 422 && result.errors) {
-                        // Xóa các lỗi cũ
-                        form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
-                        form.querySelectorAll('.invalid-feedback').forEach(el => el.textContent = '');
+                        // 1. Lấy thông báo lỗi ĐẦU TIÊN từ server
+                        const errorMessages = Object.values(result.errors).flat(); // Gom tất cả lỗi vào 1 mảng
+                        const specificErrorMessage = errorMessages.length > 0 ?
+                            errorMessages[0] :
+                            'Lỗi không xác định';
 
-                        // Hiển thị lỗi mới
-                        for (const field in result.errors) {
-                            const input = form.querySelector(`[name="${field}"]`);
-                            const errorContainer = form.querySelector(`#${field}-error`);
-                            if (input) input.classList.add('is-invalid');
-                            if (errorContainer) errorContainer.textContent = result.errors[field][0];
-                        }
+                        // 2. Hiển thị modal với TIÊU ĐỀ là lỗi cụ thể, NỘI DUNG để trống
+                        window.showAppInfoModal('', 'error', specificErrorMessage);
+
+                        if (errorCallback) errorCallback(result);
+                        return;
                     }
-                    // Throw một lỗi để catch block bên dưới xử lý và hiển thị modal
-                    throw new Error(result.message || 'Có lỗi xảy ra, vui lòng thử lại.');
-                }
 
-                // Nếu thành công, xóa các trạng thái lỗi
-                form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
-                form.querySelectorAll('.invalid-feedback').forEach(el => el.textContent = '');
+                    throw new Error(result.message || 'Có lỗi hệ thống xảy ra.');
+                }
 
                 if (successCallback) {
                     successCallback(result, form);
                 }
+
             } catch (error) {
                 console.error(`Lỗi khi submit form ${formId}:`, error);
-                window.showAppInfoModal(error.message, 'error', 'Lỗi Hệ Thống');
+                window.showAppInfoModal('Vui lòng thử lại sau giây lát.', 'error', error.message);
                 if (errorCallback) errorCallback(error);
             } finally {
                 window.hideAppLoader();
@@ -163,13 +160,9 @@
         if (typeof window.initializeShopPage === 'function') {
             window.initializeShopPage();
         }
-<<<<<<< HEAD
         if (typeof window.initializeProductDetailPage === 'function') {
             window.initializeProductDetailPage();
         }
-=======
-
->>>>>>> c0d0073cd07a3039456b2079010e2e03cbac3c12
         // THÊM MỚI: Luôn gọi hàm xử lý giỏ hàng trên mọi trang
         if (typeof window.initializeCartHandler === 'function') {
             window.initializeCartHandler();

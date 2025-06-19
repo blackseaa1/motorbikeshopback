@@ -24,14 +24,19 @@ class EnsurePasswordIsChanged
         // và quan trọng nhất: trang họ đang truy cập KHÔNG PHẢI là trang đổi mật khẩu
         // để tránh vòng lặp chuyển hướng vô tận (infinite redirect loop).
         if ($admin && $admin->password_change_required && !$request->routeIs('admin.auth.showForcePasswordChangeForm')) {
-
             // Đồng thời cho phép truy cập route đăng xuất
             if ($request->routeIs('admin.logout')) {
                 return $next($request);
             }
 
             // Nếu các điều kiện trên thỏa mãn, chuyển hướng họ về trang đổi mật khẩu
-            return redirect()->route('admin.auth.showForcePasswordChangeForm');
+            $message = 'Để đảm bảo an toàn cho tài khoản, bạn phải tạo một mật khẩu mới để tiếp tục sử dụng dịch vụ.';
+            return redirect()->route('admin.auth.showForcePasswordChangeForm')->with('warning', $message);
+        }
+
+        // Nếu người dùng cố truy cập trang đổi mật khẩu nhưng không cần đổi
+        if ($admin && !$admin->password_change_required && $request->routeIs('admin.auth.showForcePasswordChangeForm')) {
+            return redirect()->route('admin.dashboard');
         }
 
         // Nếu không, cho phép request tiếp tục như bình thường

@@ -68,7 +68,28 @@
             </div>
         </div>
     </section>
+
+    {{-- HTML CHO MODAL HIỂN THỊ LỖI AJAX --}}
+    <div class="modal fade" id="errorModal" tabindex="-1" aria-labelledby="errorModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="errorModalLabel">Lỗi Đăng Nhập</h5>
+                    <button type="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="errorMessage">
+                        <!-- Nội dung lỗi AJAX sẽ được chèn vào đây -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                </div>
+            </div>
+        </div>
+    </div>
 @endsection
+
 @push('scripts')
     <script src="{{ asset('assets_customer/js/auth.js') }}" defer></script>
 @endpush

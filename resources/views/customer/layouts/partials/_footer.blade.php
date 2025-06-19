@@ -12,7 +12,7 @@
                     <a href="{{ route('home') }}" class="text-white text-decoration-none">
                         <img src="{{ asset('assets_admin/images/thanhdo_shop_logo.png') }}" alt="ThanhDoShop"
                             height="40" class="d-inline-block align-middle me-2">
-                        ThanhDoShop
+                        Thành Đô Shop
                     </a>
                 </h5>
                 <p class="text-white-50">Đối tác tin cậy của bạn cho các phụ kiện, phụ tùng và đồ chơi xe máy sưu tầm
@@ -60,8 +60,16 @@
                                 class="text-white-50 text-decoration-none custom-link">Hồ sơ của tôi</a></li>
                         <li class="mb-2"><a href="{{ route('account.orders') }}"
                                 class="text-white-50 text-decoration-none custom-link">Đơn hàng của tôi</a></li>
-                        <li class="mb-2"><a href=""
-                                class="text-white-50 text-decoration-none custom-link">Bài viết của tôi</a></li>
+                        <li class="mb-2"><a href="" class="text-white-50 text-decoration-none custom-link">Bài viết của
+                                tôi</a></li>
+                        <li class="mb-2">
+                            <a href="#" class="text-white-50 text-decoration-none custom-link"
+                                onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
+                                Đăng xuất
+                            </a>
+                            <form id="logout-form" action="{{ route('logout') }}" method="POST" class="d-none">@csrf
+                            </form>
+                        </li>
                     @endauth
                 </ul>
             </div>
@@ -92,7 +100,7 @@
         <hr class="my-4 text-white-50">
         <div class="row align-items-center">
             <div class="col-md-6">
-                <p class="text-white-50 mb-md-0 mb-2">&copy; {{ date('Y') }} ThanhDoShop. Đã đăng ký bản quyền.</p>
+                <p class="text-white-50 mb-md-0 mb-2">© {{ date('Y') }} ThanhDoShop. Đã đăng ký bản quyền.</p>
             </div>
             <div class="col-md-6 text-md-end">
                 {{-- Có thể thêm thông tin thanh toán hoặc các logo khác ở đây --}}

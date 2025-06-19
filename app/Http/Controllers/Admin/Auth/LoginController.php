@@ -60,14 +60,7 @@ class LoginController extends Controller
 
             // KIỂM TRA STATUS
             if ($admin->status !== Admin::STATUS_ACTIVE) {
-                // START: MODIFICATION
-                // Chỉ cần logout để đảm bảo người dùng không ở trạng thái đăng nhập.
-                // Không hủy session để tránh lỗi CSRF token cho lần đăng nhập sau trên cùng một trang.
                 Auth::guard('admin')->logout();
-                // $request->session()->invalidate(); // Bỏ dòng này
-                // $request->session()->regenerateToken(); // Bỏ dòng này
-                // END: MODIFICATION
-
                 throw ValidationException::withMessages([
                     'email' => 'Tài khoản của bạn đã bị tạm khóa. Vui lòng liên hệ quản trị viên.',
                 ]);
@@ -121,6 +114,14 @@ class LoginController extends Controller
      */
     public function showForcePasswordChangeForm()
     {
+        /** @var \App\Models\Admin $admin */
+        $admin = Auth::guard('admin')->user();
+
+        // Chỉ cho phép truy cập nếu có cờ yêu cầu đổi mật khẩu
+        if (!$admin || !$admin->password_change_required) {
+            return redirect()->route('admin.dashboard');
+        }
+
         return view('admin.auth.force-password-change');
     }
 

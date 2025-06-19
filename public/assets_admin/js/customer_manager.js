@@ -56,7 +56,7 @@ function initializeCustomersPage() {
         // Cấu hình nút reset mật khẩu
         const resetBtn = form.querySelector('.btn-reset-password');
         if (resetBtn) {
-            resetBtn.dataset.url = `/admin/userManagement/customers/${customer.id}/reset-password`;
+            resetBtn.dataset.url = `/admin/user-management/customers/${customer.id}/reset-password`;
             resetBtn.dataset.name = customer.name || 'Khách hàng này';
         }
     }

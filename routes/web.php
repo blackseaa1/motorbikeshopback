@@ -46,8 +46,6 @@ use App\Http\Controllers\Customer\ShopController as CustomerShopController;
 use App\Http\Controllers\Customer\ReviewController as CustomerReviewController;
 use App\Http\Controllers\Customer\BlogController as CustomerPublicBlogController;
 
-
-
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -63,48 +61,59 @@ use App\Http\Controllers\Customer\BlogController as CustomerPublicBlogController
 // == CUSTOMER FACING ROUTES (FRONT-END) ==
 // =========================================================================
 
+// --- Các route công khai ---
 Route::get('/', [HomeController::class, 'index'])->name('home');
 
-// --- Authentication routes ---
-Route::controller(AuthController::class)->group(function () {
-    Route::middleware(['guest', 'guest.admin'])->group(function () {
-        Route::get('login', 'showLoginForm')->name('login');
-        Route::post('login', 'login');
-        Route::get('register', 'showRegisterForm')->name('register');
-        Route::post('register', 'register');
-    });
-    Route::post('logout', 'logout')->name('logout')->middleware('auth');
-});
-
-// --- Trang sản phẩm và danh mục ---
+// ... blog, contact, products ...
 Route::get('/products', [CustomerShopController::class, 'index'])->name('products.index');
 Route::get('/products/{product}', [CustomerShopController::class, 'show'])->name('products.show');
 Route::get('/categories/{category}', [CustomerShopController::class, 'index'])->name('categories.show');
-
 
 // --- Trang Blog công khai ---
 Route::get('/blog', [CustomerPublicBlogController::class, 'index'])->name('blog');
 Route::get('/blog/{blogPost}', [CustomerPublicBlogController::class, 'show'])->name('blog.show');
 
-
 // --- Trang Liên hệ ---
 Route::get('/contact', [HomeController::class, 'contact'])->name('contact');
 
-// --- Route cho tài khoản người dùng ---
-Route::prefix('account')->name('account.')->middleware('auth:customer')->group(function () {
-    Route::get('/', [AccountController::class, 'profile'])->name('profile');
-    Route::get('/orders', [AccountController::class, 'orders'])->name('orders');
-    Route::get('/addresses', [AccountController::class, 'addresses'])->name('addresses');
-    Route::patch('/update-profile', [AccountController::class, 'updateProfile'])->name('updateProfile');
-    Route::put('/update-password', [AccountController::class, 'updatePassword'])->name('updatePassword');
-
+// --- Các route xác thực (Đăng nhập, Đăng ký) ---
+Route::controller(AuthController::class)->group(function () {
+    Route::middleware(['guest:customer', 'guest:admin'])->group(function () {
+        Route::get('login', 'showLoginForm')->name('login');
+        Route::post('login', 'login');
+        Route::get('register', 'showRegisterForm')->name('register');
+        Route::post('register', 'register');
+    });
 });
 
-// Route để khách hàng gửi đánh giá
-Route::post('/products/{product}/reviews', [CustomerReviewController::class, 'store'])
-    ->name('reviews.store')
-    ->middleware('auth:customer');
+/**
+ * ===============================================================
+ * == CÁC ROUTE CHỈ DÀNH CHO KHÁCH HÀNG ĐÃ ĐĂNG NHẬP ==
+ * ===============================================================
+ * Middleware `EnsureCustomerPasswordIsChanged` đã được đăng ký toàn cục
+ * nên nó sẽ tự động kiểm tra. Ở đây chúng ta chỉ cần middleware `auth:customer`.
+ */
+Route::middleware(['auth:customer'])->group(function () {
 
+    // Route trang tài khoản
+    Route::prefix('account')->name('account.')->group(function () {
+        Route::get('/', [AccountController::class, 'profile'])->name('profile');
+        Route::get('/orders', [AccountController::class, 'orders'])->name('orders');
+        Route::get('/orders/{order}', [AccountController::class, 'showOrder'])->name('orders.show');
+        Route::get('/addresses', [AccountController::class, 'addresses'])->name('addresses');
+        Route::patch('/update-profile', [AccountController::class, 'updateProfile'])->name('updateProfile');
+        Route::put('/update-password', [AccountController::class, 'updatePassword'])->name('updatePassword');
+        Route::post('/update-avatar', [AccountController::class, 'updateAvatar'])->name('updateAvatar');
+    });
+
+    // Route gửi đánh giá
+    Route::post('/products/{product}/reviews', [CustomerReviewController::class, 'store'])->name('reviews.store');
+
+    // Các route bắt buộc đổi mật khẩu và đăng xuất
+    Route::post('logout', [AuthController::class, 'logout'])->name('logout');
+    Route::get('/force-password-change', [AuthController::class, 'showForcePasswordChangeForm'])->name('customer.password.force_change');
+    Route::post('/force-password-change', [AuthController::class, 'handleForcePasswordChange'])->name('customer.password.handle_force_change');
+});
 
 // =========================================================================
 // == ADMIN ROUTES ==
@@ -121,7 +130,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/pending-authorization', [PendingAuthorizationController::class, 'show'])->name('pending_authorization');
     });
 
-    // SỬA ĐỔI 2: Áp dụng middleware kép để chặn Customer đã đăng nhập
+    // Áp dụng middleware kép để chặn Customer đã đăng nhập
     Route::middleware(['guest:admin', 'guest.customer'])->group(function () {
         Route::controller(AdminLoginController::class)->group(function () {
             Route::get('login', 'showLoginForm')->name('auth.login');
