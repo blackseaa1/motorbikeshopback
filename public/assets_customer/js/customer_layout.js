@@ -163,7 +163,9 @@
         if (typeof window.initializeShopPage === 'function') {
             window.initializeShopPage();
         }
-
+        if (typeof window.initializeProductDetailPage === 'function') {
+            window.initializeProductDetailPage();
+        }
         // THÊM MỚI: Luôn gọi hàm xử lý giỏ hàng trên mọi trang
         if (typeof window.initializeCartHandler === 'function') {
             window.initializeCartHandler();

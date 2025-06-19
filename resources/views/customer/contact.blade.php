@@ -1,37 +1,38 @@
 @extends('customer.layouts.app')
 
 @section('title', 'Liên hệ - MotoToys')
-
+<style>
+    .custom-link:hover {
+        color: var(--bs-primary) !important;
+        /* Màu primary khi hover */
+    }
+</style>
 @section('content')
     <main class="py-5">
         <div class="container">
-            <h1 class="text-center mb-4">Contact Us</h1>
-            <p class="text-center lead mb-5">We'd love to hear from you! Please fill out the form below or use the contact
-                details provided.</p>
+            <h1 class="text-center mb-4">Liên hệ với chúng tôi</h1>
+            <p class="text-center lead mb-5">Chúng tôi muốn nghe từ bạn! Vui lòng điền vào biểu mẫu bên dưới hoặc sử dụng
+                các chi tiết liên hệ được cung cấp..</p>
 
             <div class="row">
                 <div class="col-lg-7 mb-4 mb-lg-0">
                     <div class="card">
                         <div class="card-body">
-                            <h4 class="card-title mb-4">Send us a Message</h4>
+                            <h4 class="card-title mb-4">Gửi cho chúng tôi một tin nhắn</h4>
                             <form>
                                 <div class="mb-3">
-                                    <label for="contactName" class="form-label">Full Name</label>
+                                    <label for="contactName" class="form-label">Tên đầy đủ</label>
                                     <input type="text" class="form-control" id="contactName" required>
                                 </div>
                                 <div class="mb-3">
-                                    <label for="contactEmail" class="form-label">Email Address</label>
+                                    <label for="contactEmail" class="form-label">Địa chỉ Email</label>
                                     <input type="email" class="form-control" id="contactEmail" required>
                                 </div>
                                 <div class="mb-3">
-                                    <label for="contactSubject" class="form-label">Subject</label>
-                                    <input type="text" class="form-control" id="contactSubject" required>
-                                </div>
-                                <div class="mb-3">
-                                    <label for="contactMessage" class="form-label">Message</label>
+                                    <label for="contactMessage" class="form-label">Lời nhắn</label>
                                     <textarea class="form-control" id="contactMessage" rows="5" required></textarea>
                                 </div>
-                                <button type="submit" class="btn btn-primary w-100">Send Message</button>
+                                <button type="submit" class="btn btn-primary w-100">Gửi Lời Nhắn</button>
                             </form>
                         </div>
                     </div>
@@ -40,29 +41,38 @@
                 <div class="col-lg-5">
                     <div class="card mb-4">
                         <div class="card-body">
-                            <h4 class="card-title mb-4">Contact Information</h4>
+                            <h4 class="card-title mb-4">Thông Tin Liên Hệ</h4>
                             <ul class="list-unstyled">
                                 <li class="mb-3 d-flex">
                                     <i class="bi bi-geo-alt-fill fs-4 me-3"></i>
-                                    <span>123 Auto Parts St, Car City, 12345</span>
+                                    <span>62 - Châu Văn Liêm - Phú Đô -Nam Từ Liêm- Hà Nội</span>
                                 </li>
                                 <li class="mb-3 d-flex">
                                     <i class="bi bi-telephone-fill fs-4 me-3"></i>
-                                    <span>(123) 456-7890</span>
+                                    <span>
+                                        <a href="tel:0394831886"
+                                            class="text-decoration-none text-black custom-link">0394831886</a> -
+                                        <a href="tel:0973634129"
+                                            class="text-decoration-none text-black custom-link">0973634129</a>
+                                    </span>
                                 </li>
                                 <li class="mb-3 d-flex">
                                     <i class="bi bi-envelope-fill fs-4 me-3"></i>
-                                    <span>contact@shopeaseauto.com</span>
+                                    <span>
+                                        <a href="mailto:thanhdoshop@gmail.com"
+                                            class="text-decoration-none text-black custom-link">thanhdoshop@gmail.com</a>
+                                    </span>
                                 </li>
                             </ul>
                         </div>
                     </div>
                     <div class="card">
                         <div class="card-body">
-                            <h4 class="card-title mb-3">Our Location</h4>
+                            <h4 class="card-title mb-3">Vị trí của chúng tôi</h4>
                             <iframe
-                                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3022.21949339347!2d-73.98785368459385!3d40.75807997932693!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x89c25855c6452555%3A0x8c358f232434524!2sTimes%20Square!5e0!3m2!1sen!2sus!4v1616428732959!5m2!1sen!2sus"
-                                width="100%" height="300" style="border:0;" allowfullscreen="" loading="lazy"></iframe>
+                                src="https://www.google.com/maps/embed?pb=!1m14!1m8!1m3!1d2209.080175439823!2d105.7669097!3d21.0070583!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3134535baecb401b%3A0xf7137c21adbd660b!2zNjIgxJAuIENow6J1IFbEg24gTGnDqm0sIE3hu4UgVHLDrCwgTmFtIFThu6sgTGnDqm0sIEjDoCBO4buZaSAxMDAwMDA!5e1!3m2!1svi!2s!4v1750324781649!5m2!1svi!2s"
+                                width="100%" height="300" style="border:0;" allowfullscreen="" loading="lazy"
+                                referrerpolicy="no-referrer-when-downgrade"></iframe>
                         </div>
                     </div>
                 </div>

@@ -43,6 +43,8 @@ use App\Http\Controllers\Customer\AuthController;
 use App\Http\Controllers\Customer\CartController as CustomerCartController;
 use App\Http\Controllers\Customer\HomeController;
 use App\Http\Controllers\Customer\ShopController as CustomerShopController;
+use App\Http\Controllers\Customer\ReviewController as CustomerReviewController;
+use App\Http\Controllers\Customer\BlogController as CustomerPublicBlogController;
 
 
 /*
@@ -76,25 +78,31 @@ Route::controller(AuthController::class)->group(function () {
 // --- Trang sản phẩm và danh mục ---
 Route::get('/products', [CustomerShopController::class, 'index'])->name('products.index');
 Route::get('/products/{product}', [CustomerShopController::class, 'show'])->name('products.show');
-
-// Route này để khi click vào danh mục từ trang chủ, sẽ trỏ đến trang lọc sản phẩm và chọn sẵn danh mục đó
 Route::get('/categories/{category}', [CustomerShopController::class, 'index'])->name('categories.show');
 
 
-// --- Các trang tĩnh khác ---
-Route::get('/blog', [HomeController::class, 'blog'])->name('blog');
+// --- Trang Blog công khai ---
+Route::get('/blog', [CustomerPublicBlogController::class, 'index'])->name('blog');
+Route::get('/blog/{blogPost}', [CustomerPublicBlogController::class, 'show'])->name('blog.show');
+
+
+// --- Trang Liên hệ ---
 Route::get('/contact', [HomeController::class, 'contact'])->name('contact');
 
 // --- Route cho tài khoản người dùng ---
-Route::prefix('account')->name('account.')->middleware('auth')->group(function () {
+Route::prefix('account')->name('account.')->middleware('auth:customer')->group(function () {
     Route::get('/', [AccountController::class, 'profile'])->name('profile');
     Route::get('/orders', [AccountController::class, 'orders'])->name('orders');
     Route::get('/addresses', [AccountController::class, 'addresses'])->name('addresses');
     Route::patch('/update-profile', [AccountController::class, 'updateProfile'])->name('updateProfile');
     Route::put('/update-password', [AccountController::class, 'updatePassword'])->name('updatePassword');
+
 });
 
-
+// Route để khách hàng gửi đánh giá
+Route::post('/products/{product}/reviews', [CustomerReviewController::class, 'store'])
+    ->name('reviews.store')
+    ->middleware('auth:customer');
 
 // =========================================================================
 // == ADMIN ROUTES ==

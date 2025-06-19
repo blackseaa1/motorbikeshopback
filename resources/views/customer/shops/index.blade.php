@@ -2,20 +2,6 @@
 
 @section('title', 'Cửa hàng sản phẩm')
 
-{{-- Thêm CSS cho bootstrap-select vào section head (xem Bước 4) --}}
-@push('styles')
-    <link rel="stylesheet"
-        href="https://cdn.jsdelivr.net/npm/bootstrap-select@1.14.0-beta3/dist/css/bootstrap-select.min.css">
-    <style>
-        /* Tùy chỉnh nhỏ cho bộ lọc */
-        .filter-card .card-header {
-            background-color: #f8f9fa;
-            font-weight: bold;
-        }
-    </style>
-@endpush
-
-
 @section('content')
     <main class="container py-5">
         <div class="row">
@@ -88,36 +74,16 @@
             <div class="col-lg-9">
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <h1 class="h3 mb-0">Tất cả sản phẩm</h1>
-                    <span class="text-muted">Tìm thấy {{ $products->total() }} sản phẩm</span>
+                    <span class="text-muted" id="product-count">Tìm thấy {{ $products->total() }} sản phẩm</span>
                 </div>
 
-                <div class="row row-cols-1 row-cols-md-3 g-4">
-                    @forelse($products as $product)
-                        <div class="col">
-                            <div class="card h-100 product-card">
-                                <a href="{{ route('products.show', $product->id) }}">
-                                    <img src="{{ $product->thumbnail_url ?? 'https://via.placeholder.com/300x200?text=MotoToys' }}"
-                                        class="card-img-top" alt="{{ $product->name }}">
-                                </a>
-                                <div class="card-body d-flex flex-column">
-                                    <h5 class="card-title flex-grow-1">
-                                        <a href="{{ route('products.show', $product->id) }}"
-                                            class="text-decoration-none text-dark stretched-link">{{ $product->name }}</a>
-                                    </h5>
-                                    <p class="card-text text-danger fw-bold fs-5 mt-auto mb-0">
-                                        {{ number_format($product->price, 0, ',', '.') }}₫</p>
-                                </div>
-                            </div>
-                        </div>
-                    @empty
-                        <div class="col-12">
-                            <div class="alert alert-warning text-center">Không tìm thấy sản phẩm nào phù hợp với tiêu chí
-                                của bạn.</div>
-                        </div>
-                    @endforelse
+                {{-- Vùng chứa danh sách sản phẩm sẽ được cập nhật bởi JS --}}
+                <div id="product-list-wrapper">
+                    @include('customer.shops.partials.product_list', ['products' => $products])
                 </div>
 
-                <div class="mt-4 d-flex justify-content-center">
+                {{-- Vùng chứa phân trang sẽ được cập nhật bởi JS --}}
+                <div class="mt-4 d-flex justify-content-center" id="pagination-links">
                     {{ $products->links() }}
                 </div>
             </div>
@@ -125,55 +91,22 @@
     </main>
 @endsection
 
-{{-- Thêm JS cho bootstrap-select và logic dropdown phụ thuộc (xem Bước 4) --}}
 @push('scripts')
 
+    {{-- Dữ liệu ban đầu cho JavaScript --}}
     <script>
-        $(function() {
-            // Khởi tạo bootstrap-select
-            $('.selectpicker').selectpicker();
-
-            // Dữ liệu các mẫu xe theo từng loại xe (truyền từ Controller)
-            const vehicleData = @json($vehicleBrands->keyBy('id'));
-            const selectedVehicleBrandId = '{{ $request->input('vehicle_brand_id') }}';
-            const selectedVehicleModelId = '{{ $request->input('vehicle_model_id') }}';
-
-            function populateVehicleModels(brandId) {
-                const modelSelect = $('#vehicle-model-select');
-                modelSelect.empty(); // Xóa các option cũ
-
-                if (brandId && vehicleData[brandId] && vehicleData[brandId].vehicle_models.length > 0) {
-                    const models = vehicleData[brandId].vehicle_models;
-                    models.forEach(function(model) {
-                        modelSelect.append($('<option>', {
-                            value: model.id,
-                            text: model.name
-                        }));
-                    });
-                    modelSelect.prop('disabled', false);
-                } else {
-                    modelSelect.prop('disabled', true);
-                }
-                
-                // Refresh lại selectpicker để cập nhật UI
-                modelSelect.selectpicker('refresh');
-            }
-
-            // Xử lý khi trang tải xong
-            if (selectedVehicleBrandId) {
-                populateVehicleModels(selectedVehicleBrandId);
-                // Chọn lại mẫu xe đã lọc trước đó
-                if (selectedVehicleModelId) {
-                    $('#vehicle-model-select').selectpicker('val', selectedVehicleModelId);
-                }
-            }
-
-
-            // Xử lý khi thay đổi Loại xe
-            $('#vehicle-brand-select').on('changed.bs.select', function(e, clickedIndex, isSelected, previousValue) {
-                const selectedBrandId = $(this).val();
-                populateVehicleModels(selectedBrandId);
-            });
-        });
+        // Truyền dữ liệu từ PHP Controller sang JavaScript
+        window.vehicleDataForFilter = @json($vehicleBrands->keyBy('id'));
+        window.selectedFilters = {
+            brandId: '{{ $request->input('vehicle_brand_id') }}',
+            modelId: '{{ $request->input('vehicle_model_id') }}'
+        };
+        // URL cho API
+        window.productsApiUrl = "{{ route('api.customer.products.index') }}";
+        // URL trang sản phẩm (để cập nhật thanh địa chỉ)
+        window.productsPageUrl = "{{ route('products.index') }}";
     </script>
+
+    {{-- TẢI FILE SHOP.JS --}}
+    <script src="{{ asset('assets_customer/js/shop.js') }}" defer></script>
 @endpush

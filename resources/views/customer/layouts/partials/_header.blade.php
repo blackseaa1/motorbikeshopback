@@ -1,10 +1,11 @@
 <header>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
         <div class="container">
-            <a class="navbar-brand fw-bold" href="{{ route('home') }}">
-                <i class="bi bi-motorcycle me-2"></i>MotoToys
+            <a class="navbar-brand" href="{{ route('home') }}">
+                <img src="{{ asset('assets_admin/images/thanhdo_shop_logo.png') }}" alt="Thành Đô Shop" height="40"
+                    class="d-inline-block align-top">
+                Thành Đô Shop
             </a>
-
             <div class="d-none d-md-flex flex-grow-1 mx-4">
                 <form class="input-group" action="#">
                     <input type="text" class="form-control" placeholder="Tìm kiếm sản phẩm, thương hiệu...">
@@ -27,7 +28,7 @@
                     {{-- === MODIFIED CATEGORY DROPDOWN START === --}}
                     <li class="nav-item dropdown category-nav-item">
                         {{-- Link này sẽ điều hướng đến trang lọc sản phẩm --}}
-                        <a class="nav-link" href="{{ route('products.index') }}">Sản phẩm</a>
+                        <a class="nav-link" href="{{ route('products.index') }}">Cửa hàng</a>
                     </li>
                     {{-- === MODIFIED CATEGORY DROPDOWN END === --}}
 
@@ -40,9 +41,9 @@
                     </li>
                     {{-- === NEW LINKS END === --}}
 
-                    <li class="nav-item">
+                    <li class="nav-item dropdown">
                         {{-- Logic giỏ hàng --}}
-                        <a class="nav-link position-relative" href="#">
+                        <a class="nav-link dropdown-toggle" href="#">
                             <i class="bi bi-cart3"></i>
                             <span id="header-cart-count"
                                 class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
@@ -62,7 +63,7 @@
                                 <li><a class="dropdown-item" href="{{ route('register') }}">Đăng ký</a></li>
                             @endguest
                             @auth('customer')
-                                <li><a class="dropdown-item" href="#">Tài khoản của tôi</a>
+                                <li><a class="dropdown-item" href="{{ route('account.profile') }}">Tài khoản của tôi</a>
                                 </li>
                                 <li><a class="dropdown-item" href="#">Đơn hàng của tôi</a></li>
                                 <li>

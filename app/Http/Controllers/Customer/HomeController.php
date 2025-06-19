@@ -5,7 +5,8 @@ namespace App\Http\Controllers\Customer;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Product;
-use App\Models\Brand; // <-- THÊM DÒNG NÀY
+use App\Models\Brand;
+use App\Models\BlogPost;
 
 class HomeController extends Controller
 {
@@ -41,7 +42,20 @@ class HomeController extends Controller
      */
     public function blog()
     {
-        return view('customer.blog');
+        // 1. Lấy danh sách bài viết chính để phân trang
+        $posts = BlogPost::where('status', BlogPost::STATUS_PUBLISHED)
+            ->with('author')
+            ->latest()
+            ->paginate(5);
+
+        // 2. Lấy 5 bài viết mới nhất cho sidebar
+        $recentPosts = BlogPost::where('status', BlogPost::STATUS_PUBLISHED)
+            ->latest()
+            ->take(5)
+            ->get();
+
+        // 3. Truyền cả 2 biến ($posts và $recentPosts) qua view
+        return view('customer.blog', compact('posts', 'recentPosts'));
     }
 
     /**
