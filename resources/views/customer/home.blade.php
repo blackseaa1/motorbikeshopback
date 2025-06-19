@@ -269,3 +269,6 @@
         </div>
     </section>
 @endsection
+@push('scripts')
+  <script src="{{ asset('assets_customer/js/home.js') }}" defer></script>
+@endpush  

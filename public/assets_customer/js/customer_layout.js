@@ -141,6 +141,9 @@
      =============================================================== */
     function runPageSpecificInitializers() {
         // Gọi hàm khởi tạo cho trang Đăng nhập/Đăng ký nếu tồn tại
+        if (typeof window.initializeHomePage === 'function') {
+            window.initializeHomePage();
+        }
         if (typeof window.initializeAuthPages === 'function') {
             window.initializeAuthPages();
         }
@@ -156,6 +159,14 @@
         // thì gọi nó.
         if (typeof window.initializeCategoriesPage === 'function') {
             window.initializeCategoriesPage();
+        }
+        if (typeof window.initializeShopPage === 'function') {
+            window.initializeShopPage();
+        }
+
+        // THÊM MỚI: Luôn gọi hàm xử lý giỏ hàng trên mọi trang
+        if (typeof window.initializeCartHandler === 'function') {
+            window.initializeCartHandler();
         }
     }
 

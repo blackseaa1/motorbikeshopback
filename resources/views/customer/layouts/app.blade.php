@@ -54,10 +54,11 @@
     </button>
 
     <script src="{{ asset('vendor/bootstrap/js/jquery-3.6.0.min.js') }}"></script>
+    <script src="{{ asset('vendor/bootstrap/js/popper.min.js') }}"></script>
     <script src="{{ asset('vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
     <script src="{{ asset('vendor/bootstrap/js/bootstrap-select.min.js') }}"></script>
-    <script src="{{ asset('assets_customer/js/customer_layout.js') }}"></script> {{-- Giữ lại script cũ để xử lý modal
-    thông báo --}}
+    <script src="{{ asset('assets_customer/js/customer_layout.js') }}"></script> 
+    <script src="{{ asset('assets_customer/js/cart.js') }}"></script>
 
     {{-- SỬA ĐỔI: Thêm file script mới (nội dung sẽ được cung cấp ở dưới) --}}
 

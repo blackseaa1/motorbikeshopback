@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Customer;
 
 use App\Http\Controllers\Controller;
 use App\Models\Customer;
+use App\Support\CartManager; // THÊM: Import lớp quản lý giỏ hàng
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -30,21 +31,26 @@ class AuthController extends Controller
 
     /**
      * Xử lý yêu cầu đăng nhập.
+     * @param Request $request
+     * @param CartManager $cartManager - THÊM: Tự động inject CartManager
+     * @return \Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse
+     * @throws ValidationException
      */
-    public function login(Request $request)
+    public function login(Request $request, CartManager $cartManager)
     {
         $credentials = $request->validate([
             'email'    => ['required', 'email'],
             'password' => ['required'],
         ]);
 
-        if (Auth::guard('web')->attempt($credentials, $request->boolean('remember'))) {
+        // SỬA ĐỔI: Sử dụng guard 'customer' thay vì 'web'
+        if (Auth::guard('customer')->attempt($credentials, $request->boolean('remember'))) {
             /** @var \App\Models\Customer $customer */
-            $customer = Auth::guard('web')->user();
+            $customer = Auth::guard('customer')->user();
 
             // Kiểm tra trạng thái tài khoản
-            if (!$customer->isActive()) { // Sử dụng hàm isActive() từ model Customer
-                Auth::guard('web')->logout();
+            if (!$customer->isActive()) {
+                Auth::guard('customer')->logout(); // SỬA ĐỔI: Dùng guard 'customer'
                 throw ValidationException::withMessages([
                     'email' => 'Tài khoản của bạn đã bị khóa. Vui lòng liên hệ hỗ trợ.',
                 ]);
@@ -52,11 +58,14 @@ class AuthController extends Controller
 
             $request->session()->regenerate();
 
+            // THÊM: Gộp giỏ hàng session vào database sau khi đăng nhập thành công
+            $cartManager->mergeSessionCartToDatabase();
+
             // Trả về JSON nếu là request AJAX (để JS xử lý)
             if ($request->expectsJson()) {
                 return response()->json([
                     'message'      => 'Đăng nhập thành công!',
-                    'redirect_url' => route('home') // Chuyển về trang chủ
+                    'redirect_url' => route('home')
                 ]);
             }
 
@@ -77,14 +86,14 @@ class AuthController extends Controller
             'name'                  => ['required', 'string', 'max:255'],
             'email'                 => ['required', 'string', 'email', 'max:255', 'unique:customers'],
             'password'              => ['required', 'string', 'min:8', 'confirmed'],
-            'terms'                 => ['required'], // Validate checkbox điều khoản
+            'terms'                 => ['required'],
         ]);
 
         $customer = Customer::create([
             'name'     => $request->name,
             'email'    => $request->email,
             'password' => Hash::make($request->password),
-            'status'   => Customer::STATUS_ACTIVE, // Mặc định là active
+            'status'   => Customer::STATUS_ACTIVE,
         ]);
 
         event(new Registered($customer));
@@ -105,7 +114,9 @@ class AuthController extends Controller
      */
     public function logout(Request $request)
     {
-        Auth::guard('web')->logout();
+        // SỬA ĐỔI: Sử dụng guard 'customer'
+        Auth::guard('customer')->logout();
+
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
