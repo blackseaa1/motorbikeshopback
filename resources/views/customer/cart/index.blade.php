@@ -37,7 +37,7 @@
                                     <ul class="list-group list-group-flush">
                                         <li class="list-group-item d-flex justify-content-between">
                                             <span>Tạm tính</span>
-                                                <strong class="text-danger">{{ number_format($cartDetails['subtotal'] ?? 0, 0, ',', '.') }} ₫</strong>
+                                                <strong class="text-danger" id="cart-subtotal">{{ number_format($cartDetails['subtotal'] ?? 0, 0, ',', '.') }} ₫</strong>
                                                 ₫</strong>
                                         </li>
                                         <li class="list-group-item d-flex justify-content-between">
@@ -92,7 +92,7 @@
                                 <ul class="list-group list-group-flush">
                                     <li class="list-group-item d-flex justify-content-between fs-5">
                                         <strong>Tạm tính</strong>
-                                   <strong class="text-danger">{{ number_format($cartDetails['subtotal'] ?? 0, 0, ',', '.') }} ₫</strong>
+                                   <strong class="text-danger" id="cart-subtotal">{{ number_format($cartDetails['subtotal'] ?? 0, 0, ',', '.') }} ₫</strong>
                                     </li>
                                 </ul>
                                 <div class="alert alert-light mt-4 text-center">

@@ -1,23 +1,3 @@
-/**
- * ===================================================================
- * cart.js - PHIÊN BẢN XỬ LÝ DỮ LIỆU LINH HOẠT
- *
- * - Sửa lại hàm renderHeaderCart để hiển thị `subtotal` hoặc `grand_total`
- * tùy thuộc vào dữ liệu được trả về.
- * - THÊM MỚI: Các bước kiểm tra "null check" trong các hàm render để đảm bảo script không bị lỗi khi chạy trên các trang khác nhau.
- * - THÊM MỚI: Hiển thị modal thông báo của Bootstrap khi thêm vào giỏ thành công.
- * - SỬA LỖI: Tối ưu lại luồng xử lý để không bị lỗi "lớp phủ".
- * - SỬA LỖI: Sửa dứt điểm lỗi nút Xóa không hoạt động do xung đột giữa trình lắng nghe sự kiện trên dropdown và trên body.
- * - SỬA LỖI: Sửa lỗi gửi yêu cầu 2 lần bằng biến 'isProcessing'.
- * - CẬP NHẬT: Cập nhật giỏ hàng bằng AJAX không cần tải lại trang.
- * - THÊM MỚI: Cập nhật tóm tắt đơn hàng trên trang /cart.
- * - SỬA LỖI: Xử lý lỗi NaN trong tóm tắt đơn hàng.
- * - THÊM MỚI: Tích hợp bootstrap-select cho lựa chọn dịch vụ giao hàng.
- * - CẬP NHẬT: Sửa lỗi cập nhật giao diện trang giỏ hàng để đồng bộ toàn bộ trang sau khi thao tác (xóa, sửa số lượng).
- * - SỬA LỖI: Sửa lỗi mất link "Tiếp tục mua sắm" trong thông báo giỏ hàng trống.
- * - CẬP NHẬT: Cập nhật lại hàm renderCartPage để reset toàn bộ summary khi giỏ hàng trống.
- * ===================================================================
- */
 (function () {
     'use strict';
 
@@ -130,6 +110,9 @@
         if (shippingFeeEl) shippingFeeEl.textContent = `${shippingFee.toLocaleString('vi-VN')} ₫`;
         if (discountEl) discountEl.textContent = `-${discountAmount.toLocaleString('vi-VN')} ₫`;
         if (grandTotalEl) grandTotalEl.textContent = `${grandTotal.toLocaleString('vi-VN')} ₫`;
+        
+        // Ẩn dòng giảm giá nếu không có giảm giá
+        if (discountRowEl) discountRowEl.classList.toggle('d-none', discountAmount <= 0);
     }
 
     /**
