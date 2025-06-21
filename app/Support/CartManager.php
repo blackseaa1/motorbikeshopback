@@ -16,7 +16,7 @@ class CartManager
     protected const PROMOTION_SESSION_KEY = 'cart_promotion';
 
     /**
-     * === HÀM MỚI: Tự động kiểm tra và xóa session khi giỏ hàng trống ===
+     * Hàm helper: Tự động kiểm tra và xóa session ship/promo nếu giỏ hàng trống.
      */
     private function checkCartIsEmptyAndClearSessionData(): void
     {
@@ -26,18 +26,18 @@ class CartManager
     }
 
     /**
-     * Thêm sản phẩm vào giỏ hàng và xóa session ship/promo nếu không ở trang cart/checkout.
+     * Thêm sản phẩm vào giỏ.
+     * Sửa đổi: Tự động xóa thông tin ship/promo cũ khi thêm sản phẩm mới từ các trang bên ngoài.
      */
     public function add(int $productId, int $quantity = 1): void
     {
         $product = Product::findOrFail($productId);
-
         $currentQuantityInCart = $this->getQuantityInCart($productId);
         if (($currentQuantityInCart + $quantity) > $product->stock_quantity) {
             throw ValidationException::withMessages(['stock' => 'Số lượng sản phẩm trong kho không đủ.']);
         }
-        
-        // Xóa thông tin ship/promo không còn liên quan
+
+        // Tự động xóa thông tin ship/promo không còn liên quan khi người dùng quay lại mua sắm
         $this->clearCheckoutData();
 
         if (Auth::guard('customer')->check()) {
@@ -155,29 +155,34 @@ class CartManager
     }
 
     /**
-     * Cập nhật getCartDetails để trả về 0 nếu giỏ hàng trống.
+     * Lấy thông tin chi tiết giỏ hàng (an toàn hơn).
      */
     public function getCartDetails(): array
     {
         $subtotal = $this->getCartTotal();
-        
+
         if ($subtotal <= 0) {
             return [
-                'items' => collect(), 'count' => 0, 'subtotal' => 0,
-                'shipping_info' => null, 'promotion_info' => null,
-                'shipping_fee' => 0, 'discount_amount' => 0, 'grand_total' => 0,
+                'items' => collect(),
+                'count' => 0,
+                'subtotal' => 0,
+                'shipping_info' => null,
+                'promotion_info' => null,
+                'shipping_fee' => 0,
+                'discount_amount' => 0,
+                'grand_total' => 0,
             ];
         }
 
         $shippingInfo = $this->getShippingInfo();
         $promotionInfo = $this->getPromotionInfo();
         $shippingFee = $shippingInfo['fee'] ?? 0;
-        
+
         $discountAmount = 0;
         if ($promotionInfo && $promotionInfo->isEffective()) {
             $discountAmount = ($subtotal * $promotionInfo->discount_percentage) / 100;
         } else if ($promotionInfo) {
-            $this->clearPromotion(); // Xóa promo nếu không còn hiệu lực
+            $this->clearPromotion();
             $promotionInfo = null;
         }
 

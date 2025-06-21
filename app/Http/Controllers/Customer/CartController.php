@@ -18,15 +18,15 @@ class CartController extends Controller
     }
 
     /**
-     * Trả về dữ liệu cơ bản cho các hành động nhanh (thêm, xóa, sửa).
+     * Trả về dữ liệu cơ bản (chỉ subtotal) cho các hành động nhanh.
      */
     protected function getSimpleCartResponse()
     {
+        // Chỉ lấy những thông tin cơ bản nhất, không có grand_total
         return response()->json([
-            'message'       => 'Cập nhật giỏ hàng thành công.',
-            'count'         => $this->cartManager->getCartCount(),
-            'subtotal'      => $this->cartManager->getCartTotal(), // Chỉ trả về tạm tính
-            'items'         => $this->cartManager->getItems()->values(),
+            'count' => $this->cartManager->getCartCount(),
+            'subtotal' => $this->cartManager->getCartTotal(),
+            'items' => $this->cartManager->getItems()->values(),
         ]);
     }
 
@@ -53,7 +53,7 @@ class CartController extends Controller
     }
 
     /**
-     * API: Lấy dữ liệu giỏ hàng ban đầu.
+     * API: Lấy dữ liệu giỏ hàng ban đầu (dùng dữ liệu đầy đủ).
      */
     public function getCartData()
     {
@@ -94,7 +94,7 @@ class CartController extends Controller
     }
 
     /**
-     * API: Cập nhật số lượng - Dùng hàm response đơn giản.
+     * API: Cập nhật số lượng - Dùng hàm response đầy đủ.
      */
     public function update(Request $request)
     {
@@ -103,11 +103,11 @@ class CartController extends Controller
             'quantity' => 'required|integer|min:0',
         ]);
         $this->cartManager->update($validated['product_id'], $validated['quantity']);
-        return $this->getSimpleCartResponse();
+        return $this->getFullCartDetailsResponse(); // Cập nhật ở trang cart nên cần full response
     }
 
     /**
-     * API: Xóa sản phẩm khỏi giỏ - Dùng hàm response đơn giản.
+     * API: Xóa sản phẩm khỏi giỏ - Dùng hàm response đầy đủ.
      */
     public function remove(Request $request)
     {
@@ -115,6 +115,6 @@ class CartController extends Controller
             'product_id' => 'required|exists:products,id',
         ]);
         $this->cartManager->remove($validated['product_id']);
-        return $this->getSimpleCartResponse();
+        return $this->getFullCartDetailsResponse(); // Xóa ở trang cart nên cần full response
     }
 }

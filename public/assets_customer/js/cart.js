@@ -130,9 +130,6 @@
         if (shippingFeeEl) shippingFeeEl.textContent = `${shippingFee.toLocaleString('vi-VN')} ₫`;
         if (discountEl) discountEl.textContent = `-${discountAmount.toLocaleString('vi-VN')} ₫`;
         if (grandTotalEl) grandTotalEl.textContent = `${grandTotal.toLocaleString('vi-VN')} ₫`;
-        
-        // Ẩn dòng giảm giá nếu không có giảm giá
-        if (discountRowEl) discountRowEl.classList.toggle('d-none', discountAmount <= 0);
     }
 
     /**
