@@ -1,90 +1,299 @@
 <div class="modal fade" id="viewOrderModal" tabindex="-1" aria-labelledby="viewOrderModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-centered">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="viewOrderModalLabel">
-                    <i class="bi bi-eye-fill me-2"></i>Chi tiết Đơn hàng: <strong id="viewModalOrderIdStrong">N/A</strong>
+                    <i class="bi bi-receipt-cutoff me-2"></i>Chi Tiết Đơn Hàng: <strong
+                        id="viewModalOrderIdStrong">N/A</strong>
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <h6><strong>Thông tin chung:</strong></h6>
-                        <table class="table table-bordered table-sm mb-3">
-                            <tbody>
-                                <tr><th>Mã Đơn hàng</th><td id="viewDetailOrderId"></td></tr>
-                                <tr><th>Ngày đặt</th><td id="viewDetailOrderCreatedAt"></td></tr>
-                                <tr><th>Trạng thái</th><td id="viewDetailOrderStatusBadge"></td></tr>
-                                <tr><th>Tổng cộng</th><td id="viewDetailOrderTotalPrice" class="text-danger fw-bold"></td></tr>
-                                <tr><th>Phương thức TT</th><td id="viewDetailOrderPaymentMethod"></td></tr>
-                                <tr><th>Dịch vụ VC</th><td id="viewDetailOrderDeliveryService"></td></tr>
-                                <tr><th>Ghi chú</th><td id="viewDetailOrderNotes"></td></tr>
-                                <tr><th>Tạo bởi Admin</th><td id="viewDetailOrderCreatedByAdmin"></td></tr>
-                            </tbody>
-                        </table>
+                {{-- Giao diện xem chi tiết thông thường --}}
+                <div id="order-view-content">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6><i class="bi bi-person-circle me-2"></i>Thông tin khách hàng</h6>
+                            <hr class="mt-0">
+                            <p class="mb-1"><strong>Mã đơn hàng:</strong> <span id="viewDetailOrderId"></span></p>
+                            <p class="mb-1"><strong>Ngày tạo:</strong> <span id="viewDetailOrderCreatedAt"></span></p>
+                            <p class="mb-1"><strong>Trạng thái:</strong> <span id="viewDetailOrderStatusBadge"></span>
+                            </p>
+                            <p class="mb-1"><strong>Loại khách hàng:</strong> <span id="viewDetailCustomerType"></span>
+                            </p>
+                            <p class="mb-1"><strong>Tên khách hàng:</strong> <span id="viewDetailCustomerName"></span>
+                            </p>
+                            <p class="mb-1"><strong>Điện thoại:</strong> <span id="viewDetailCustomerPhone"></span></p>
+                            <p class="mb-1"><strong>Email:</strong> <span id="viewDetailCustomerEmail"></span></p>
+                            <p class="mb-1"><strong>Địa chỉ giao hàng:</strong> <span
+                                    id="viewDetailOrderFullAddress"></span></p>
+                        </div>
+
+                        <div class="col-md-6">
+                            <h6><i class="bi bi-box-seam me-2"></i>Thông tin đơn hàng</h6>
+                            <hr class="mt-0">
+                            <p class="mb-1"><strong>Phương thức thanh toán:</strong> <span
+                                    id="viewDetailOrderPaymentMethod"></span></p>
+                            <p class="mb-1"><strong>Dịch vụ vận chuyển:</strong> <span
+                                    id="viewDetailOrderDeliveryService"></span></p>
+                            <p class="mb-1"><strong>Mã khuyến mãi:</strong> <span
+                                    id="viewDetailOrderPromotionCode"></span>
+                            </p>
+                            <p class="mb-1"><strong>Ghi chú:</strong> <span id="viewDetailOrderNotes"></span></p>
+                            {{-- SỬA LỖI: Thêm dòng này --}}
+                            <p class="mb-1"><strong>Người tạo đơn:</strong> <span
+                                    id="viewDetailOrderCreatedByAdmin">N/A</span></p>
+                        </div>
                     </div>
-                    <div class="col-md-6">
-                        <h6><strong>Thông tin khách hàng:</strong></h6>
-                        <table class="table table-bordered table-sm mb-3">
-                            <tbody>
-                                <tr><th>Loại khách hàng</th><td id="viewDetailCustomerType"></td></tr>
-                                <tr><th>Tên khách hàng</th><td id="viewDetailCustomerName"></td></tr>
-                                <tr><th>Email</th><td id="viewDetailCustomerEmail"></td></tr>
-                                <tr><th>Số điện thoại</th><td id="viewDetailCustomerPhone"></td></tr>
-                                <tr><th>Địa chỉ</th><td id="viewDetailOrderFullAddress"></td></tr>
-                                {{-- Nếu bạn có cột `address_line` trong DB Order, có thể thêm vào đây --}}
-                                {{-- <tr><th>Địa chỉ chi tiết</th><td id="viewDetailOrderAddressLine"></td></tr> --}}
-                                @if(config('admin.show_promotion_info')) {{-- Chỉ hiện nếu bạn muốn --}}
-                                    <tr><th>Mã KM đã dùng</th><td id="viewDetailOrderPromotionCode"></td></tr>
-                                    <tr><th>Giảm giá</th><td id="viewDetailOrderDiscountAmount"></td></tr>
-                                @endif
+
+                    <h6 class="mt-4"><i class="bi bi-card-list me-2"></i>Chi tiết sản phẩm</h6>
+                    <hr class="mt-0">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Sản phẩm</th>
+                                    <th>Số lượng</th>
+                                    <th>Đơn giá</th>
+                                    <th class="text-end">Thành tiền</th>
+                                </tr>
+                            </thead>
+                            <tbody id="viewOrderItemsBody">
                             </tbody>
+                            <tfoot class="table-light fw-bold">
+                                <tr>
+                                    <td colspan="3" class="text-end">Tạm tính:</td>
+                                    <td class="text-end" id="viewOrderSubtotal">0 ₫</td>
+                                </tr>
+                                <tr>
+                                    <td colspan="3" class="text-end">Phí vận chuyển:</td>
+                                    <td class="text-end" id="viewOrderShippingFee">0 ₫</td>
+                                </tr>
+                                <tr>
+                                    <td colspan="3" class="text-end">Giảm giá:</td>
+                                    <td class="text-end text-danger" id="viewOrderDiscount">-0 ₫</td>
+                                </tr>
+                                <tr>
+                                    <td colspan="3" class="text-end fs-5">Tổng cộng:</td>
+                                    <td class="text-end fs-5" id="viewOrderGrandTotal">0 ₫</td>
+                                </tr>
+                            </tfoot>
                         </table>
                     </div>
                 </div>
 
-                <h6><strong>Sản phẩm trong đơn hàng:</strong></h6>
-                <div class="table-responsive">
-                    <table class="table table-bordered table-striped table-sm">
-                        <thead>
-                            <tr>
-                                <th style="width: 50px;">Ảnh</th>
-                                <th>Sản phẩm</th>
-                                <th>Số lượng</th>
-                                <th>Giá mua</th>
-                                <th>Tổng</th>
+                {{-- BẮT ĐẦU MẪU HÓA ĐƠN ĐỂ IN (ẨN ĐI MẶC ĐỊNH) --}}
+                <div id="invoice-print-template" style="display: none;">
+                    <style>
+                        .invoice-box {
+                            max-width: 990px;
+                            margin: auto;
+                            padding: 20px;
+                            border: 1px solid #eee;
+                            box-shadow: 0 0 10px rgba(0, 0, 0, 0.15);
+                            font-size: 16px;
+                            line-height: 24px;
+                            font-family: 'Helvetica Neue', 'Helvetica', Helvetica, Arial, sans-serif;
+                            color: #555;
+                        }
+
+                        .invoice-box table {
+                            width: 100%;
+                            line-height: inherit;
+                            text-align: left;
+                            border-collapse: collapse;
+                        }
+
+                        .invoice-box table td {
+                            padding: 5px;
+                            vertical-align: top;
+                        }
+
+                        .invoice-box table tr.top table td {
+                            padding-bottom: 20px;
+                        }
+
+                        .invoice-box table tr.top table td.title {
+                            font-size: 45px;
+                            line-height: 45px;
+                            color: #333;
+                        }
+
+                        .invoice-box table tr.information table td {
+                            padding-bottom: 40px;
+                        }
+
+                        .invoice-box table tr.heading td {
+                            background: #eee;
+                            border-bottom: 1px solid #ddd;
+                            font-weight: bold;
+                            text-align: left;
+                        }
+
+                        .invoice-box table tr.details td {
+                            padding-bottom: 20px;
+                        }
+
+                        .invoice-box table tr.item td {
+                            border-bottom: 1px solid #eee;
+                            text-align: left;
+                        }
+
+                        .invoice-box table tr.item.last td {
+                            border-bottom: none;
+                        }
+
+                        .invoice-box table tr.total td:nth-child(2) {
+                            border-top: 2px solid #eee;
+                            font-weight: bold;
+                            text-align: right;
+                        }
+
+                        .invoice-company-logo {
+                            max-width: 150px;
+                            max-height: 100px;
+                        }
+
+                        .text-right {
+                            text-align: right !important;
+                        }
+
+                        .invoice-footer {
+                            text-align: center;
+                            margin-top: 30px;
+                            font-size: 12px;
+                            color: #777;
+                        }
+
+                        /* CSS chỉ áp dụng khi in */
+                        @media print {
+                            body * {
+                                visibility: hidden;
+                                /* Ẩn tất cả các phần tử mặc định */
+                            }
+
+                            #viewOrderModal,
+                            #viewOrderModal * {
+                                visibility: visible;
+                                /* Chỉ hiện modal in */
+                            }
+
+                            #order-view-content {
+                                display: none;
+                                /* Ẩn giao diện xem chi tiết thông thường khi in */
+                            }
+
+                            #invoice-print-template {
+                                display: block !important;
+                                /* Hiện mẫu hóa đơn khi in */
+                            }
+
+                            .modal-footer {
+                                display: none;
+                                /* Ẩn footer của modal khi in */
+                            }
+
+                            .modal-dialog {
+                                max-width: none !important;
+                                margin: 0 !important;
+                                padding: 0 !important;
+                            }
+
+                            .modal-content {
+                                border: none !important;
+                                border-radius: 0 !important;
+                                box-shadow: none !important;
+                            }
+                        }
+                    </style>
+                    <div class="invoice-box">
+                        <table>
+                            <tr class="top">
+                                <td colspan="3">
+                                    <table>
+                                        <tr>
+                                            <td class="title">
+                                                {{-- Giữ nguyên thẻ img của bạn --}}
+                                                <img src="{{ asset('assets_admin/images/hoadon.png') }}"
+                                                    alt="Company logo" class="invoice-company-logo" />
+                                            </td>
+                                            <td class="text-right">
+                                                <strong>HÓA ĐƠN</strong><br>
+                                                Mã: #<span id="print-invoice-id"></span><br>
+                                                Ngày tạo: <span id="print-invoice-date"></span><br>
+                                                Trạng thái: <span id="print-invoice-status"></span>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody id="viewOrderItemsBody">
-                            {{-- Dữ liệu sẽ được điền bởi JS --}}
-                        </tbody>
-                        <tfoot>
-                            <tr>
-                                <th colspan="4" class="text-end">Tạm tính:</th>
-                                <td id="viewOrderSubtotal"></td>
+                            <tr class="information">
+                                <td colspan="3">
+                                    <table>
+                                        <tr>
+                                            <td>
+                                                {{-- === BẮT ĐẦU NỘI DUNG THAY ĐỔI === --}}
+                                                <strong>TỪ CỬA HÀNG:</strong><br>
+                                                Thanhdo Shop<br>
+                                                62 Châu Văn Liêm, Phú Đô, Nam Từ Liêm, Hà Nội<br>
+                                                Email: thanhdoshop@gmail.com<br>
+                                                SĐT: 0394831886 - 0973634129
+                                                {{-- === KẾT THÚC NỘI DUNG THAY ĐỔI === --}}
+                                            </td>
+                                            <td class="text-right">
+                                                <strong>GIAO ĐẾN:</strong><br>
+                                                <strong id="print-customer-name"></strong><br>
+                                                <span id="print-customer-phone"></span><br>
+                                                <span id="print-customer-email"></span><br>
+                                                <span id="print-customer-address"></span>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                            <tr class="heading">
+                                <td style="width: 50%;">Sản phẩm</td>
+                                <td style="width: 25%; text-align: center;">Số lượng</td>
+                                <td style="width: 25%;" class="text-right">Giá</td>
+                            </tr>
+                            <tbody id="print-items-body">
+                                {{-- Các dòng sản phẩm sẽ được chèn vào đây bằng JS --}}
+                            </tbody>
+                            <tr class="heading">
+                                <td colspan="3">Tổng kết</td>
                             </tr>
                             <tr>
-                                <th colspan="4" class="text-end">Phí vận chuyển:</th>
-                                <td id="viewOrderShippingFee"></td>
+                                <td colspan="2" class="text-right">Tạm tính</td>
+                                <td class="text-right" id="print-subtotal"></td>
                             </tr>
                             <tr>
-                                <th colspan="4" class="text-end">Giảm giá:</th>
-                                <td id="viewOrderDiscount"></td>
+                                <td colspan="2" class="text-right">Phí vận chuyển</td>
+                                <td class="text-right" id="print-shipping"></td>
                             </tr>
                             <tr>
-                                <th colspan="4" class="text-end">Tổng cộng:</th>
-                                <td id="viewOrderGrandTotal" class="fw-bold"></td>
+                                <td colspan="2" class="text-right">Giảm giá</td>
+                                <td class="text-right" id="print-discount"></td>
                             </tr>
-                        </tfoot>
-                    </table>
+                            <tr class="total">
+                                <td colspan="2" class="text-right"><strong>Tổng cộng</strong></td>
+                                <td class="text-right"><strong><span id="print-grand-total"></span></strong></td>
+                            </tr>
+                        </table>
+                        <div class="invoice-footer">
+                            Cảm ơn quý khách đã tin tưởng và mua sắm tại Motorbike Shop!
+                        </div>
+                    </div>
                 </div>
+                {{-- KẾT THÚC MẪU HÓA ĐƠN --}}
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-primary me-auto" id="editOrderFromViewBtn">
-                    <i class="bi bi-pencil-square me-1"></i>Chỉnh sửa
+                <button type="button" class="btn btn-info" id="printOrderBtn">
+                    <i class="bi bi-printer me-1"></i> In hóa đơn
                 </button>
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                <button type="button" class="btn btn-primary" id="editOrderFromViewBtn">
+                    <i class="bi bi-pencil-square me-1"></i> Chỉnh sửa
+                </button>
             </div>
         </div>
     </div>

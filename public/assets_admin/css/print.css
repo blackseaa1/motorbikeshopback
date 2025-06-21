@@ -1,0 +1,66 @@
+@media print {
+    /* Khi đang ở chế độ in (body có class 'is-printing') */
+
+    /* 1. Ẩn TOÀN BỘ các thành phần trên trang bằng visibility.
+       Đây là cách hiệu quả để tránh in các yếu tố không mong muốn. */
+    body.is-printing * {
+        visibility: hidden;
+    }
+
+    /* 2. CHỈ CHO PHÉP modal xem chi tiết và TẤT CẢ con của nó được hiển thị.
+       Quy tắc này sẽ ghi đè lên quy tắc ẩn ở trên. */
+    body.is-printing #viewOrderModal, 
+    body.is-printing #viewOrderModal * {
+        visibility: visible;
+    }
+
+    /* 3. Đặt lại vị trí của modal để nó nằm gọn gàng trên trang in. */
+    body.is-printing #viewOrderModal {
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: visible !important; /* Đảm bảo nội dung không bị cắt */
+        background: #fff !important; /* Nền trắng cho trang in */
+    }
+
+    body.is-printing #viewOrderModal .modal-dialog {
+        max-width: 100% !important;
+        margin: 0 !important;
+        box-shadow: none !important;
+    }
+    
+    body.is-printing #viewOrderModal .modal-content {
+        border: none !important;
+        box-shadow: none !important;
+    }
+
+    /* 4. Ẩn các nút không cần thiết bằng display: none để chúng không chiếm không gian. */
+    body.is-printing #viewOrderModal .modal-footer,
+    body.is-printing #viewOrderModal .modal-header .btn-close,
+    body.is-printing #viewOrderModal #editOrderFromViewBtn,
+    body.is-printing #viewOrderModal #printOrderBtn {
+        display: none !important;
+    }
+    
+    /* 5. Tùy chỉnh hiển thị cho đẹp hơn khi in */
+    body.is-printing #viewOrderModal .modal-title {
+        font-size: 20pt !important;
+    }
+    
+    body.is-printing .table {
+        font-size: 10pt !important;
+    }
+
+    body.is-printing h6 {
+        font-size: 12pt !important;
+        margin-top: 20px;
+    }
+}
+ #invoice-print-template .invoice-company-logo {
+        max-width: 250px !important;
+        max-height: 250px !important; /* Tăng kích thước và thêm !important để đảm bảo ưu tiên */
+        width: 100%;
+    }

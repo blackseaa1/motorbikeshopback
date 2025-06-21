@@ -3,17 +3,16 @@
 @section('title', 'Quản lý Đơn Hàng')
 
 @section('content')
-    <div id="adminOrdersPage">
-        <header class="content-header">
-            <h1><i class="bi bi-tags-fill me-2"></i>Đơn Hàng</h1>
-            <div class="content-header-actions">
-                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createOrderModal">
-                    <i class="bi bi-plus-circle me-2"></i>Tạo Đơn Hàng Mới
-                </button>
-            </div>
-        </header>
+    {{-- SỬA LỖI: Gắn dữ liệu vào các thuộc tính data-* để JS có thể đọc --}}
+    <div class="container-fluid" id="adminOrdersPage" data-products='@json($products)'
+        data-errors="{{ $errors->any() ? 'true' : 'false' }}" data-form-marker="{{ session('form_marker', '') }}">
 
-        @include('admin.layouts.partials.messages')
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="h3 mb-0 text-gray-800">Quản lý Đơn hàng</h1>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createOrderModal">
+                <i class="bi bi-plus-circle-fill me-2"></i>Tạo đơn hàng mới
+            </button>
+        </div>
 
         <div class="card mt-4 shadow-sm">
             <div class="card-header bg-light">
@@ -105,7 +104,6 @@
 @endsection
 
 @push('styles')
-    <link rel="stylesheet" href="{{ asset('vendor/bootstrap/css/bootstrap-select.min.css') }}">
     <style>
         .product-item-row-modal {
             display: flex;
