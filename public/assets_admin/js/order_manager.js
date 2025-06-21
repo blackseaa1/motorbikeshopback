@@ -4,7 +4,20 @@
  * Xử lý JavaScript cho trang quản lý Đơn hàng.
  * ===================================================================
  */
+
+// BƯỚC 1: Thêm một biến cờ (flag) để kiểm tra
+if (typeof window.orderManagerInitialized === 'undefined') {
+    window.orderManagerInitialized = false;
+}
+
+
 function initializeOrderManager() {
+    // BƯỚC 2: Kiểm tra ngay khi bắt đầu hàm
+    // Nếu đã khởi tạo rồi, thì thoát ngay lập tức
+    if (window.orderManagerInitialized) {
+        return;
+    }
+
     const pageContainer = document.getElementById('adminOrdersPage');
     if (!pageContainer) return;
 
@@ -632,6 +645,10 @@ function initializeOrderManager() {
 
     // --- KHỞI CHẠY ---
     setupEventListeners();
+
+    // BƯỚC 3: Đặt cờ thành true ở cuối hàm để đánh dấu đã khởi tạo
+    window.orderManagerInitialized = true;
+
     console.log("JS cho quản lý Đơn hàng đã được khởi tạo thành công.");
 }
 

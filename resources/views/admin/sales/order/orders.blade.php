@@ -69,17 +69,33 @@
                                         <td>{{ $order->payment_method_text }}</td>
                                         <td>{{ $order->created_at->format('d/m/Y H:i') }}</td>
                                         <td class="text-center">
-                                            <button class="btn btn-sm btn-info view-order-btn" data-id="{{ $order->id }}"
+                                            {{-- Nút Xem --}}
+                                            <button class="btn btn-sm btn-outline-info me-2 view-order-btn"
+                                                data-bs-toggle="modal" data-bs-target="#viewOrderModal"
+                                                data-id="{{ $order->id }}"
+                                                data-url="{{ route('admin.sales.orders.show', $order->id) }}"
                                                 title="Xem chi tiết">
-                                                <i class="bi bi-eye"></i>
+                                                <i class="bi bi-eye-fill"></i>
                                             </button>
-                                            <button class="btn btn-sm btn-primary edit-order-btn" data-id="{{ $order->id }}"
+
+                                            {{-- Nút Sửa --}}
+                                            <button class="btn btn-sm btn-outline-primary me-2 edit-order-btn"
+                                                data-bs-toggle="modal" data-bs-target="#updateOrderModal"
+                                                data-id="{{ $order->id }}"
+                                                data-url="{{ route('admin.sales.orders.show', $order->id) }}"
+                                                data-update-url="{{ route('admin.sales.orders.update', $order->id) }}"
                                                 title="Chỉnh sửa">
                                                 <i class="bi bi-pencil-square"></i>
                                             </button>
-                                            <button class="btn btn-sm btn-danger delete-order-btn" data-id="{{ $order->id }}"
+
+                                            {{-- Nút Xóa --}}
+                                            <button class="btn btn-sm btn-outline-danger delete-order-btn"
+                                                data-bs-toggle="modal" data-bs-target="#deleteOrderModal"
+                                                data-id="{{ $order->id }}"
+                                                data-name="{{ $order->customer_name }} (Order #{{ $order->id }})"
+                                                data-delete-url="{{ route('admin.sales.orders.destroy', $order->id) }}"
                                                 title="Xóa">
-                                                <i class="bi bi-trash"></i>
+                                                <i class="bi bi-trash-fill"></i>
                                             </button>
                                         </td>
                                     </tr>

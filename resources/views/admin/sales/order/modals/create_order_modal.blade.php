@@ -28,7 +28,8 @@
                                         @foreach($customers as $customer)
                                             <option value="{{ $customer->id }}" data-customer-name="{{ $customer->name }}"
                                                 data-customer-phone="{{ $customer->phone }}">{{ $customer->name }} -
-                                                {{ $customer->email }}</option>
+                                                {{ $customer->email }}
+                                            </option>
                                         @endforeach
                                     @endif
                                 </select>
@@ -64,7 +65,33 @@
                                     <input type="text" class="form-control" id="shipping_address_line"
                                         name="shipping_address_line">
                                 </div>
-                                {{-- Bạn có thể thêm các trường Tỉnh/Huyện/Xã ở đây nếu cần --}}
+
+                                <div class="mb-3">
+                                    <label for="guest_province_id_modal" class="form-label">Tỉnh/Thành phố</label>
+                                    <select class="form-select selectpicker" data-live-search="true"
+                                        id="guest_province_id_modal" name="province_id" data-width="100%">
+                                        <option value="">-- Chọn Tỉnh/Thành phố --</option>
+                                        @if(isset($provinces))
+                                            @foreach($provinces as $province)
+                                                <option value="{{ $province->id }}">{{ $province->name }}</option>
+                                            @endforeach
+                                        @endif
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="guest_district_id_modal" class="form-label">Quận/Huyện</label>
+                                    <select class="form-select selectpicker" data-live-search="true"
+                                        id="guest_district_id_modal" name="district_id" data-width="100%">
+                                        <option value="">-- Chọn Quận/Huyện --</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="guest_ward_id_modal" class="form-label">Phường/Xã</label>
+                                    <select class="form-select selectpicker" data-live-search="true"
+                                        id="guest_ward_id_modal" name="ward_id" data-width="100%">
+                                        <option value="">-- Chọn Phường/Xã --</option>
+                                    </select>
+                                </div>
                             </div>
                         </div>
 
@@ -95,7 +122,8 @@
                                     @if(isset($deliveryServices))
                                         @foreach($deliveryServices as $service)
                                             <option value="{{ $service->id }}">{{ $service->name }} -
-                                                {{ number_format($service->shipping_fee, 0, ',', '.') }}đ</option>
+                                                {{ number_format($service->shipping_fee, 0, ',', '.') }}đ
+                                            </option>
                                         @endforeach
                                     @endif
                                 </select>
@@ -110,14 +138,12 @@
                     <hr>
                     <h5>3. Sản phẩm trong đơn hàng</h5>
 
-                    {{-- Đảm bảo DIV này tồn tại và có ID chính xác --}}
-                    <div id="product_items_container_modal"> {{-- SỬA ID TẠI ĐÂY --}}
+                    <div id="product_items_container_modal">
                         {{-- Các dòng sản phẩm sẽ được JS chèn động vào đây --}}
                     </div>
 
                     <div class="text-start mt-2">
-                        <button type="button" id="add_product_item_modal" class="btn btn-sm btn-success"> {{-- SỬA ID
-                            NÚT THÊM SẢN PHẨM NẾU CẦN --}}
+                        <button type="button" id="add_product_item_modal" class="btn btn-sm btn-success">
                             <i class="bi bi-plus-circle"></i> Thêm sản phẩm
                         </button>
                     </div>
