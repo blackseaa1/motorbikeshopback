@@ -13,6 +13,8 @@ use App\Support\CartManager;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use App\Models\Product;
+use Illuminate\Validation\Rule;
 
 class CheckoutController extends Controller
 {
@@ -50,90 +52,105 @@ class CheckoutController extends Controller
      */
     public function placeOrder(Request $request)
     {
-        // Lấy thông tin giỏ hàng và thanh toán từ session/manager
-        $cartDetails = $this->cartManager->getCartDetails();
-
-        // Validate dữ liệu chung
-        $validatorRules = [
-            'payment_method' => 'required|string|in:cod,bank_transfer',
-            'delivery_service_id' => 'required|exists:delivery_services,id',
-            'notes' => 'nullable|string|max:1000',
-        ];
-
-        $customer = Auth::guard('customer')->user();
-
-        if ($customer) { // Nếu khách hàng đã đăng nhập
-            $validatorRules['shipping_address_id'] = 'required|exists:customer_addresses,id,customer_id,' . $customer->id;
-        } else { // Nếu là khách vãng lai
-            $validatorRules['guest_name'] = 'required|string|max:255';
-            $validatorRules['guest_phone'] = ['required', 'string', 'regex:/^([0-9\s\-\+\(\)]*)$/', 'min:10', 'max:15'];
-            $validatorRules['guest_email'] = 'required|email|max:255';
-            $validatorRules['guest_address_line'] = 'required|string|max:255';
-            $validatorRules['guest_province_id'] = 'required|exists:provinces,id';
-            $validatorRules['guest_district_id'] = 'required|exists:districts,id';
-            $validatorRules['guest_ward_id'] = 'required|exists:wards,id';
+        // 1. Kiểm tra giỏ hàng có trống không
+        if ($this->cartManager->getCartCount() === 0) {
+            return redirect()->route('cart.index')->with('info', 'Giỏ hàng của bạn đang trống để đặt hàng.');
         }
 
-        $validatedData = $request->validate($validatorRules);
+        /** @var \App\Models\Customer|null $customer */
+        $customer = Auth::guard('customer')->user();
 
-        // Bắt đầu một transaction để đảm bảo toàn vẹn dữ liệu
+        // 2. Validate dữ liệu gửi lên
+        $validationRules = [
+            'payment_method' => ['required', Rule::in(['cod', 'vnpay'])],
+            'delivery_service_id' => ['required', 'exists:delivery_services,id'],
+            'notes' => ['nullable', 'string', 'max:1000'],
+        ];
+
+        if ($customer) {
+            // Quy tắc cho khách hàng đã đăng nhập
+            $validationRules['shipping_address_id'] = ['required', Rule::exists('customer_addresses', 'id')->where('customer_id', $customer->id)];
+        } else {
+            // Quy tắc cho khách vãng lai
+            $validationRules += [
+                'guest_name' => ['required', 'string', 'max:255'],
+                'guest_email' => ['required', 'email', 'max:255'],
+                'guest_phone' => ['required', 'string', 'max:20'],
+                'guest_address_line' => ['required', 'string', 'max:255'],
+                'guest_province_id' => ['required', 'exists:provinces,id'],
+                'guest_district_id' => ['required', 'exists:districts,id'],
+                'guest_ward_id' => ['required', 'exists:wards,id'],
+            ];
+        }
+
+        $validatedData = $request->validate($validationRules);
+
+        // 3. Lấy thông tin chi tiết cuối cùng của giỏ hàng
+        $cartDetails = $this->cartManager->getCartDetails();
+
         DB::beginTransaction();
         try {
-            // Lấy thông tin địa chỉ
+            // 4. Lấy thông tin địa chỉ giao hàng
             $shippingAddressInfo = $this->getShippingAddressInfo($validatedData, $customer);
 
-            // Tạo đơn hàng
+            // 5. Tạo đơn hàng (Order)
             $order = Order::create([
                 'customer_id' => $customer?->id,
-                'promotion_id' => $cartDetails['promotion_info']?->id,
-                'delivery_service_id' => $validatedData['delivery_service_id'],
-
-                'customer_name' => $shippingAddressInfo['name'],
-                'customer_email' => $shippingAddressInfo['email'],
-                'customer_phone' => $shippingAddressInfo['phone'],
+                'guest_name' => $shippingAddressInfo['name'],
+                'guest_email' => $shippingAddressInfo['email'],
+                'guest_phone' => $shippingAddressInfo['phone'],
                 'shipping_address' => $shippingAddressInfo['full_address'],
-
-                'notes' => $validatedData['notes'],
-                'payment_method' => $validatedData['payment_method'],
-
+                'status' => Order::STATUS_PENDING, // Trạng thái chờ xử lý
+                'total_price' => $cartDetails['grand_total'],
                 'subtotal' => $cartDetails['subtotal'],
                 'shipping_fee' => $cartDetails['shipping_fee'],
                 'discount_amount' => $cartDetails['discount_amount'],
-                'total_amount' => $cartDetails['grand_total'],
-                'status' => Order::STATUS_PENDING,
+                'promotion_id' => $cartDetails['promotion']['id'] ?? null,
+                'delivery_service_id' => $validatedData['delivery_service_id'],
+                'payment_method' => $validatedData['payment_method'],
+                'notes' => $validatedData['notes'] ?? null,
             ]);
 
-            // Thêm các sản phẩm trong giỏ vào đơn hàng
+            // 6. Tạo các mục trong đơn hàng (Order Items) và trừ kho
             foreach ($cartDetails['items'] as $item) {
                 $order->items()->create([
-                    'product_id' => $item->product_id,
-                    'quantity' => $item->quantity,
-                    'price' => $item->product->price,
+                    'product_id' => $item['product_id'],
+                    'quantity' => $item['quantity'],
+                    'price' => $item['product']['price'], // Lưu giá tại thời điểm mua
                 ]);
+
                 // Trừ số lượng tồn kho
-                $item->product->decrement('stock_quantity', $item->quantity);
+                $product = Product::find($item['product_id']);
+                if ($product) {
+                    $product->decrement('stock_quantity', $item['quantity']);
+                }
             }
 
-            // Tăng số lượt sử dụng của mã giảm giá (nếu có)
-            if ($cartDetails['promotion_info']) {
-                $cartDetails['promotion_info']->increment('uses_count');
-            }
+            DB::commit(); // Hoàn tất giao dịch
 
-            // Xóa giỏ hàng và các thông tin liên quan trong session
+            // 7. Xóa giỏ hàng
             $this->cartManager->clear();
-            $this->cartManager->clearCheckoutData();
 
-            DB::commit();
-
-            // Chuyển đến trang cảm ơn hoặc chi tiết đơn hàng
-            return redirect()->route('home')->with('success', 'Đặt hàng thành công! Cảm ơn bạn đã mua hàng.');
+            // 8. Chuyển hướng tới trang chi tiết đơn hàng vừa tạo
+            return redirect()->route('account.orders.show', $order->id)
+                ->with('success', 'Đặt hàng thành công! Cảm ơn bạn đã mua hàng.');
         } catch (\Exception $e) {
-            DB::rollBack();
-            // Log lỗi và báo cho người dùng
+            DB::rollBack(); // Hoàn tác nếu có lỗi
+            // Ghi log lỗi để debug
             // Log::error('Lỗi khi đặt hàng: ' . $e->getMessage());
             return back()->with('error', 'Đã có lỗi xảy ra trong quá trình đặt hàng. Vui lòng thử lại.')->withInput();
         }
     }
+
+
+
+
+
+
+
+
+
+
 
     /**
      * Helper để lấy thông tin địa chỉ từ request.

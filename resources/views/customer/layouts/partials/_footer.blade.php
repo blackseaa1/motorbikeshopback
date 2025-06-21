@@ -33,9 +33,9 @@
                             class="text-white-50 text-decoration-none custom-link">Trang Chủ</a></li>
                     <li class="mb-2"><a href="{{ route('products.index') }}"
                             class="text-white-50 text-decoration-none custom-link">Cửa Hàng</a></li>
-                    <li class="mb-2"><a href="{{ route('blog') }}"
+                    <li class="mb-2"><a href="{{ route('blog.index') }}"
                             class="text-white-50 text-decoration-none custom-link">Blog</a></li>
-                    <li class="mb-2"><a href="{{ route('contact') }}"
+                    <li class="mb-2"><a href="{{ route('contact.index') }}"
                             class="text-white-50 text-decoration-none custom-link">Liên hệ</a></li>
                 </ul>
             </div>

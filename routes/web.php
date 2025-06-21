@@ -58,85 +58,77 @@ use App\Http\Controllers\Customer\CheckoutController;
 | php artisan route:clear
 |
 */
-
 // =========================================================================
 // == CUSTOMER FACING ROUTES (FRONT-END) ==
 // =========================================================================
 
-// --- Các route công khai ---
-Route::get('/', [HomeController::class, 'index'])->name('home');
+Route::middleware(['web'])->group(function () {
 
-// ... blog, contact, products ...
-Route::get('/products', [CustomerShopController::class, 'index'])->name('products.index');
-Route::get('/products/{product}', [CustomerShopController::class, 'show'])->name('products.show');
-Route::get('/categories/{category}', [CustomerShopController::class, 'index'])->name('categories.show');
+    // --- CÁC TRANG CHUNG ---
+    Route::get('/', [App\Http\Controllers\Customer\HomeController::class, 'index'])->name('home');
+    Route::get('/products', [App\Http\Controllers\Customer\ShopController::class, 'index'])->name('products.index');
+    Route::get('/products/{product}', [App\Http\Controllers\Customer\ShopController::class, 'show'])->name('products.show');
+    Route::get('/categories/{category}', [App\Http\Controllers\Customer\ShopController::class, 'index'])->name('categories.show');
+    Route::get('/blog', [App\Http\Controllers\Customer\BlogController::class, 'index'])->name('blog.index');
+    Route::get('/blog/{blogPost}', [App\Http\Controllers\Customer\BlogController::class, 'show'])->name('blog.show');
+    Route::get('/contact', [App\Http\Controllers\Customer\HomeController::class, 'contact'])->name('contact.index');
 
-// --- Trang Blog công khai ---
-Route::get('/blog', [CustomerPublicBlogController::class, 'index'])->name('blog');
-Route::get('/blog/{blogPost}', [CustomerPublicBlogController::class, 'show'])->name('blog.show');
-
-// --- Trang Liên hệ ---
-Route::get('/contact', [HomeController::class, 'contact'])->name('contact');
-
-// --- Các route xác thực (Đăng nhập, Đăng ký) ---
-Route::controller(AuthController::class)->group(function () {
-    Route::middleware(['guest:customer', 'guest:admin'])->group(function () {
-        Route::get('login', 'showLoginForm')->name('login');
-        Route::post('login', 'login');
-        Route::get('register', 'showRegisterForm')->name('register');
-        Route::post('register', 'register');
+    // --- XÁC THỰC (Đăng nhập, Đăng ký) ---
+    Route::controller(App\Http\Controllers\Customer\AuthController::class)->group(function () {
+        Route::middleware('guest:customer')->group(function () {
+            Route::get('login', 'showLoginForm')->name('login');
+            Route::post('login', 'login');
+            Route::get('register', 'showRegisterForm')->name('register');
+            Route::post('register', 'register');
+        });
+        // Đăng xuất cần phải đăng nhập
+        Route::post('logout', 'logout')->name('logout')->middleware('auth:customer');
     });
-});
 
+    // --- GIỎ HÀNG & THANH TOÁN (Đã hoàn nguyên về cấu trúc cũ) ---
+    Route::get('/cart', [App\Http\Controllers\Customer\CartController::class, 'index'])->name('cart.index');
+    Route::get('/checkout', [App\Http\Controllers\Customer\CheckoutController::class, 'index'])->name('checkout.index');
+    // Hoàn nguyên đường dẫn xử lý đặt hàng
+    Route::post('/place-order', [App\Http\Controllers\Customer\CheckoutController::class, 'placeOrder'])->name('checkout.placeOrder');
 
-// --- Các route giỏ hàng ---
-Route::controller(CartController::class)->group(function () {
-    // Trang giỏ hàng (web)
-    Route::get('/cart', 'index')->name('cart.index');
-
-    // Các API cho giỏ hàng
+    // --- API CHO GIỎ HÀNG (Đã hoàn nguyên về cấu trúc cũ) ---
     Route::prefix('api/cart')->name('api.cart.')->group(function () {
-        Route::get('/', 'getCartData')->name('data');
-        Route::post('/add', 'add')->name('add');
-        Route::post('/update', 'update')->name('update');
-        Route::post('/remove', 'remove')->name('remove');
-        Route::post('/update-summary', 'updateSummary')->name('updateSummary');
-    });
-});
-Route::controller(CheckoutController::class)->group(function () {
-    Route::get('/checkout', 'index')->name('checkout.index');
-    Route::post('/place-order', 'placeOrder')->name('checkout.placeOrder');
-});
-
-/**
- * ===============================================================
- * == CÁC ROUTE CHỈ DÀNH CHO KHÁCH HÀNG ĐÃ ĐĂNG NHẬP ==
- * ===============================================================
- * Middleware `EnsureCustomerPasswordIsChanged` đã được đăng ký toàn cục
- * nên nó sẽ tự động kiểm tra. Ở đây chúng ta chỉ cần middleware `auth:customer`.
- */
-Route::middleware(['auth:customer'])->group(function () {
-
-    // Route trang tài khoản
-    Route::prefix('account')->name('account.')->group(function () {
-        Route::get('/', [AccountController::class, 'profile'])->name('profile');
-        Route::get('/orders', [AccountController::class, 'orders'])->name('orders');
-        Route::get('/orders/{order}', [AccountController::class, 'showOrder'])->name('orders.show');
-        Route::resource('addresses', AddressController::class)->except(['show']);
-        Route::patch('addresses/{address}/set-default', [AddressController::class, 'setDefault'])->name('addresses.setDefault');
-        Route::patch('/update-profile', [AccountController::class, 'updateProfile'])->name('updateProfile');
-        Route::put('/update-password', [AccountController::class, 'updatePassword'])->name('updatePassword');
-        Route::post('/update-avatar', [AccountController::class, 'updateAvatar'])->name('updateAvatar');
+        Route::post('/add', [App\Http\Controllers\Customer\CartController::class, 'add'])->name('add');
+        Route::post('/update', [App\Http\Controllers\Customer\CartController::class, 'update'])->name('update');
+        Route::post('/remove', [App\Http\Controllers\Customer\CartController::class, 'remove'])->name('remove');
+        // Hoàn nguyên các route API cũ
+        Route::get('/', [App\Http\Controllers\Customer\CartController::class, 'getCartData'])->name('data');
+        Route::post('/update-summary', [App\Http\Controllers\Customer\CartController::class, 'updateSummary'])->name('updateSummary');
     });
 
-    // Route gửi đánh giá
-    Route::post('/products/{product}/reviews', [CustomerReviewController::class, 'store'])->name('reviews.store');
+    /**
+     * ===============================================================
+     * == CÁC ROUTE CHỈ DÀNH CHO KHÁCH HÀNG ĐÃ ĐĂNG NHẬP ==
+     * ===============================================================
+     */
+    Route::middleware(['auth:customer'])->group(function () {
+        // Route trang tài khoản
+        Route::prefix('account')->name('account.')->group(function () {
+            Route::get('/', [App\Http\Controllers\Customer\AccountController::class, 'profile'])->name('profile');
+            // Hoàn nguyên tên route
+            Route::get('/orders', [App\Http\Controllers\Customer\AccountController::class, 'orders'])->name('orders');
+            Route::get('/orders/{order}', [App\Http\Controllers\Customer\AccountController::class, 'showOrder'])->name('orders.show');
+            Route::resource('addresses', App\Http\Controllers\Customer\AddressController::class)->except(['show']);
+            Route::post('addresses/{address}/set-default', [App\Http\Controllers\Customer\AddressController::class, 'setDefault'])->name('addresses.setDefault');
+            Route::post('/update-profile', [App\Http\Controllers\Customer\AccountController::class, 'updateInfo'])->name('updateProfile');
+            Route::post('/update-password', [App\Http\Controllers\Customer\AccountController::class, 'updatePassword'])->name('updatePassword');
+            Route::post('/update-avatar', [App\Http\Controllers\Customer\AccountController::class, 'updateAvatar'])->name('updateAvatar');
+        });
 
-    // Các route bắt buộc đổi mật khẩu và đăng xuất
-    Route::post('logout', [AuthController::class, 'logout'])->name('logout');
-    Route::get('/force-password-change', [AuthController::class, 'showForcePasswordChangeForm'])->name('customer.password.force_change');
-    Route::post('/force-password-change', [AuthController::class, 'handleForcePasswordChange'])->name('customer.password.handle_force_change');
+        // Route gửi đánh giá sản phẩm
+        Route::post('/products/{product}/reviews', [App\Http\Controllers\Customer\ReviewController::class, 'store'])->name('reviews.store');
+
+        // Route bắt buộc đổi mật khẩu
+        Route::get('/force-password-change', [App\Http\Controllers\Customer\AuthController::class, 'showForcePasswordChangeForm'])->name('customer.password.force_change');
+        Route::post('/force-password-change', [App\Http\Controllers\Customer\AuthController::class, 'handleForcePasswordChange'])->name('customer.password.handle_force_change');
+    });
 });
+
 
 // =========================================================================
 // == ADMIN ROUTES ==

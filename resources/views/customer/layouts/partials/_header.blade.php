@@ -34,15 +34,12 @@
 
                     {{-- === NEW LINKS START === --}}
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ route('blog') }}">Blog</a>
+                        <a class="nav-link" href="{{ route('blog.index') }}">Blog</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ route('contact') }}">Liên hệ</a>
+                        <a class="nav-link" href="{{ route('contact.index') }}">Liên hệ</a>
                     </li>
                     {{-- === NEW LINKS END === --}}
-
-
-
                     <li class="nav-item dropdown">
                         <a class="nav-link position-relative" href="#" id="cartDropdown" role="button"
                             data-bs-toggle="dropdown" aria-expanded="false">
@@ -80,15 +77,6 @@
                             </div>
                         </div>
                     </li>
-
-
-
-
-
-
-
-
-
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button"
                             data-bs-toggle="dropdown" aria-expanded="false">

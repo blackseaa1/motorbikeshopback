@@ -351,4 +351,5 @@ class CartManager
         unset($cart[$productId]);
         session([self::SESSION_KEY => $cart]);
     }
+    
 }
