@@ -6,11 +6,14 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Number; // SỬA ĐỔI: Thêm import Number
+use App\Models\Admin; // SỬA ĐỔI: Thêm import Admin model
 
 class Order extends Model
 {
     use HasFactory;
+
+    protected $table = 'orders'; // SỬA ĐỔI: Thêm tên bảng
 
     // ... (các hằng số trạng thái giữ nguyên) ...
     const STATUS_PENDING = 'pending';
@@ -66,9 +69,9 @@ class Order extends Model
         'formatted_total_price',
         'full_address',
         'subtotal',
+        'shipping_fee', // SỬA ĐỔI: Thêm shipping_fee
         'discount_amount',
-        'formatted_discount',
-        'customer_name' // Thêm dòng này
+        'customer_name'
     ];
 
 
@@ -77,37 +80,37 @@ class Order extends Model
     // Relationships
     public function customer(): BelongsTo
     {
-        return $this->belongsTo(Customer::class);
+        return $this->belongsTo(Customer::class, 'customer_id'); // SỬA ĐỔI: Thêm foreign key
     }
 
     public function items(): HasMany
     {
-        return $this->hasMany(OrderItem::class);
+        return $this->hasMany(OrderItem::class, 'order_id'); // SỬA ĐỔI: Thêm foreign key
     }
 
     public function promotion(): BelongsTo
     {
-        return $this->belongsTo(Promotion::class);
+        return $this->belongsTo(Promotion::class, 'promotion_id'); // SỬA ĐỔI: Thêm foreign key
     }
 
     public function deliveryService(): BelongsTo
     {
-        return $this->belongsTo(DeliveryService::class);
+        return $this->belongsTo(DeliveryService::class, 'delivery_service_id'); // SỬA ĐỔI: Thêm foreign key
     }
 
     public function province(): BelongsTo
     {
-        return $this->belongsTo(Province::class);
+        return $this->belongsTo(Province::class, 'province_id'); // SỬA ĐỔI: Thêm foreign key
     }
 
     public function district(): BelongsTo
     {
-        return $this->belongsTo(District::class);
+        return $this->belongsTo(District::class, 'district_id'); // SỬA ĐỔI: Thêm foreign key
     }
 
     public function ward(): BelongsTo
     {
-        return $this->belongsTo(Ward::class);
+        return $this->belongsTo(Ward::class, 'ward_id'); // SỬA ĐỔI: Thêm foreign key
     }
 
     public function createdByAdmin(): BelongsTo
@@ -117,70 +120,116 @@ class Order extends Model
 
     // Accessors for computed properties
 
-    public function getSubtotalAttribute()
+    public function getSubtotalAttribute(): float
     {
+        // SỬA ĐỔI: Thêm kiểm tra đã load relationship chưa
+        if (!$this->relationLoaded('items')) {
+            $this->load('items');
+        }
         return $this->items->sum(function ($item) {
             return $item->price * $item->quantity;
         });
     }
 
-    public function getDiscountAmountAttribute()
+    public function getDiscountAmountAttribute(): float
     {
-        if ($this->promotion) {
-            return ($this->subtotal * $this->promotion->discount_percentage) / 100;
+        // SỬA ĐỔI: Thêm kiểm tra đã load relationship chưa và isEffective
+        if (!$this->relationLoaded('promotion')) {
+            $this->load('promotion');
+        }
+        $promotion = $this->promotion;
+        $subtotal = $this->subtotal; // Sử dụng accessor subtotal
+        if ($promotion && method_exists($promotion, 'isEffective') && $promotion->isEffective()) {
+            return ($subtotal * $promotion->discount_percentage) / 100;
         }
         return 0;
     }
 
-    public function getFormattedDiscountAttribute()
-    {
-        return number_format($this->discount_amount, 0, ',', '.') . ' ₫';
-    }
-
+    // Removed getFormattedDiscountAttribute as it's not in the new appends array
 
     public function getStatusTextAttribute(): string
     {
-        return self::STATUSES[$this->status] ?? 'Không xác định';
+        // SỬA ĐỔI: Chuyển sang match expression
+        return match ($this->status) {
+            self::STATUS_PENDING => 'Chờ xử lý',
+            self::STATUS_PROCESSING => 'Đang xử lý',
+            self::STATUS_APPROVED => 'Đã duyệt',
+            self::STATUS_SHIPPED => 'Đã giao vận chuyển',
+            self::STATUS_DELIVERED => 'Đã giao hàng',
+            self::STATUS_COMPLETED => 'Hoàn thành',
+            self::STATUS_CANCELLED => 'Đã hủy',
+            self::STATUS_RETURNED => 'Đã trả hàng',
+            self::STATUS_FAILED => 'Thất bại',
+            default => 'Không xác định',
+        };
     }
 
     public function getStatusBadgeClassAttribute(): string
     {
-        return [
+        // SỬA ĐỔI: Chuyển sang match expression và cập nhật class
+        return match ($this->status) {
             self::STATUS_PENDING => 'bg-warning text-dark',
             self::STATUS_PROCESSING => 'bg-info text-dark',
-            self::STATUS_APPROVED => 'bg-primary',
-            self::STATUS_SHIPPED => 'bg-info',
-            self::STATUS_DELIVERED => 'bg-light text-dark',
-            self::STATUS_COMPLETED => 'bg-success',
-            self::STATUS_CANCELLED => 'bg-secondary',
-            self::STATUS_RETURNED => 'bg-dark',
-            self::STATUS_FAILED => 'bg-danger',
-        ][$this->status] ?? 'bg-light text-dark';
+            self::STATUS_APPROVED => 'bg-primary', // Giữ nguyên hoặc thay đổi tùy ý
+            self::STATUS_SHIPPED => 'bg-info', // Giữ nguyên hoặc thay đổi tùy ý
+            self::STATUS_DELIVERED, self::STATUS_COMPLETED => 'bg-success',
+            self::STATUS_CANCELLED, self::STATUS_RETURNED, self::STATUS_FAILED => 'bg-danger',
+            default => 'bg-light text-dark',
+        };
     }
 
     public function getFormattedTotalPriceAttribute(): string
     {
-        return number_format($this->total_price, 0, ',', '.') . ' ₫';
+        // SỬA ĐỔI: Sử dụng Number::currency
+        return Number::currency($this->total_price, 'VND', 'vi');
     }
 
     public function getFullAddressAttribute(): string
     {
-        if ($this->customer && $this->customer->defaultAddress) {
-            return $this->customer->defaultAddress->full_address;
+        // SỬA ĐỔI: Logic xây dựng địa chỉ
+        $addressParts = [];
+        if ($this->shipping_address_line) {
+            $addressParts[] = $this->shipping_address_line;
         }
-
-        $addressParts = [
-            $this->shipping_address_line,
-            $this->ward?->name,
-            $this->district?->name,
-            $this->province?->name,
-        ];
+        if ($this->relationLoaded('ward') && $this->ward) {
+            $addressParts[] = $this->ward->name;
+        }
+        if ($this->relationLoaded('district') && $this->district) {
+            $addressParts[] = $this->district->name;
+        }
+        if ($this->relationLoaded('province') && $this->province) {
+            $addressParts[] = $this->province->name;
+        }
 
         return implode(', ', array_filter($addressParts));
     }
 
-    public function getCustomerNameAttribute()
+    public function getCustomerNameAttribute(): string
     {
-        return $this->customer->name ?? $this->guest_name;
+        // SỬA ĐỔI: Logic lấy tên khách hàng
+        return ($this->customer_id && $this->relationLoaded('customer') && $this->customer)
+            ? ($this->customer->full_name ?? '')
+            : ($this->guest_name ?? '');
+    }
+
+    public function getShippingFeeAttribute(): float
+    {
+        // SỬA ĐỔI: Thêm kiểm tra đã load relationship chưa
+        if (!$this->relationLoaded('deliveryService')) {
+            $this->load('deliveryService');
+        }
+        return $this->deliveryService->shipping_fee ?? 0;
+    }
+
+    //======================================================================
+    // NEW FUNCTIONALITY: CANCELLATION LOGIC
+    //======================================================================
+
+    public function isCancellable(): bool
+    {
+        return in_array($this->status, [
+            self::STATUS_PENDING,
+            self::STATUS_PROCESSING,
+        ]);
     }
 }
