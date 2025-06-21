@@ -74,7 +74,8 @@
                                 <div class="d-grid gap-2">
                                     <a href="{{ route('cart.index') }}" class="btn btn-primary">Xem giỏ hàng chi
                                         tiết</a>
-                                    <a href="#" class="btn btn-warning">Tiến hành thanh toán</a>
+                                    <a href="{{ route('checkout.index') }}" class="btn btn-warning">Tiến hành thanh
+                                        toán</a>
                                 </div>
                             </div>
                         </div>
