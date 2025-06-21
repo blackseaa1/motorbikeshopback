@@ -110,7 +110,7 @@
             // Nếu giỏ hàng trống, hiển thị thông báo
             itemsContainer.innerHTML = '<div class="alert alert-info">Giỏ hàng của bạn đang trống. <a href="/products" class="alert-link">Tiếp tục mua sắm</a>.</div>';
         }
-
+        
         // === SỬA ĐỔI QUAN TRỌNG: LUÔN CẬP NHẬT KHU VỰC SUMMARY ===
         // Lấy các element trong tóm tắt đơn hàng
         const subtotalEl = document.getElementById('cart-subtotal');
@@ -130,7 +130,7 @@
         if (shippingFeeEl) shippingFeeEl.textContent = `${shippingFee.toLocaleString('vi-VN')} ₫`;
         if (discountEl) discountEl.textContent = `-${discountAmount.toLocaleString('vi-VN')} ₫`;
         if (grandTotalEl) grandTotalEl.textContent = `${grandTotal.toLocaleString('vi-VN')} ₫`;
-
+        
         // Ẩn dòng giảm giá nếu không có giảm giá
         if (discountRowEl) discountRowEl.classList.toggle('d-none', discountAmount <= 0);
     }
