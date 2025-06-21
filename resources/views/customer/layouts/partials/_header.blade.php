@@ -39,6 +39,9 @@
                     <li class="nav-item">
                         <a class="nav-link" href="{{ route('contact.index') }}">Liên hệ</a>
                     </li>
+                    <li class="nav-item">
+        <a class="nav-link" href="{{ route('guest.order.lookup') }}">Tra cứu đơn hàng</a>
+    </li>
                     {{-- === NEW LINKS END === --}}
                     <li class="nav-item dropdown">
                         <a class="nav-link position-relative" href="#" id="cartDropdown" role="button"
@@ -91,8 +94,9 @@
                             @auth('customer')
                                 <li><a class="dropdown-item" href="{{ route('account.profile') }}">Tài khoản của tôi</a>
                                 </li>
-                                <li><a class="dropdown-item" href="#">Đơn hàng của tôi</a></li>
+                                <li><a class="dropdown-item" href="{{ route('account.orders.index') }}">Đơn hàng của tôi</a></li>
                                 <li>
+                                    
                                     <hr class="dropdown-divider">
                                 </li>
                                 <li>

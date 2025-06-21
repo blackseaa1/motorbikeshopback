@@ -3,7 +3,7 @@
         <h5 class="card-header">Tìm kiếm</h5>
         <div class="card-body">
             {{-- Form tìm kiếm trỏ đến route 'blog' với method GET --}}
-            <form action="{{ route('blog') }}" method="GET">
+            <form action="{{ route('blog.index') }}" method="GET">
                 <div class="input-group">
                     <input type="text" 
                            class="form-control" 

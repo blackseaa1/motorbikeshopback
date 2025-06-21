@@ -15,7 +15,7 @@
             class="list-group-item list-group-item-action {{ request()->routeIs('account.profile') ? 'active' : '' }}">
             <i class="bi bi-person me-2"></i> Hồ sơ của tôi
         </a>
-        <a href="{{ route('account.orders') }}"
+        <a href="{{ route('account.orders.index') }}"
             class="list-group-item list-group-item-action {{ request()->routeIs('account.orders*') ? 'active' : '' }}">
             <i class="bi bi-box me-2"></i> Đơn hàng của tôi
         </a>

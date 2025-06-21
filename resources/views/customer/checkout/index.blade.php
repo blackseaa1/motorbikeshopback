@@ -14,7 +14,7 @@
                         {{-- Dành cho người dùng đã đăng nhập --}}
                         <div class="mb-3">
                             <label for="shipping_address_id" class="form-label">Chọn địa chỉ đã lưu</label>
-                            <select class="form-select" id="shipping_address_id" name="shipping_address_id">
+                            <select class="form-select" id="shipping_address_id" name="shipping_address_id" required>
                                 @forelse($customerAddresses as $address)
                                     <option value="{{ $address->id }}" {{ $address->is_default ? 'selected' : '' }}>
                                         {{ $address->full_name }} - {{ Str::limit($address->address_line, 40) }}
@@ -144,7 +144,8 @@
                             <div class="mb-3">
                                 <label for="delivery_service_id" class="form-label fw-bold">Đơn vị vận chuyển</label>
                                 <select class="selectpicker form-control" id="delivery_service_id"
-                                    name="delivery_service_id" data-live-search="true" title="Chọn đơn vị vận chuyển...">
+                                    name="delivery_service_id" data-live-search="true" title="Chọn đơn vị vận chuyển..."
+                                    required>
                                     @if($deliveryServices->isNotEmpty())
                                         @foreach($deliveryServices as $service)
                                             <option value="{{ $service->id }}"
@@ -159,7 +160,8 @@
                             <hr>
                             {{-- Mã giảm giá --}}
                             <div class="mb-4">
-                                <label for="promotion_code" class="form-label fw-bold">Mã giảm giá</label>
+                                <label for="promotion_code" class="form-label fw-bold">Mã giảm giá <span>"Vui lòng bấm áp
+                                        dụng để được sử dụng"</span></label>
                                 <div class="input-group">
                                     <input type="text" class="form-control" id="promotion_code" placeholder="Nhập mã..."
                                         value="{{ $cartDetails['promotion_info']['code'] ?? '' }}">

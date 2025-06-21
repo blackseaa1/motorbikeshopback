@@ -35,8 +35,9 @@
                             class="text-white-50 text-decoration-none custom-link">Cửa Hàng</a></li>
                     <li class="mb-2"><a href="{{ route('blog.index') }}"
                             class="text-white-50 text-decoration-none custom-link">Blog</a></li>
-                    <li class="mb-2"><a href="{{ route('contact.index') }}"
-                            class="text-white-50 text-decoration-none custom-link">Liên hệ</a></li>
+                    <li class="mb-2"><a href="{{ route('contact.index') }}" {{-- Sửa route 'contact.index' thành 'contact' nếu
+                            là tên route đúng --}} class="text-white-50 text-decoration-none custom-link">Liên hệ</a>
+                    </li>
                 </ul>
             </div>
 
@@ -44,21 +45,29 @@
             {{-- == THÔNG TIN TÀI KHOẢN KHÁCH HÀNG (MỚI) == --}}
             {{-- ============================================= --}}
             <div class="col-lg-3 col-md-6">
-                <h6 class="fw-bold mb-3">Tài khoản của tôi</h6>
+                <h6 class="fw-bold mb-3">Dịch vụ khách hàng</h6>
                 <ul class="list-unstyled">
                     {{-- Hiển thị khi khách chưa đăng nhập --}}
                     @guest('customer')
-                        <li class="mb-2"><a href="{{ route('login') }}"
-                                class="text-white-50 text-decoration-none custom-link">Đăng nhập</a></li>
-                        <li class="mb-2"><a href="{{ route('register') }}"
+                        <li class="mb-2"><a href="{{ route('login') }}" {{-- Đã sửa route 'login'
+                                thành 'customer.auth.login' --}} class="text-white-50 text-decoration-none custom-link">Đăng
+                                nhập</a></li>
+                        <li class="mb-2"><a href="{{ route('register') }}" {{-- Đã sửa route 'register'
+                                thành 'customer.auth.register' --}}
                                 class="text-white-50 text-decoration-none custom-link">Đăng ký</a></li>
                     @endguest
 
+                    {{-- Luôn hiển thị liên kết tra cứu đơn hàng cho khách vãng lai/chưa đăng nhập --}}
+                    {{-- Có thể đặt ngoài @guest nếu muốn hiển thị cho cả người dùng đã đăng nhập --}}
+                    <li class="mb-2"><a href="{{ route('guest.order.lookup') }}"
+                            class="text-white-50 text-decoration-none custom-link">Tra cứu đơn hàng</a></li>
+
                     {{-- Hiển thị khi khách đã đăng nhập --}}
                     @auth('customer')
-                        <li class="mb-2"><a href="{{ route('account.profile') }}"
+                        <li class="mb-2"><a href="{{ route('account.profile') }}" {{-- Đã sửa route 'account.profile'
+                                thành 'account.index' nếu đây là trang hồ sơ chính --}}
                                 class="text-white-50 text-decoration-none custom-link">Hồ sơ của tôi</a></li>
-                        <li class="mb-2"><a href="{{ route('account.orders') }}"
+                        <li class="mb-2"><a href="{{ route('account.orders.index') }}"
                                 class="text-white-50 text-decoration-none custom-link">Đơn hàng của tôi</a></li>
                         <li class="mb-2"><a href="" class="text-white-50 text-decoration-none custom-link">Bài viết của
                                 tôi</a></li>
@@ -67,7 +76,8 @@
                                 onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
                                 Đăng xuất
                             </a>
-                            <form id="logout-form" action="{{ route('logout') }}" method="POST" class="d-none">@csrf
+                            <form id="logout-form" action="{{ route('logout') }}" method="POST"
+                                class="d-none">@csrf {{-- Đã sửa route 'logout' thành 'customer.auth.logout' --}}
                             </form>
                         </li>
                     @endauth

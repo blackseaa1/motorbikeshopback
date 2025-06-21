@@ -33,15 +33,17 @@ class AccountController extends Controller
 
     /**
      * Hiển thị chi tiết một đơn hàng.
-     */
-    public function showOrder(Order $order)
+     */ public function showOrder(Order $order)
     {
-        // Đảm bảo khách hàng chỉ có thể xem đơn hàng của chính mình
-        abort_if($order->customer_id !== Auth::guard('customer')->id(), 403);
+        // Đảm bảo đơn hàng thuộc về người dùng đang đăng nhập
+        if ($order->customer_id !== Auth::guard('customer')->id()) {
+            abort(403); // Hoặc chuyển hướng với lỗi
+        }
 
-        $customer = Auth::guard('customer')->user();
-        $order->load('items.product'); // Tải thông tin sản phẩm liên quan
-        return view('customer.account.orders_show', compact('customer', 'order'));
+        // Tải các quan hệ cần thiết cho việc tính toán accessor và hiển thị
+        $order->load(['items.product.images', 'deliveryService', 'promotion', 'province', 'district', 'ward']);
+
+        return view('customer.account.orders_show', compact('order'));
     }
 
     /**

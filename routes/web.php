@@ -39,14 +39,15 @@ use App\Http\Controllers\Api\GeographyApiController;
 
 // --- CUSTOMER CONTROLLERS ---
 use App\Http\Controllers\Customer\AccountController;
+use App\Http\Controllers\Customer\AddressController;
 use App\Http\Controllers\Customer\AuthController;
 use App\Http\Controllers\Customer\BlogController as CustomerPublicBlogController;
 use App\Http\Controllers\Customer\CartController;
+use App\Http\Controllers\Customer\CheckoutController;
 use App\Http\Controllers\Customer\HomeController;
 use App\Http\Controllers\Customer\ReviewController as CustomerReviewController;
 use App\Http\Controllers\Customer\ShopController as CustomerShopController;
-use App\Http\Controllers\Customer\AddressController;
-use App\Http\Controllers\Customer\CheckoutController;
+
 
 /*
 |--------------------------------------------------------------------------
@@ -58,84 +59,98 @@ use App\Http\Controllers\Customer\CheckoutController;
 | php artisan route:clear
 |
 */
-// =========================================================================
-// == CUSTOMER FACING ROUTES (FRONT-END) ==
-// =========================================================================
 
+// =========================================================================
+// == CUSTOMER FACING ROUTES (FRONT-END)
+// =========================================================================
 Route::middleware(['web'])->group(function () {
 
-    // --- CÁC TRANG CHUNG ---
-    Route::get('/', [App\Http\Controllers\Customer\HomeController::class, 'index'])->name('home');
-    Route::get('/products', [App\Http\Controllers\Customer\ShopController::class, 'index'])->name('products.index');
-    Route::get('/products/{product}', [App\Http\Controllers\Customer\ShopController::class, 'show'])->name('products.show');
-    Route::get('/categories/{category}', [App\Http\Controllers\Customer\ShopController::class, 'index'])->name('categories.show');
-    Route::get('/blog', [App\Http\Controllers\Customer\BlogController::class, 'index'])->name('blog.index');
-    Route::get('/blog/{blogPost}', [App\Http\Controllers\Customer\BlogController::class, 'show'])->name('blog.show');
-    Route::get('/contact', [App\Http\Controllers\Customer\HomeController::class, 'contact'])->name('contact.index');
+    // --- CÁC TRANG CÔNG KHAI & CHUNG ---
+    Route::get('/', [HomeController::class, 'index'])->name('home');
+    Route::get('/contact', [HomeController::class, 'contact'])->name('contact.index');
 
-    // --- XÁC THỰC (Đăng nhập, Đăng ký) ---
-    Route::controller(App\Http\Controllers\Customer\AuthController::class)->group(function () {
+    Route::controller(CustomerShopController::class)->group(function () {
+        Route::get('/products', 'index')->name('products.index');
+        Route::get('/products/{product}', 'show')->name('products.show');
+        Route::get('/categories/{category}', 'index')->name('categories.show');
+    });
+
+    Route::controller(CustomerPublicBlogController::class)->prefix('blog')->name('blog.')->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/{blogPost}', 'show')->name('show');
+    });
+
+    // --- TRA CỨU ĐƠN HÀNG CỦA KHÁCH VÃNG LAI ---
+    Route::controller(CheckoutController::class)->group(function () {
+        Route::get('/guest/order-lookup', 'showOrderLookupForm')->name('guest.order.lookup');
+        Route::post('/guest/order-lookup', 'lookupGuestOrder')->name('guest.order.lookup.post');
+        Route::get('/guest/orders/{order}', 'showGuestOrder')->name('guest.order.show');
+        Route::post('/guest/orders/{order}/cancel', 'cancelOrder')->name('guest.order.cancel');
+    });
+
+
+    // --- XÁC THỰC KHÁCH HÀNG (ĐĂNG NHẬP, ĐĂNG KÝ, ĐĂNG XUẤT) ---
+    Route::controller(AuthController::class)->group(function () {
         Route::middleware('guest:customer')->group(function () {
             Route::get('login', 'showLoginForm')->name('login');
             Route::post('login', 'login');
             Route::get('register', 'showRegisterForm')->name('register');
             Route::post('register', 'register');
         });
-        // Đăng xuất cần phải đăng nhập
         Route::post('logout', 'logout')->name('logout')->middleware('auth:customer');
     });
 
-    // --- GIỎ HÀNG & THANH TOÁN (Đã hoàn nguyên về cấu trúc cũ) ---
-    Route::get('/cart', [App\Http\Controllers\Customer\CartController::class, 'index'])->name('cart.index');
-    Route::get('/checkout', [App\Http\Controllers\Customer\CheckoutController::class, 'index'])->name('checkout.index');
-    // Hoàn nguyên đường dẫn xử lý đặt hàng
-    Route::post('/place-order', [App\Http\Controllers\Customer\CheckoutController::class, 'placeOrder'])->name('checkout.placeOrder');
+    // --- GIỎ HÀNG & THANH TOÁN ---
+    Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
+    Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
+    Route::post('/place-order', [CheckoutController::class, 'placeOrder'])->name('checkout.placeOrder');
 
-    // --- API CHO GIỎ HÀNG (Đã hoàn nguyên về cấu trúc cũ) ---
-    Route::prefix('api/cart')->name('api.cart.')->group(function () {
-        Route::post('/add', [App\Http\Controllers\Customer\CartController::class, 'add'])->name('add');
-        Route::post('/update', [App\Http\Controllers\Customer\CartController::class, 'update'])->name('update');
-        Route::post('/remove', [App\Http\Controllers\Customer\CartController::class, 'remove'])->name('remove');
-        // Hoàn nguyên các route API cũ
-        Route::get('/', [App\Http\Controllers\Customer\CartController::class, 'getCartData'])->name('data');
-        Route::post('/update-summary', [App\Http\Controllers\Customer\CartController::class, 'updateSummary'])->name('updateSummary');
+    // --- API NỘI BỘ CHO GIỎ HÀNG (Sử dụng session, csrf...) ---
+    Route::controller(CartController::class)->prefix('api/cart')->name('api.cart.')->group(function () {
+        Route::get('/', 'getCartData')->name('data');
+        Route::post('/add', 'add')->name('add');
+        Route::post('/update', 'update')->name('update');
+        Route::post('/remove', 'remove')->name('remove');
+        Route::post('/update-summary', 'updateSummary')->name('updateSummary');
     });
 
-    /**
-     * ===============================================================
-     * == CÁC ROUTE CHỈ DÀNH CHO KHÁCH HÀNG ĐÃ ĐĂNG NHẬP ==
-     * ===============================================================
-     */
+
+    // --- CÁC ROUTE YÊU CẦU KHÁCH HÀNG ĐĂNG NHẬP ---
     Route::middleware(['auth:customer'])->group(function () {
-        // Route trang tài khoản
+        // --- Quản lý tài khoản ---
         Route::prefix('account')->name('account.')->group(function () {
-            Route::get('/', [App\Http\Controllers\Customer\AccountController::class, 'profile'])->name('profile');
-            // Hoàn nguyên tên route
-            Route::get('/orders', [App\Http\Controllers\Customer\AccountController::class, 'orders'])->name('orders');
-            Route::get('/orders/{order}', [App\Http\Controllers\Customer\AccountController::class, 'showOrder'])->name('orders.show');
-            Route::resource('addresses', App\Http\Controllers\Customer\AddressController::class)->except(['show']);
-            Route::post('addresses/{address}/set-default', [App\Http\Controllers\Customer\AddressController::class, 'setDefault'])->name('addresses.setDefault');
-            Route::post('/update-profile', [App\Http\Controllers\Customer\AccountController::class, 'updateInfo'])->name('updateProfile');
-            Route::post('/update-password', [App\Http\Controllers\Customer\AccountController::class, 'updatePassword'])->name('updatePassword');
-            Route::post('/update-avatar', [App\Http\Controllers\Customer\AccountController::class, 'updateAvatar'])->name('updateAvatar');
+            Route::get('/', [AccountController::class, 'profile'])->name('profile');
+            Route::post('/update-profile', [AccountController::class, 'updateInfo'])->name('updateProfile');
+            Route::post('/update-password', [AccountController::class, 'updatePassword'])->name('updatePassword');
+            Route::post('/update-avatar', [AccountController::class, 'updateAvatar'])->name('updateAvatar');
+
+            // Đơn hàng
+            Route::get('/orders', [AccountController::class, 'orders'])->name('orders.index');
+            Route::get('/orders/{order}', [AccountController::class, 'showOrder'])->name('orders.show');
+            Route::post('/orders/{order}/cancel', [CheckoutController::class, 'cancelOrder'])->name('orders.cancel');
+
+            // Sổ địa chỉ
+            Route::resource('addresses', AddressController::class)->except(['show']);
+            Route::post('addresses/{address}/set-default', [AddressController::class, 'setDefault'])->name('addresses.setDefault');
         });
 
-        // Route gửi đánh giá sản phẩm
-        Route::post('/products/{product}/reviews', [App\Http\Controllers\Customer\ReviewController::class, 'store'])->name('reviews.store');
+        // --- Gửi đánh giá sản phẩm ---
+        Route::post('/products/{product}/reviews', [CustomerReviewController::class, 'store'])->name('reviews.store');
 
-        // Route bắt buộc đổi mật khẩu
-        Route::get('/force-password-change', [App\Http\Controllers\Customer\AuthController::class, 'showForcePasswordChangeForm'])->name('customer.password.force_change');
-        Route::post('/force-password-change', [App\Http\Controllers\Customer\AuthController::class, 'handleForcePasswordChange'])->name('customer.password.handle_force_change');
+        // --- Bắt buộc đổi mật khẩu ---
+        Route::get('/force-password-change', [AuthController::class, 'showForcePasswordChangeForm'])->name('customer.password.force_change');
+        Route::post('/force-password-change', [AuthController::class, 'handleForcePasswordChange'])->name('customer.password.handle_force_change');
     });
 });
 
 
 // =========================================================================
-// == ADMIN ROUTES ==
+// == ADMIN ROUTES
 // =========================================================================
 Route::prefix('admin')->name('admin.')->group(function () {
 
-    // --- Admin Authentication ---
+    // --- XÁC THỰC ADMIN ---
+    // Route cho admin đã đăng nhập (logout, đổi mật khẩu bắt buộc)
     Route::middleware('auth:admin')->group(function () {
         Route::controller(AdminLoginController::class)->group(function () {
             Route::get('/force-password-change', 'showForcePasswordChangeForm')->name('auth.showForcePasswordChangeForm');
@@ -145,7 +160,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/pending-authorization', [PendingAuthorizationController::class, 'show'])->name('pending_authorization');
     });
 
-    // Áp dụng middleware kép để chặn Customer đã đăng nhập
+    // Route cho khách (chưa đăng nhập admin)
     Route::middleware(['guest:admin', 'guest.customer'])->group(function () {
         Route::controller(AdminLoginController::class)->group(function () {
             Route::get('login', 'showLoginForm')->name('auth.login');
@@ -157,31 +172,35 @@ Route::prefix('admin')->name('admin.')->group(function () {
         });
     });
 
-    // --- Main Admin Panel Routes ---
+    // --- BẢNG ĐIỀU KHIỂN CHÍNH CỦA ADMIN ---
+    // Yêu cầu: Đã đăng nhập, đã đổi mật khẩu lần đầu, có vai trò hợp lệ
     Route::middleware(['auth:admin', 'password.changed', 'admin.hasrole'])->group(function () {
         Route::get('/', fn() => redirect()->route('admin.dashboard'));
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-        // --- Profile Management ---
-        Route::controller(AdminProfileController::class)->prefix('profile')->name('profile.')->group(function () {
-            Route::get('/', 'showProfileForm')->name('show');
-            Route::post('/update-info', 'updateInfo')->name('updateInfo');
-            Route::post('/change-password', 'changePassword')->name('changePassword');
-            Route::post('/update-avatar', 'updateAvatar')->name('updateAvatar');
-        });
-
-        // --- Module: Sales Management ---
-        Route::prefix('sales')->name('sales.')->group(function () {
-            Route::controller(OrderController::class)->prefix('orders')->name('orders.')->group(function () {
-                Route::get('/', 'index')->name('index');
-                Route::get('/{order}', 'show')->name('show');
-                Route::post('/{order}/update-status', 'updateStatus')->name('updateStatus');
+        // --- Module: Quản lý Nội dung (Content Management) ---
+        Route::prefix('content')->name('content.')->group(function () {
+            // Blogs
+            Route::controller(BlogController::class)->prefix('blogs')->name('blogs.')->group(function () {
+                Route::get('/', 'index')->name('index')->middleware('can:viewAny,App\Models\BlogPost');
+                Route::post('/', 'store')->name('store')->middleware('can:create,App\Models\BlogPost');
+                Route::get('/{blog}', 'show')->name('show')->withTrashed()->middleware('can:view,blog');
+                Route::post('/{blog}', 'update')->name('update')->withTrashed()->middleware('can:update,blog');
+                Route::delete('/{blog}', 'destroy')->name('destroy')->middleware('can:delete,blog');
+                Route::post('/{blog}/toggle-status', 'toggleStatus')->name('toggleStatus')->withTrashed()->middleware('can:toggleStatus,blog');
+                Route::post('/{blog}/restore', 'restore')->name('restore')->withTrashed()->middleware('can:restore,blog');
+                Route::delete('/{blog}/force-delete', 'forceDelete')->name('forceDelete')->withTrashed()->middleware('can:forceDelete,blog');
             });
-            Route::resource('promotions', PromotionController::class)->except(['create', 'edit']);
-            Route::post('promotions/{promotion}/toggle-status', [PromotionController::class, 'toggleStatus'])->name('promotions.toggleStatus');
+
+            // Reviews
+            Route::controller(ReviewController::class)->prefix('reviews')->name('reviews.')->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::delete('/{review}', 'destroy')->name('destroy');
+                Route::post('/{review}/update-status', 'updateStatus')->name('updateStatus');
+            });
         });
 
-        // --- Module: Product Management ---
+        // --- Module: Quản lý Sản phẩm (Product Management) ---
         Route::prefix('product-management')->name('productManagement.')->group(function () {
             // Products
             Route::controller(ProductController::class)->prefix('products')->name('products.')->group(function () {
@@ -208,45 +227,29 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('inventory', [InventoryController::class, 'index'])->name('inventory.index');
         });
 
-        // --- Module: Content Management ---
-        Route::prefix('content')->name('content.')->group(function () {
-            // Blogs
-            Route::controller(BlogController::class)->prefix('blogs')->name('blogs.')->group(function () {
-                Route::get('/', 'index')->name('index')->middleware('can:viewAny,App\Models\BlogPost');
-                Route::post('/', 'store')->name('store')->middleware('can:create,App\Models\BlogPost');
-                Route::get('/{blog}', 'show')->name('show')->withTrashed()->middleware('can:view,blog');
-                Route::post('/{blog}', 'update')->name('update')->withTrashed()->middleware('can:update,blog');
-                Route::delete('/{blog}', 'destroy')->name('destroy')->middleware('can:delete,blog');
-                Route::post('/{blog}/toggle-status', 'toggleStatus')->name('toggleStatus')->withTrashed()->middleware('can:toggleStatus,blog');
-                Route::post('/{blog}/restore', 'restore')->name('restore')->withTrashed()->middleware('can:restore,blog');
-                Route::delete('/{blog}/force-delete', 'forceDelete')->name('forceDelete')->withTrashed()->middleware('can:forceDelete,blog');
-            });
+        // --- Module: Quản lý Hồ sơ cá nhân (Profile Management) ---
+        Route::controller(AdminProfileController::class)->prefix('profile')->name('profile.')->group(function () {
+            Route::get('/', 'showProfileForm')->name('show');
+            Route::post('/update-info', 'updateInfo')->name('updateInfo');
+            Route::post('/change-password', 'changePassword')->name('changePassword');
+            Route::post('/update-avatar', 'updateAvatar')->name('updateAvatar');
+        });
 
-            // Reviews
-            Route::controller(ReviewController::class)->prefix('reviews')->name('reviews.')->group(function () {
+        // --- Module: Báo cáo (Reports) ---
+        Route::get('reports', [ReportsController::class, 'index'])->name('reports');
+
+        // --- Module: Quản lý Bán hàng (Sales Management) ---
+        Route::prefix('sales')->name('sales.')->group(function () {
+            Route::controller(OrderController::class)->prefix('orders')->name('orders.')->group(function () {
                 Route::get('/', 'index')->name('index');
-                Route::delete('/{review}', 'destroy')->name('destroy');
-                Route::post('/{review}/update-status', 'updateStatus')->name('updateStatus');
+                Route::get('/{order}', 'show')->name('show');
+                Route::post('/{order}/update-status', 'updateStatus')->name('updateStatus');
             });
+            Route::resource('promotions', PromotionController::class)->except(['create', 'edit']);
+            Route::post('promotions/{promotion}/toggle-status', [PromotionController::class, 'toggleStatus'])->name('promotions.toggleStatus');
         });
 
-        // --- Module: User Management ---
-        Route::prefix('user-management')->name('userManagement.')->group(function () {
-            Route::resource('staff', StaffAccountController::class);
-            Route::controller(StaffAccountController::class)->prefix('staff')->name('staff.')->group(function () {
-                Route::post('/{staff}/toggle-status', 'toggleStatus')->name('toggleStatus')->withTrashed();
-                Route::post('/{staff}/reset-password', 'resetPassword')->name('resetPassword')->withTrashed();
-            });
-            Route::resource('customers', CustomerAccountController::class)->except(['create', 'edit', 'show']);
-            Route::controller(CustomerAccountController::class)->prefix('customers')->name('customers.')->group(function () {
-                Route::post('/{customer}/toggle-status', 'toggleStatus')->name('toggleStatus')->withTrashed();
-                Route::post('/{customer}/reset-password', 'resetPassword')->name('resetPassword')->withTrashed();
-                Route::post('/{customer}/restore', 'restore')->name('restore')->withTrashed();
-                Route::delete('/{customer}/force-delete', 'forceDelete')->name('forceDelete')->withTrashed();
-            });
-        });
-
-        // --- Module: System Configuration & Reports ---
+        // --- Module: Cấu hình Hệ thống (System Configuration) ---
         Route::prefix('system')->name('system.')->group(function () {
             Route::resource('delivery-services', DeliveryServiceController::class)->except(['create', 'edit', 'show'])->names('deliveryServices');
             Route::post('delivery-services/{delivery_service}/toggle-status', [DeliveryServiceController::class, 'toggleStatus'])->name('deliveryServices.toggleStatus');
@@ -263,26 +266,46 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('settings', fn() => view('admin.system.settings'))->name('settings');
         });
 
-        // Reports
-        Route::get('reports', [ReportsController::class, 'index'])->name('reports');
+        // --- Module: Quản lý Người dùng (User Management) ---
+        Route::prefix('user-management')->name('userManagement.')->group(function () {
+            // Staff Accounts
+            Route::resource('staff', StaffAccountController::class);
+            Route::controller(StaffAccountController::class)->prefix('staff')->name('staff.')->group(function () {
+                Route::post('/{staff}/toggle-status', 'toggleStatus')->name('toggleStatus')->withTrashed();
+                Route::post('/{staff}/reset-password', 'resetPassword')->name('resetPassword')->withTrashed();
+            });
+            // Customer Accounts
+            Route::resource('customers', CustomerAccountController::class)->except(['create', 'edit', 'show']);
+            Route::controller(CustomerAccountController::class)->prefix('customers')->name('customers.')->group(function () {
+                Route::post('/{customer}/toggle-status', 'toggleStatus')->name('toggleStatus')->withTrashed();
+                Route::post('/{customer}/reset-password', 'resetPassword')->name('resetPassword')->withTrashed();
+                Route::post('/{customer}/restore', 'restore')->name('restore')->withTrashed();
+                Route::delete('/{customer}/force-delete', 'forceDelete')->name('forceDelete')->withTrashed();
+            });
+        });
     });
 });
 
+
 // =========================================================================
-// == API ROUTES ==
+// == GENERAL API ROUTES
 // =========================================================================
 Route::prefix('api')->name('api.')->group(function () {
+    // --- GEOGRAPHY API ---
     Route::get('/provinces/{province}/districts', [GeographyApiController::class, 'getDistrictsByProvince'])->name('provinces.districts');
     Route::get('/districts/{district}/wards', [GeographyApiController::class, 'getWardsByDistrict'])->name('districts.wards');
+
+    // --- CUSTOMER API ---
+    Route::prefix('customer')->name('customer.')->group(function () {
+        // API để lấy danh sách sản phẩm (có lọc, phân trang) cho front-end
+        Route::get('/products', [CustomerShopController::class, 'getProductsApi'])->name('products.index');
+    });
+
+    // --- ADMIN API ---
     // API lấy số thông báo chưa đọc
     Route::get('/notifications/unread-count', function () {
         // return response()->json([
         // 'count' => Auth::guard('admin')->check() ? Auth::guard('admin')->user()->unreadNotifications()->count() : 0
         // ]);
     })->middleware('auth:admin')->name('notifications.unreadCount');
-    // --- CUSTOMER API ---
-    Route::prefix('customer')->name('customer.')->group(function () {
-        // API để lấy danh sách sản phẩm (có lọc, phân trang)
-        Route::get('/products', [CustomerShopController::class, 'getProductsApi'])->name('products.index');
-    });
 });
