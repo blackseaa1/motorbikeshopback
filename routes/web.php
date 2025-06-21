@@ -238,12 +238,19 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // --- Module: Báo cáo (Reports) ---
         Route::get('reports', [ReportsController::class, 'index'])->name('reports');
 
-        // --- Module: Quản lý Bán hàng (Sales Management) ---
+        // Sales Management
         Route::prefix('sales')->name('sales.')->group(function () {
             Route::controller(OrderController::class)->prefix('orders')->name('orders.')->group(function () {
                 Route::get('/', 'index')->name('index');
+                Route::get('/create', 'create')->name('create');
+                Route::post('/', 'store')->name('store');
+
                 Route::get('/{order}', 'show')->name('show');
+                // SỬA ĐỔI: Thêm route UPDATE
+                Route::put('/{order}', 'update')->name('update'); // Thêm dòng này
+
                 Route::post('/{order}/update-status', 'updateStatus')->name('updateStatus');
+                Route::delete('/{order}', 'destroy')->name('destroy'); // Đảm bảo destroy cũng đã có
             });
             Route::resource('promotions', PromotionController::class)->except(['create', 'edit']);
             Route::post('promotions/{promotion}/toggle-status', [PromotionController::class, 'toggleStatus'])->name('promotions.toggleStatus');

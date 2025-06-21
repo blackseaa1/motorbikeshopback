@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Number;
+use App\Models\Admin; // SỬA ĐỔI: Thêm import Admin model
 
 class Order extends Model
 {
@@ -29,10 +30,6 @@ class Order extends Model
         'guest_phone',
         'promotion_id',
         'total_price',
-        // BỎ subtotal, shipping_fee, discount_amount khỏi $fillable vì chúng sẽ được tính toán động
-        // 'subtotal',
-        // 'shipping_fee',
-        // 'discount_amount',
         'status',
         'province_id',
         'district_id',
@@ -45,10 +42,6 @@ class Order extends Model
 
     protected $casts = [
         'total_price' => 'decimal:2',
-        // BỎ cast cho subtotal, shipping_fee, discount_amount
-        // 'subtotal' => 'decimal:2',
-        // 'shipping_fee' => 'decimal:2',
-        // 'discount_amount' => 'decimal:2',
     ];
 
     protected $appends = [
@@ -57,9 +50,9 @@ class Order extends Model
         'formatted_total_price',
         'customer_name',
         'full_address',
-        'subtotal',          // SỬA ĐỔI: Giữ trong $appends để Accessor hoạt động
-        'shipping_fee',      // SỬA ĐỔI: Giữ trong $appends để Accessor hoạt động
-        'discount_amount',   // SỬA ĐỔI: Giữ trong $appends để Accessor hoạt động
+        'subtotal',
+        'shipping_fee',
+        'discount_amount',
     ];
 
     //======================================================================
@@ -99,6 +92,14 @@ class Order extends Model
     public function ward()
     {
         return $this->belongsTo(Ward::class, 'ward_id');
+    }
+
+    /**
+     * SỬA ĐỔI: Thêm mối quan hệ với Admin, người đã tạo hoặc xử lý đơn hàng.
+     */
+    public function createdByAdmin()
+    {
+        return $this->belongsTo(Admin::class, 'created_by_admin_id');
     }
 
     //======================================================================
@@ -159,28 +160,19 @@ class Order extends Model
             $addressParts[] = $this->province->name;
         }
 
-        return implode(', ', $addressParts);
+        return implode(', ', array_filter($addressParts));
     }
 
-    /**
-     * SỬA ĐỔI: Accessor để tính toán lại Subtotal.
-     * Yêu cầu eager load items.product.
-     */
     public function getSubtotalAttribute(): float
     {
-        // Đảm bảo quan hệ `items` và `product` được tải
         if (!$this->relationLoaded('items') || !$this->items->every(fn($item) => $item->relationLoaded('product'))) {
             $this->load('items.product');
         }
         return $this->items->sum(function ($item) {
-            return $item->quantity * ($item->price ?? 0); // Sử dụng giá tại thời điểm mua (price của order_item)
+            return $item->quantity * ($item->price ?? 0);
         });
     }
 
-    /**
-     * SỬA ĐỔI: Accessor để tính toán lại Shipping Fee.
-     * Yêu cầu eager load deliveryService.
-     */
     public function getShippingFeeAttribute(): float
     {
         if (!$this->relationLoaded('deliveryService')) {
@@ -189,17 +181,13 @@ class Order extends Model
         return $this->deliveryService->shipping_fee ?? 0;
     }
 
-    /**
-     * SỬA ĐỔI: Accessor để tính toán lại Discount Amount.
-     * Yêu cầu eager load promotion.
-     */
     public function getDiscountAmountAttribute(): float
     {
         if (!$this->relationLoaded('promotion')) {
             $this->load('promotion');
         }
         $promotion = $this->promotion;
-        $subtotal = $this->subtotal; // Sử dụng accessor subtotal để tính toán lại
+        $subtotal = $this->subtotal;
         if ($promotion && $promotion->isEffective()) {
             return ($subtotal * $promotion->discount_percentage) / 100;
         }

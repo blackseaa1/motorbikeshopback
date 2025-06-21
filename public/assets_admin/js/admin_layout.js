@@ -453,6 +453,11 @@
         if (typeof initializeBlogsPage === 'function' && document.getElementById('adminBlogsPage')) {
             initializeBlogsPage();
         }
+        if (typeof initializeOrderManager === 'function' && (document.getElementById('adminOrdersPage') || document.getElementById('createOrderModal'))) {
+            // Truyền biến lỗi validation và form marker nếu có để mở lại modal
+            initializeOrderManager(window.orderValidationErrors || false, window.orderFormMarker || null);
+        }
+
         if (typeof initializePromotionsPage === 'function' && document.getElementById('adminPromotionsPage')) {
             initializePromotionsPage();
         }
