@@ -1,4 +1,4 @@
-<header>
+<header class="sticky-top bg-light shadow-sm">
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
         <div class="container">
             <a class="navbar-brand" href="{{ route('home') }}">
@@ -41,16 +41,53 @@
                     </li>
                     {{-- === NEW LINKS END === --}}
 
+
+
                     <li class="nav-item dropdown">
-                        {{-- Logic giỏ hàng --}}
-                        <a class="nav-link dropdown-toggle" href="#">
+                        <a class="nav-link position-relative" href="#" id="cartDropdown" role="button"
+                            data-bs-toggle="dropdown" aria-expanded="false">
                             <i class="bi bi-cart3"></i>
                             <span id="header-cart-count"
-                                class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                                3 {{-- Số lượng sản phẩm trong giỏ hàng sẽ được cập nhật động sau --}}
+                                class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+                                style="font-size: 0.6em;">
+                                {{-- Số lượng sẽ được JS chèn vào đây --}}
                             </span>
                         </a>
+                        <div class="dropdown-menu dropdown-menu-end p-0 shadow" aria-labelledby="cartDropdown"
+                            style="width: 380px;">
+                            <div class="p-3">
+                                <h6 class="mb-0">Giỏ hàng</h6>
+                            </div>
+                            <div class="dropdown-divider m-0"></div>
+
+                            {{-- Danh sách sản phẩm sẽ được JS chèn vào đây --}}
+                            <div id="header-cart-items-container" style="max-height: 300px; overflow-y: auto;">
+                                <div class="p-4 text-center text-muted">Giỏ hàng của bạn đang trống</div>
+                            </div>
+
+                            {{-- Phần tổng tiền và các nút hành động --}}
+                            <div id="header-cart-footer" class="p-3 border-top d-none">
+                                <div class="d-flex justify-content-between mb-3">
+                                    <span class="fw-bold">Tổng cộng:</span>
+                                    <span class="fw-bold text-danger" id="header-cart-total">0 ₫</span>
+                                </div>
+                                <div class="d-grid gap-2">
+                                    <a href="{{ route('cart.index') }}" class="btn btn-primary">Xem giỏ hàng chi
+                                        tiết</a>
+                                    <a href="#" class="btn btn-warning">Tiến hành thanh toán</a>
+                                </div>
+                            </div>
+                        </div>
                     </li>
+
+
+
+
+
+
+
+
+
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button"
                             data-bs-toggle="dropdown" aria-expanded="false">

@@ -20,7 +20,7 @@ class Promotion extends Model
     const STATUS_EFFECTIVE_ACTIVE = 'active';
     const STATUS_EFFECTIVE_SCHEDULED = 'scheduled';
     const STATUS_EFFECTIVE_EXPIRED = 'expired';
-    const STATUS_EFFECTIVE_INACTIVE = 'inactive'; // Bị tắt thủ công
+    const STATUS_EFFECTIVE_INACTIVE = 'inactive';
 
     protected $fillable = [
         'code',
@@ -41,41 +41,73 @@ class Promotion extends Model
         'uses_count' => 'integer',
     ];
 
-    /**
-     * SỬA ĐỔI 1: Thêm $appends để tự động thêm các accessor vào JSON.
-     * @var array
-     */
     protected $appends = [
         'effective_status_key',
         'effective_status_text',
         'effective_status_badge_class',
         'manual_status_text',
         'manual_status_badge_class',
-        'formatted_discount'
+        'formatted_discount',
     ];
 
+    //======================================================================
+    // HELPER METHODS (CÁC HÀM KIỂM TRA) - PHẦN SỬA LỖI
+    //======================================================================
 
-    public function orders()
+    /**
+     * Phương thức chính để kiểm tra xem mã có hợp lệ để áp dụng không.
+     * Đây là phương thức đang bị thiếu trong file của bạn.
+     */
+    public function isEffective(): bool
     {
-        return $this->hasMany(Order::class, 'promotion_id');
+        return $this->isManuallyActive() && $this->isCurrentlyActive() && $this->hasUsesLeft();
     }
 
     /**
-     * SỬA ĐỔI 2: Chuyển các phương thức helper thành Accessor.
+     * Kiểm tra xem mã có đang được bật thủ công không.
      */
+    public function isManuallyActive(): bool
+    {
+        return $this->status === self::STATUS_MANUAL_ACTIVE;
+    }
+
+    /**
+     * Kiểm tra xem mã có đang trong thời gian hiệu lực không.
+     */
+    public function isCurrentlyActive(): bool
+    {
+        $now = Carbon::now();
+        $isStarted = $this->start_date === null || $now->gte($this->start_date);
+        $isNotEnded = $this->end_date === null || $now->lte($this->end_date);
+        return $isStarted && $isNotEnded;
+    }
+
+    /**
+     * Kiểm tra xem mã có còn lượt sử dụng không.
+     */
+    public function hasUsesLeft(): bool
+    {
+        if ($this->max_uses === null) {
+            return true; // Không giới hạn lượt sử dụng
+        }
+        return $this->uses_count < $this->max_uses;
+    }
+
+    //======================================================================
+    // ACCESSORS (CÁC THUỘC TÍNH TỰ ĐỘNG)
+    //======================================================================
+
     public function getEffectiveStatusKeyAttribute(): string
     {
-        if ($this->status === self::STATUS_MANUAL_INACTIVE) {
+        if (!$this->isManuallyActive()) {
             return self::STATUS_EFFECTIVE_INACTIVE;
         }
-        if ($this->end_date && $this->end_date < Carbon::now()) {
-            return self::STATUS_EFFECTIVE_EXPIRED;
+        if (!$this->isCurrentlyActive()) {
+            $now = Carbon::now();
+            return ($this->start_date && $now->lt($this->start_date)) ? self::STATUS_EFFECTIVE_SCHEDULED : self::STATUS_EFFECTIVE_EXPIRED;
         }
-        if (isset($this->max_uses) && $this->uses_count >= $this->max_uses) {
+        if (!$this->hasUsesLeft()) {
             return self::STATUS_EFFECTIVE_EXPIRED;
-        }
-        if ($this->start_date && $this->start_date > Carbon::now()) {
-            return self::STATUS_EFFECTIVE_SCHEDULED;
         }
         return self::STATUS_EFFECTIVE_ACTIVE;
     }
@@ -117,8 +149,12 @@ class Promotion extends Model
         return rtrim(rtrim(number_format($this->discount_percentage, 2), '0'), '.') . '%';
     }
 
-    public function isManuallyActive(): bool
+    //======================================================================
+    // RELATIONSHIPS
+    //======================================================================
+
+    public function orders()
     {
-        return $this->status === self::STATUS_MANUAL_ACTIVE;
+        return $this->hasMany(Order::class);
     }
 }

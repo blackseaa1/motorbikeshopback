@@ -3,7 +3,7 @@
         color: var(--bs-primary) !important;
     }
 </style>
-<footer id="contact" class="bg-dark text-white py-5">
+<footer id="contact" class="bg-dark text-white py-5 ">
     <div class="container">
         <div class="row g-4">
             {{-- Cột thông tin shop --}}

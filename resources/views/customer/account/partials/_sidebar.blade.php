@@ -13,18 +13,24 @@
     <div class="list-group list-group-flush">
         <a href="{{ route('account.profile') }}"
             class="list-group-item list-group-item-action {{ request()->routeIs('account.profile') ? 'active' : '' }}">
-            Hồ sơ của tôi
+            <i class="bi bi-person me-2"></i> Hồ sơ của tôi
         </a>
         <a href="{{ route('account.orders') }}"
             class="list-group-item list-group-item-action {{ request()->routeIs('account.orders*') ? 'active' : '' }}">
-            Đơn hàng của tôi
+            <i class="bi bi-box me-2"></i> Đơn hàng của tôi
         </a>
+        {{-- Sửa lại route và logic active cho Sổ địa chỉ --}}
+        <a href="{{ route('account.addresses.index') }}"
+            class="list-group-item list-group-item-action {{ request()->routeIs('account.addresses*') ? 'active' : '' }}">
+            <i class="bi bi-geo-alt me-2"></i> Sổ địa chỉ
+        </a>
+        {{-- Nút đăng xuất giữ nguyên --}}
         <a href="#" class="list-group-item list-group-item-action text-danger"
             onclick="event.preventDefault(); document.getElementById('sidebar-logout-form').submit();">
-            Đăng xuất
+            <i class="bi bi-box-arrow-right me-2"></i> Đăng xuất
         </a>
         <form id="sidebar-logout-form" action="{{ route('logout') }}" method="POST" class="d-none">
             @csrf
         </form>
-    </div>
+</div>
 </div>

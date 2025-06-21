@@ -167,6 +167,13 @@
         if (typeof window.initializeCartHandler === 'function') {
             window.initializeCartHandler();
         }
+        if (typeof window.initializeAddressForms === 'function') {
+            window.initializeAddressForms();
+        }
+        if (typeof window.initializeCheckoutPage === 'function') {
+            window.initializeCheckoutPage();
+        }
+
     }
 
     /* ===============================================================

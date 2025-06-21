@@ -40,11 +40,13 @@ use App\Http\Controllers\Api\GeographyApiController;
 // --- CUSTOMER CONTROLLERS ---
 use App\Http\Controllers\Customer\AccountController;
 use App\Http\Controllers\Customer\AuthController;
-use App\Http\Controllers\Customer\CartController as CustomerCartController;
-use App\Http\Controllers\Customer\HomeController;
-use App\Http\Controllers\Customer\ShopController as CustomerShopController;
-use App\Http\Controllers\Customer\ReviewController as CustomerReviewController;
 use App\Http\Controllers\Customer\BlogController as CustomerPublicBlogController;
+use App\Http\Controllers\Customer\CartController;
+use App\Http\Controllers\Customer\HomeController;
+use App\Http\Controllers\Customer\ReviewController as CustomerReviewController;
+use App\Http\Controllers\Customer\ShopController as CustomerShopController;
+use App\Http\Controllers\Customer\AddressController;
+use App\Http\Controllers\Customer\CheckoutController;
 
 /*
 |--------------------------------------------------------------------------
@@ -86,6 +88,26 @@ Route::controller(AuthController::class)->group(function () {
     });
 });
 
+
+// --- Các route giỏ hàng ---
+Route::controller(CartController::class)->group(function () {
+    // Trang giỏ hàng (web)
+    Route::get('/cart', 'index')->name('cart.index');
+
+    // Các API cho giỏ hàng
+    Route::prefix('api/cart')->name('api.cart.')->group(function () {
+        Route::get('/', 'getCartData')->name('data');
+        Route::post('/add', 'add')->name('add');
+        Route::post('/update', 'update')->name('update');
+        Route::post('/remove', 'remove')->name('remove');
+        Route::post('/update-summary', 'updateSummary')->name('updateSummary');
+    });
+});
+Route::controller(CheckoutController::class)->group(function () {
+    Route::get('/checkout', 'index')->name('checkout.index');
+    Route::post('/place-order', 'placeOrder')->name('checkout.placeOrder');
+});
+
 /**
  * ===============================================================
  * == CÁC ROUTE CHỈ DÀNH CHO KHÁCH HÀNG ĐÃ ĐĂNG NHẬP ==
@@ -100,7 +122,8 @@ Route::middleware(['auth:customer'])->group(function () {
         Route::get('/', [AccountController::class, 'profile'])->name('profile');
         Route::get('/orders', [AccountController::class, 'orders'])->name('orders');
         Route::get('/orders/{order}', [AccountController::class, 'showOrder'])->name('orders.show');
-        Route::get('/addresses', [AccountController::class, 'addresses'])->name('addresses');
+        Route::resource('addresses', AddressController::class)->except(['show']);
+        Route::patch('addresses/{address}/set-default', [AddressController::class, 'setDefault'])->name('addresses.setDefault');
         Route::patch('/update-profile', [AccountController::class, 'updateProfile'])->name('updateProfile');
         Route::put('/update-password', [AccountController::class, 'updatePassword'])->name('updatePassword');
         Route::post('/update-avatar', [AccountController::class, 'updateAvatar'])->name('updateAvatar');
@@ -258,7 +281,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
 // =========================================================================
 Route::prefix('api')->name('api.')->group(function () {
     Route::get('/provinces/{province}/districts', [GeographyApiController::class, 'getDistrictsByProvince'])->name('provinces.districts');
-
+    Route::get('/districts/{district}/wards', [GeographyApiController::class, 'getWardsByDistrict'])->name('districts.wards');
     // API lấy số thông báo chưa đọc
     Route::get('/notifications/unread-count', function () {
         // return response()->json([
@@ -269,12 +292,5 @@ Route::prefix('api')->name('api.')->group(function () {
     Route::prefix('customer')->name('customer.')->group(function () {
         // API để lấy danh sách sản phẩm (có lọc, phân trang)
         Route::get('/products', [CustomerShopController::class, 'getProductsApi'])->name('products.index');
-
-        // API cho giỏ hàng
-        Route::controller(CustomerCartController::class)->prefix('cart')->name('cart.')->group(function () {
-            Route::post('/add', 'add')->name('add');
-            Route::get('/info', 'getCartInfo')->name('info');
-            // Thêm các route khác: update, remove, clear...
-        });
     });
 });

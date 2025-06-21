@@ -4,6 +4,7 @@
 
 @section('content')
     <main class="container py-5">
+        <h2 class="mb-4">Cửa hàng</h2>
         <div class="row">
             {{-- BỘ LỌC (ASIDE) --}}
             <aside class="col-lg-3">
@@ -72,6 +73,7 @@
 
             {{-- DANH SÁCH SẢN PHẨM --}}
             <div class="col-lg-9">
+                
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <h1 class="h3 mb-0">Tất cả sản phẩm</h1>
                     <span class="text-muted" id="product-count">Tìm thấy {{ $products->total() }} sản phẩm</span>
@@ -92,7 +94,6 @@
 @endsection
 
 @push('scripts')
-
     {{-- Dữ liệu ban đầu cho JavaScript --}}
     <script>
         // Truyền dữ liệu từ PHP Controller sang JavaScript

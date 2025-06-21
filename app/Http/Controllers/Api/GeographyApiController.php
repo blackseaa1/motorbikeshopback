@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Province;
+use App\Models\District;
 use Illuminate\Http\JsonResponse;
 
 class GeographyApiController extends Controller
@@ -21,5 +22,9 @@ class GeographyApiController extends Controller
 
         // Trả về dữ liệu dưới dạng JSON.
         return response()->json($districts);
+    }
+    public function getWardsByDistrict(District $district)
+    {
+        return response()->json($district->wards);
     }
 }

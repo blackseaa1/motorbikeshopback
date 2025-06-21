@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Auth\Events\Registered;
+use App\Support\CartManager;
 
 class AuthController extends Controller
 {
@@ -28,53 +29,43 @@ class AuthController extends Controller
     /**
      * Xử lý yêu cầu đăng nhập.
      */
-    public function login(Request $request)
+    public function login(Request $request, CartManager $cartManager)
     {
         $credentials = $request->validate([
             'email' => ['required', 'string', 'email'],
             'password' => ['required', 'string'],
         ]);
 
-        // Bước 1: Tìm khách hàng bằng email
-        $customer = Customer::where('email', $request->email)->first();
+        if (Auth::guard('customer')->attempt($credentials, $request->boolean('remember'))) {
+            $request->session()->regenerate();
 
-        // Bước 2: Kiểm tra trạng thái tài khoản (phải active mới được đăng nhập)
-        if ($customer && $customer->status !== Customer::STATUS_ACTIVE) {
-            throw ValidationException::withMessages([
-                'email' => 'Tài khoản của bạn đã bị khóa. Vui lòng liên hệ hỗ trợ.',
-            ]);
-        }
+            // Gộp giỏ hàng từ session vào database
+            $cartManager->mergeSessionCartToDatabase();
 
-        // Bước 3: Kiểm tra thông tin đăng nhập (email hoặc mật khẩu)
-        if (!$customer || !Hash::check($request->password, $customer->password)) {
-            throw ValidationException::withMessages([
-                'email' => 'Thông tin đăng nhập không chính xác.',
-            ]);
-        }
+            /** @var \App\Models\Customer $customer */
+            $customer = Auth::guard('customer')->user();
+            if ($customer->password_change_required) {
+                if ($request->expectsJson()) {
+                    return response()->json([
+                        'message' => 'Bạn cần phải tạo mật khẩu mới để tiếp tục.',
+                        'redirect_url' => route('customer.password.force_change')
+                    ]);
+                }
+                return redirect()->route('customer.password.force_change');
+            }
 
-        // Bước 4: Đăng nhập thành công
-        Auth::guard('customer')->login($customer, $request->boolean('remember'));
-        $request->session()->regenerate();
-
-        // KIỂM TRA NẾU BỊ ADMIN YÊU CẦU ĐỔI MẬT KHẨU
-        if ($customer->password_change_required) {
             if ($request->expectsJson()) {
                 return response()->json([
-                    'message' => 'Bạn cần phải tạo mật khẩu mới để tiếp tục.',
-                    'redirect_url' => route('customer.password.force_change')
+                    'message' => 'Đăng nhập thành công!',
+                    'redirect_url' => $request->session()->pull('url.intended', route('home'))
                 ]);
             }
-            return redirect()->route('customer.password.force_change');
+            return redirect()->intended(route('home'));
         }
 
-        // Nếu không, chuyển hướng đến trang mong muốn hoặc trang chủ
-        if ($request->expectsJson()) {
-            return response()->json([
-                'message' => 'Đăng nhập thành công!',
-                'redirect_url' => $request->session()->pull('url.intended', route('home'))
-            ]);
-        }
-        return redirect()->intended(route('home'));
+        throw ValidationException::withMessages([
+            'email' => 'Thông tin đăng nhập không chính xác hoặc tài khoản của bạn đã bị khóa. Vui lòng liên hệ hỗ trợ.',
+        ]);
     }
 
     /**

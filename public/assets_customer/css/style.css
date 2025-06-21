@@ -11,12 +11,26 @@
 }
 
 body {
+  display: flex;
+  /* Kích hoạt Flexbox */
+  flex-direction: column;
+  /* Sắp xếp các phần tử con theo chiều dọc */
+  min-height: 100%;
+  /* Chiều cao tối thiểu của body là 100% chiều cao của html */
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   line-height: 1.6;
+  /* XÓA hoặc GHI ĐÈ dòng này đi */
+  /* padding-bottom: 60px; */
 }
 
 html {
+  height: 100%;
+  /* Đảm bảo thẻ html chiếm toàn bộ chiều cao */
   scroll-behavior: smooth;
+}
+
+.wrapper {
+  flex: 1;
 }
 
 .bg-gradient-primary {

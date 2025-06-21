@@ -198,8 +198,9 @@
                             </div>
                             <div class="card-footer bg-transparent border-0">
                                 <div class="d-grid gap-2">
-                                    <button class="btn btn-primary btn-sm"><i class="bi bi-cart-plus me-1"></i>Thêm vào
-                                        giỏ</button>
+                                    <button class="btn btn-primary btn-sm add-to-cart-btn" data-product-id="{{ $product->id }}">
+                                        <i class="bi bi-cart-plus"></i> Thêm vào giỏ
+                                    </button>
                                     {{-- SỬA ĐỔI: Dùng route 'products.show' và truyền id --}}
                                     <a href="{{ route('products.show', ['product' => $product->id]) }}"
                                         class="btn btn-outline-secondary btn-sm">Xem chi tiết</a>
@@ -270,5 +271,5 @@
     </section>
 @endsection
 @push('scripts')
-  <script src="{{ asset('assets_customer/js/home.js') }}" defer></script>
-@endpush  
+    <script src="{{ asset('assets_customer/js/home.js') }}" defer></script>
+@endpush

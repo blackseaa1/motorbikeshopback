@@ -90,7 +90,18 @@ class Customer extends Authenticatable
     | Mối quan hệ (Relationships)
     |--------------------------------------------------------------------------
     */
+    public function addresses(): HasMany
+    {
+        return $this->hasMany(CustomerAddress::class)->orderByDesc('is_default');
+    }
 
+    /**
+     * Lấy địa chỉ mặc định của khách hàng.
+     */
+    public function defaultAddress(): HasOne
+    {
+        return $this->hasOne(CustomerAddress::class)->where('is_default', true);
+    }
     public function orders(): HasMany
     {
         return $this->hasMany(Order::class);
