@@ -1,66 +1,127 @@
+.invoice-box {
+    max-width: 990px;
+    margin: auto;
+    padding: 20px;
+    border: 1px solid #eee;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.15);
+    font-size: 16px;
+    line-height: 24px;
+    font-family: 'Helvetica Neue', 'Helvetica', Helvetica, Arial, sans-serif;
+    color: #555;
+}
+
+.invoice-box table {
+    width: 100%;
+    line-height: inherit;
+    text-align: left;
+    border-collapse: collapse;
+}
+
+.invoice-box table td {
+    padding: 5px;
+    vertical-align: top;
+}
+
+.invoice-box table tr.top table td {
+    padding-bottom: 20px;
+}
+
+.invoice-box table tr.top table td.title {
+    font-size: 45px;
+    line-height: 45px;
+    color: #333;
+}
+
+.invoice-box table tr.information table td {
+    padding-bottom: 40px;
+}
+
+.invoice-box table tr.heading td {
+    background: #eee;
+    border-bottom: 1px solid #ddd;
+    font-weight: bold;
+    text-align: left;
+}
+
+.invoice-box table tr.details td {
+    padding-bottom: 20px;
+}
+
+.invoice-box table tr.item td {
+    border-bottom: 1px solid #eee;
+    text-align: left;
+}
+
+.invoice-box table tr.item.last td {
+    border-bottom: none;
+}
+
+.invoice-box table tr.total td:nth-child(2) {
+    border-top: 2px solid #eee;
+    font-weight: bold;
+    text-align: right;
+}
+
+.invoice-company-logo {
+    max-width: 150px;
+    max-height: 100px;
+}
+
+.text-right {
+    text-align: right !important;
+}
+
+.invoice-footer {
+    text-align: center;
+    margin-top: 30px;
+    font-size: 12px;
+    color: #777;
+}
+
+/* CSS chỉ áp dụng khi in */
 @media print {
-    /* Khi đang ở chế độ in (body có class 'is-printing') */
-
-    /* 1. Ẩn TOÀN BỘ các thành phần trên trang bằng visibility.
-       Đây là cách hiệu quả để tránh in các yếu tố không mong muốn. */
-    body.is-printing * {
+    body * {
         visibility: hidden;
+        /* Ẩn tất cả các phần tử mặc định */
     }
 
-    /* 2. CHỈ CHO PHÉP modal xem chi tiết và TẤT CẢ con của nó được hiển thị.
-       Quy tắc này sẽ ghi đè lên quy tắc ẩn ở trên. */
-    body.is-printing #viewOrderModal, 
-    body.is-printing #viewOrderModal * {
+    #viewOrderModal,
+    #viewOrderModal * {
         visibility: visible;
+        /* Chỉ hiện modal in */
     }
 
-    /* 3. Đặt lại vị trí của modal để nó nằm gọn gàng trên trang in. */
-    body.is-printing #viewOrderModal {
-        position: absolute !important;
-        left: 0 !important;
-        top: 0 !important;
-        width: 100% !important;
+    #order-view-content {
+        display: none;
+        /* Ẩn giao diện xem chi tiết thông thường khi in */
+    }
+
+    #invoice-print-template {
+        display: block !important;
+        /* Hiện mẫu hóa đơn khi in */
+    }
+
+    .modal-footer {
+        display: none;
+        /* Ẩn footer của modal khi in */
+    }
+
+    .modal-dialog {
+        max-width: none !important;
         margin: 0 !important;
         padding: 0 !important;
-        overflow: visible !important; /* Đảm bảo nội dung không bị cắt */
-        background: #fff !important; /* Nền trắng cho trang in */
     }
 
-    body.is-printing #viewOrderModal .modal-dialog {
-        max-width: 100% !important;
-        margin: 0 !important;
-        box-shadow: none !important;
-    }
-    
-    body.is-printing #viewOrderModal .modal-content {
+    .modal-content {
         border: none !important;
+        border-radius: 0 !important;
         box-shadow: none !important;
     }
 
-    /* 4. Ẩn các nút không cần thiết bằng display: none để chúng không chiếm không gian. */
-    body.is-printing #viewOrderModal .modal-footer,
-    body.is-printing #viewOrderModal .modal-header .btn-close,
-    body.is-printing #viewOrderModal #editOrderFromViewBtn,
-    body.is-printing #viewOrderModal #printOrderBtn {
-        display: none !important;
-    }
-    
-    /* 5. Tùy chỉnh hiển thị cho đẹp hơn khi in */
-    body.is-printing #viewOrderModal .modal-title {
-        font-size: 20pt !important;
-    }
-    
-    body.is-printing .table {
-        font-size: 10pt !important;
-    }
-
-    body.is-printing h6 {
-        font-size: 12pt !important;
-        margin-top: 20px;
-    }
-}
- #invoice-print-template .invoice-company-logo {
+    #invoice-print-template .invoice-company-logo {
         max-width: 250px !important;
-        max-height: 250px !important; /* Tăng kích thước và thêm !important để đảm bảo ưu tiên */
+        max-height: 250px !important;
+        /* Tăng kích thước và thêm !important để đảm bảo ưu tiên */
         width: 100%;
     }
+}
