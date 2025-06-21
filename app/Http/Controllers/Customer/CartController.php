@@ -8,10 +8,6 @@ use App\Support\CartManager;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
-// File này không trực tiếp dùng CustomerAddress nhưng Auth::user()->addresses() sẽ dùng nó.
-// Việc thêm vào đây là một thói quen tốt để làm rõ các model liên quan.
-use App\Models\CustomerAddress;
-
 class CartController extends Controller
 {
     protected $cartManager;
@@ -22,41 +18,50 @@ class CartController extends Controller
     }
 
     /**
-     * Hiển thị trang giỏ hàng với đầy đủ thông tin để thanh toán.
+     * Trả về dữ liệu cơ bản cho các hành động nhanh (thêm, xóa, sửa).
      */
-    public function index()
+    protected function getSimpleCartResponse()
     {
-        // Lấy toàn bộ chi tiết giỏ hàng (sản phẩm, tổng tiền, khuyến mãi, vận chuyển...)
-        $cartDetails = $this->cartManager->getCartDetails();
-
-        // Lấy danh sách các đơn vị vận chuyển đang hoạt động
-        $deliveryServices = DeliveryService::where('status', 'active')->get();
-
-        // Lấy danh sách địa chỉ đã lưu của khách hàng (nếu đã đăng nhập)
-        $customerAddresses = Auth::guard('customer')->check()
-            ? Auth::guard('customer')->user()->addresses()->with(['province', 'district', 'ward'])->get()
-            : collect();
-
-        // Trả về view của trang giỏ hàng và truyền các dữ liệu cần thiết
-        return view('customer.cart.index', compact('cartDetails', 'deliveryServices', 'customerAddresses'));
-    }
-
-    /**
-     * API: Lấy dữ liệu giỏ hàng để hiển thị trên header.
-     */
-    public function getCartData()
-    {
-        // Lấy chi tiết giỏ hàng và chỉ trả về các thông tin cần thiết cho header
-        $cartDetails = $this->cartManager->getCartDetails();
         return response()->json([
-            'count' => $cartDetails['count'],
-            'total' => number_format($cartDetails['grand_total']),
-            'items' => $cartDetails['items'],
+            'message'       => 'Cập nhật giỏ hàng thành công.',
+            'count'         => $this->cartManager->getCartCount(),
+            'subtotal'      => $this->cartManager->getCartTotal(), // Chỉ trả về tạm tính
+            'items'         => $this->cartManager->getItems()->values(),
         ]);
     }
 
     /**
-     * API: Cập nhật toàn bộ tóm tắt giỏ hàng (vận chuyển, giảm giá).
+     * Trả về dữ liệu đầy đủ cho trang cart/checkout.
+     */
+    protected function getFullCartDetailsResponse()
+    {
+        return response()->json($this->cartManager->getCartDetails());
+    }
+
+    /**
+     * Hiển thị trang giỏ hàng.
+     */
+    public function index()
+    {
+        $cartDetails = $this->cartManager->getCartDetails();
+        $deliveryServices = DeliveryService::where('status', 'active')->get();
+        $customerAddresses = Auth::guard('customer')->check()
+            ? Auth::guard('customer')->user()->addresses()->with(['province', 'district', 'ward'])->get()
+            : collect();
+
+        return view('customer.cart.index', compact('cartDetails', 'deliveryServices', 'customerAddresses'));
+    }
+
+    /**
+     * API: Lấy dữ liệu giỏ hàng ban đầu.
+     */
+    public function getCartData()
+    {
+        return $this->getFullCartDetailsResponse();
+    }
+
+    /**
+     * API: Cập nhật tóm tắt đơn hàng (vận chuyển, giảm giá).
      */
     public function updateSummary(Request $request)
     {
@@ -72,11 +77,11 @@ class CartController extends Controller
             }
         }
 
-        return response()->json($this->cartManager->getCartDetails());
+        return $this->getFullCartDetailsResponse();
     }
 
     /**
-     * API: Thêm sản phẩm vào giỏ.
+     * API: Thêm sản phẩm - Dùng hàm response đơn giản.
      */
     public function add(Request $request)
     {
@@ -85,11 +90,11 @@ class CartController extends Controller
             'quantity' => 'required|integer|min:1',
         ]);
         $this->cartManager->add($validated['product_id'], $validated['quantity']);
-        return response()->json($this->cartManager->getCartDetails());
+        return $this->getSimpleCartResponse();
     }
 
     /**
-     * API: Cập nhật số lượng sản phẩm.
+     * API: Cập nhật số lượng - Dùng hàm response đơn giản.
      */
     public function update(Request $request)
     {
@@ -98,11 +103,11 @@ class CartController extends Controller
             'quantity' => 'required|integer|min:0',
         ]);
         $this->cartManager->update($validated['product_id'], $validated['quantity']);
-        return response()->json($this->cartManager->getCartDetails());
+        return $this->getSimpleCartResponse();
     }
 
     /**
-     * API: Xóa sản phẩm khỏi giỏ.
+     * API: Xóa sản phẩm khỏi giỏ - Dùng hàm response đơn giản.
      */
     public function remove(Request $request)
     {
@@ -110,6 +115,6 @@ class CartController extends Controller
             'product_id' => 'required|exists:products,id',
         ]);
         $this->cartManager->remove($validated['product_id']);
-        return response()->json($this->cartManager->getCartDetails());
+        return $this->getSimpleCartResponse();
     }
 }

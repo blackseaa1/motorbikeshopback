@@ -1,7 +1,9 @@
 /**
  * ===================================================================
- * cart.js - PHIÊN BẢN SỬA LỖI "Cannot set properties of null" VÀ TÍCH HỢP BOOTSTRAP SELECT
+ * cart.js - PHIÊN BẢN XỬ LÝ DỮ LIỆU LINH HOẠT
  *
+ * - Sửa lại hàm renderHeaderCart để hiển thị `subtotal` hoặc `grand_total`
+ * tùy thuộc vào dữ liệu được trả về.
  * - THÊM MỚI: Các bước kiểm tra "null check" trong các hàm render để đảm bảo script không bị lỗi khi chạy trên các trang khác nhau.
  * - THÊM MỚI: Hiển thị modal thông báo của Bootstrap khi thêm vào giỏ thành công.
  * - SỬA LỖI: Tối ưu lại luồng xử lý để không bị lỗi "lớp phủ".
@@ -11,6 +13,9 @@
  * - THÊM MỚI: Cập nhật tóm tắt đơn hàng trên trang /cart.
  * - SỬA LỖI: Xử lý lỗi NaN trong tóm tắt đơn hàng.
  * - THÊM MỚI: Tích hợp bootstrap-select cho lựa chọn dịch vụ giao hàng.
+ * - CẬP NHẬT: Sửa lỗi cập nhật giao diện trang giỏ hàng để đồng bộ toàn bộ trang sau khi thao tác (xóa, sửa số lượng).
+ * - SỬA LỖI: Sửa lỗi mất link "Tiếp tục mua sắm" trong thông báo giỏ hàng trống.
+ * - CẬP NHẬT: Cập nhật lại hàm renderCartPage để reset toàn bộ summary khi giỏ hàng trống.
  * ===================================================================
  */
 (function () {
@@ -21,7 +26,7 @@
 
     /**
      * HÀM 1: Dựng lại HTML cho mini-cart trên header.
-     * (Đã thêm kiểm tra null)
+     * (Cập nhật để hiển thị tổng tiền một cách linh hoạt)
      */
     function renderHeaderCart(data) {
         const countBadge = document.getElementById('header-cart-count');
@@ -29,12 +34,18 @@
         const cartFooter = document.getElementById('header-cart-footer');
         const cartTotalEl = document.getElementById('header-cart-total');
 
-        // KIỂM TRA: Chỉ thực thi nếu tất cả các element cần thiết tồn tại
         if (!countBadge || !itemsContainer || !cartFooter || !cartTotalEl) return;
 
-        countBadge.textContent = data.count;
-        countBadge.classList.toggle('d-none', data.count === 0);
-        
+        const count = data.count || 0;
+
+        // === SỬA ĐỔI LOGIC HIỂN THỊ TỔNG TIỀN ===
+        // Ưu tiên hiển thị grand_total (tổng cuối cùng) nếu có.
+        // Nếu không, sẽ hiển thị subtotal (tạm tính).
+        const totalToShow = data.grand_total ?? data.subtotal ?? 0;
+
+        countBadge.textContent = count;
+        countBadge.classList.toggle('d-none', count === 0);
+
         if (data.items && data.items.length > 0) {
             let itemsHtml = '<ul class="list-group list-group-flush">';
             data.items.forEach(item => {
@@ -55,7 +66,7 @@
             });
             itemsHtml += '</ul>';
             itemsContainer.innerHTML = itemsHtml;
-            cartTotalEl.textContent = `${data.total} ₫`;
+            cartTotalEl.textContent = `${totalToShow.toLocaleString('vi-VN')} ₫`;
             cartFooter.classList.remove('d-none');
         } else {
             itemsContainer.innerHTML = '<div class="p-4 text-center text-muted">Giỏ hàng của bạn đang trống</div>';
@@ -64,20 +75,14 @@
     }
 
     /**
-     * HÀM 2: Dựng lại HTML cho trang giỏ hàng chi tiết (/cart).
-     * (Đã thêm kiểm tra null)
+     * === HÀM 2: SỬA LỖI - Dựng lại toàn bộ giao diện trang /cart ===
+     * (Cập nhật theo góp ý của bạn)
      */
     function renderCartPage(data) {
         const itemsContainer = document.getElementById('cart-items-container');
-        const subtotalEl = document.getElementById('cart-subtotal');
-        const totalEl = document.getElementById('cart-total');
+        if (!itemsContainer) return; // Chỉ chạy nếu đang ở trang cart
 
-        // KIỂM TRA: Chỉ thực thi nếu đang ở đúng trang giỏ hàng
-        if (!itemsContainer || !subtotalEl || !totalEl) return;
-
-        subtotalEl.textContent = `${data.total} ₫`;
-        totalEl.textContent = `${data.total} ₫`;
-
+        // Dựng lại danh sách sản phẩm
         if (data.items && data.items.length > 0) {
             let itemsHtml = '';
             data.items.forEach(item => {
@@ -86,9 +91,9 @@
                     <div class="card mb-3 cart-item" data-product-id="${item.product_id}">
                         <div class="card-body">
                             <div class="d-flex align-items-center flex-wrap">
-                                <img src="${item.product?.thumbnail_url || ''}" alt="${item.product?.name || ''}" style="width: 100px; height: 100px; object-fit: cover;" class="me-3 mb-2 mb-md-0">
+                                <img src="${item.product.thumbnail_url}" alt="${item.product.name}" style="width: 100px; height: 100px; object-fit: cover;" class="me-3 mb-2 mb-md-0">
                                 <div class="ms-md-3 me-md-auto flex-grow-1">
-                                    <h5 class="mb-1">${item.product?.name || 'Sản phẩm không xác định'}</h5>
+                                    <h5 class="mb-1"><a href="/products/${item.product_id}" class="text-dark text-decoration-none">${item.product.name}</a></h5>
                                     <p class="mb-1 text-muted">${price.toLocaleString('vi-VN')} ₫</p>
                                 </div>
                                 <div class="d-flex align-items-center mt-2 mt-md-0">
@@ -102,8 +107,32 @@
             });
             itemsContainer.innerHTML = itemsHtml;
         } else {
-            itemsContainer.innerHTML = '<div class="alert alert-info">Giỏ hàng của bạn đang trống.</div>';
+            // Nếu giỏ hàng trống, hiển thị thông báo
+            itemsContainer.innerHTML = '<div class="alert alert-info">Giỏ hàng của bạn đang trống. <a href="/products" class="alert-link">Tiếp tục mua sắm</a>.</div>';
         }
+
+        // === SỬA ĐỔI QUAN TRỌNG: LUÔN CẬP NHẬT KHU VỰC SUMMARY ===
+        // Lấy các element trong tóm tắt đơn hàng
+        const subtotalEl = document.getElementById('cart-subtotal');
+        const shippingFeeEl = document.getElementById('cart-shipping-fee');
+        const discountEl = document.getElementById('cart-discount');
+        const discountRowEl = document.getElementById('discount-row');
+        const grandTotalEl = document.getElementById('cart-grand-total');
+
+        // Lấy giá trị từ data, mặc định là 0 nếu không có
+        const subtotal = data.subtotal || 0;
+        const shippingFee = data.shipping_fee || 0;
+        const discountAmount = data.discount_amount || 0;
+        const grandTotal = data.grand_total || 0;
+
+        // Cập nhật các giá trị. Khi giỏ hàng trống, các giá trị này sẽ là 0.
+        if (subtotalEl) subtotalEl.textContent = `${subtotal.toLocaleString('vi-VN')} ₫`;
+        if (shippingFeeEl) shippingFeeEl.textContent = `${shippingFee.toLocaleString('vi-VN')} ₫`;
+        if (discountEl) discountEl.textContent = `-${discountAmount.toLocaleString('vi-VN')} ₫`;
+        if (grandTotalEl) grandTotalEl.textContent = `${grandTotal.toLocaleString('vi-VN')} ₫`;
+
+        // Ẩn dòng giảm giá nếu không có giảm giá
+        if (discountRowEl) discountRowEl.classList.toggle('d-none', discountAmount <= 0);
     }
 
     /**
@@ -187,7 +216,6 @@
             }
 
         } catch (error) {
-            window.hideAppLoader();
             window.showAppInfoModal(error.message, 'error');
         } finally {
             window.hideAppLoader();

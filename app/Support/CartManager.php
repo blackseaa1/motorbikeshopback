@@ -16,21 +16,29 @@ class CartManager
     protected const PROMOTION_SESSION_KEY = 'cart_promotion';
 
     /**
-     * Thêm sản phẩm vào giỏ hàng.
+     * === HÀM MỚI: Tự động kiểm tra và xóa session khi giỏ hàng trống ===
+     */
+    private function checkCartIsEmptyAndClearSessionData(): void
+    {
+        if ($this->getCartCount() === 0) {
+            $this->clearCheckoutData();
+        }
+    }
+
+    /**
+     * Thêm sản phẩm vào giỏ hàng và xóa session ship/promo nếu không ở trang cart/checkout.
      */
     public function add(int $productId, int $quantity = 1): void
     {
         $product = Product::findOrFail($productId);
 
-        // Kiểm tra số lượng tồn kho
         $currentQuantityInCart = $this->getQuantityInCart($productId);
-        $totalQuantity = $currentQuantityInCart + $quantity;
-
-        if ($totalQuantity > $product->stock_quantity) {
-            throw ValidationException::withMessages([
-                'stock' => 'Rất tiếc, số lượng sản phẩm trong kho không đủ.',
-            ]);
+        if (($currentQuantityInCart + $quantity) > $product->stock_quantity) {
+            throw ValidationException::withMessages(['stock' => 'Số lượng sản phẩm trong kho không đủ.']);
         }
+        
+        // Xóa thông tin ship/promo không còn liên quan
+        $this->clearCheckoutData();
 
         if (Auth::guard('customer')->check()) {
             $this->addToDatabase($productId, $quantity);
@@ -40,7 +48,7 @@ class CartManager
     }
 
     /**
-     * Cập nhật số lượng sản phẩm trong giỏ hàng.
+     * Cập nhật số lượng và kiểm tra giỏ hàng trống.
      */
     public function update(int $productId, int $quantity): void
     {
@@ -49,10 +57,11 @@ class CartManager
         } else {
             $this->updateInSession($productId, $quantity);
         }
+        $this->checkCartIsEmptyAndClearSessionData();
     }
 
     /**
-     * Xóa sản phẩm khỏi giỏ hàng.
+     * Xóa sản phẩm và kiểm tra giỏ hàng trống.
      */
     public function remove(int $productId): void
     {
@@ -61,6 +70,7 @@ class CartManager
         } else {
             $this->removeFromSession($productId);
         }
+        $this->checkCartIsEmptyAndClearSessionData();
     }
 
     /**
@@ -115,7 +125,7 @@ class CartManager
     }
 
     /**
-     * Xóa toàn bộ giỏ hàng.
+     * Xóa toàn bộ giỏ hàng và thông tin checkout.
      */
     public function clear(): void
     {
@@ -124,6 +134,7 @@ class CartManager
         } else {
             session()->forget(self::SESSION_KEY);
         }
+        $this->clearCheckoutData();
     }
 
     /**
@@ -144,19 +155,30 @@ class CartManager
     }
 
     /**
-     * Lấy thông tin chi tiết của giỏ hàng bao gồm cả tổng tiền, phí vận chuyển và giảm giá.
+     * Cập nhật getCartDetails để trả về 0 nếu giỏ hàng trống.
      */
     public function getCartDetails(): array
     {
         $subtotal = $this->getCartTotal();
+        
+        if ($subtotal <= 0) {
+            return [
+                'items' => collect(), 'count' => 0, 'subtotal' => 0,
+                'shipping_info' => null, 'promotion_info' => null,
+                'shipping_fee' => 0, 'discount_amount' => 0, 'grand_total' => 0,
+            ];
+        }
+
         $shippingInfo = $this->getShippingInfo();
         $promotionInfo = $this->getPromotionInfo();
-
         $shippingFee = $shippingInfo['fee'] ?? 0;
-
+        
         $discountAmount = 0;
-        if ($promotionInfo) {
+        if ($promotionInfo && $promotionInfo->isEffective()) {
             $discountAmount = ($subtotal * $promotionInfo->discount_percentage) / 100;
+        } else if ($promotionInfo) {
+            $this->clearPromotion(); // Xóa promo nếu không còn hiệu lực
+            $promotionInfo = null;
         }
 
         $grandTotal = $subtotal + $shippingFee - $discountAmount;
@@ -182,13 +204,7 @@ class CartManager
         if (!$deliveryService || !$deliveryService->isActive()) {
             throw ValidationException::withMessages(['delivery_service' => 'Dịch vụ vận chuyển không hợp lệ.']);
         }
-
-        $shippingInfo = [
-            'id' => $deliveryService->id,
-            'name' => $deliveryService->name,
-            'fee' => $deliveryService->shipping_fee,
-        ];
-
+        $shippingInfo = ['id' => $deliveryService->id, 'name' => $deliveryService->name, 'fee' => $deliveryService->shipping_fee];
         session([self::SHIPPING_SESSION_KEY => $shippingInfo]);
         return $shippingInfo;
     }
@@ -200,12 +216,10 @@ class CartManager
     {
         $promoCode = strtoupper(trim($promoCode));
         $promotion = Promotion::where('code', $promoCode)->first();
-
         if (!$promotion || !$promotion->isEffective()) {
             $this->clearPromotion();
             throw ValidationException::withMessages(['promotion_code' => 'Mã giảm giá không hợp lệ hoặc đã hết hạn.']);
         }
-
         session([self::PROMOTION_SESSION_KEY => $promotion]);
         return $promotion;
     }
@@ -227,7 +241,7 @@ class CartManager
     }
 
     /**
-     * Xóa thông tin vận chuyển và giảm giá khỏi session (dùng sau khi đặt hàng).
+     * Xóa thông tin vận chuyển và giảm giá khỏi session.
      */
     public function clearCheckoutData(): void
     {
