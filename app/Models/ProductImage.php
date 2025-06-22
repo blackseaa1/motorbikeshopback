@@ -43,7 +43,7 @@ class ProductImage extends Model
     {
         $path = $this->image_url; // Dùng thuộc tính image_url
         if ($path && Storage::disk('public')->exists($path)) {
-            return Storage::disk('public')->url($this->path);
+            return Storage::url($path);
         }
         // Trả về ảnh placeholder cho sản phẩm
         return 'https://placehold.co/400x400/EFEFEF/AAAAAA&text=Image';

@@ -69,7 +69,7 @@ class OrderController extends Controller
             'deliveryServices',
             'promotions',
             'orderStatuses',
-            'allProductsForJs'
+            // 'allProductsForJs'
         ));
     }
 
@@ -202,7 +202,8 @@ class OrderController extends Controller
                 $this->handleStockAndPromotionOnStatusChange($order, Order::STATUS_APPROVED, Order::STATUS_CANCELLED);
             }
 
-            $order->items()->sync([]); // Sử dụng sync([]) để xóa tất cả các mục liên quan
+            // Sử dụng delete() để xóa tất cả các OrderItem liên quan
+            $order->items()->delete();
             $order->delete();
 
             DB::commit();
@@ -212,6 +213,34 @@ class OrderController extends Controller
             Log::error("Lỗi khi xóa đơn hàng #{$order->id}: " . $e->getMessage());
             return response()->json(['success' => false, 'message' => 'Không thể xóa đơn hàng. Vui lòng thử lại.'], 500);
         }
+    }
+    /**
+     * API: Lấy danh sách sản phẩm để sử dụng trong modal tạo đơn hàng.
+     * Trả về dữ liệu JSON tinh gọn để JavaScript xử lý.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getProductsForOrderCreation(): JsonResponse
+    {
+        // Lấy sản phẩm đang hoạt động, kèm hình ảnh đầu tiên.
+        // Giả định Model Product có accessor `thumbnail_url` để lấy URL ảnh nhỏ.
+        $products = Product::where('status', Product::STATUS_ACTIVE)
+            ->with('firstImage')
+            ->orderBy('name')
+            ->get();
+
+        // Chuyển đổi collection sang một array với các thuộc tính cần thiết cho JS
+        $productsData = $products->map(function ($product) {
+            return [
+                'id' => $product->id,
+                'name' => $product->name,
+                'price' => $product->price,
+                'stock_quantity' => $product->stock_quantity,
+                'thumbnail_url' => $product->thumbnail_url, // Sử dụng accessor từ Model
+            ];
+        });
+
+        return response()->json($productsData);
     }
 
     // =========================================================================
@@ -264,47 +293,36 @@ class OrderController extends Controller
     private function assignCustomerAndAddress(Order &$order, array $validatedData): void
     {
         if ($validatedData['customer_type'] === 'existing') {
-            // **THAY ĐỔI Ở ĐÂY: Tải thêm thông tin customer và address**
-            $address = CustomerAddress::with('customer', 'province', 'district', 'ward')->findOrFail($validatedData['shipping_address_id']);
+            // Lấy thông tin địa chỉ mà khách hàng đã chọn từ sổ địa chỉ
+            $address = CustomerAddress::with('customer')->findOrFail($validatedData['shipping_address_id']);
 
             $order->customer_id = $validatedData['customer_id'];
 
-            // **THÊM CÁC DÒNG NÀY VÀO**
-            $order->shipping_name = $address->full_name;
-            $order->shipping_phone = $address->phone;
-            // Lấy email từ chính khách hàng, không phải từ địa chỉ
-            $order->shipping_email = $address->customer->email;
-            // **KẾT THÚC PHẦN THÊM**
-
-            $order->shipping_address_line = $address->address_line;
+            // Sao chép thông tin vào các cột tương ứng của đơn hàng
+            $order->guest_name = $address->full_name;
+            $order->guest_phone = $address->phone;
+            $order->guest_email = $address->customer->email;
             $order->province_id = $address->province_id;
             $order->district_id = $address->district_id;
             $order->ward_id = $address->ward_id;
 
-            // Xóa thông tin khách vãng lai nếu có
-            $order->guest_name = null;
-            $order->guest_email = null;
-            $order->guest_phone = null;
-        } else { // Khách vãng lai
+            // Lưu địa chỉ chi tiết vào cột mới
+            $order->shipping_address_line = $address->address_line;
+        } else { // Xử lý cho khách vãng lai
             $order->customer_id = null;
 
-            // **SỬA LẠI CÁC DÒNG NÀY ĐỂ ĐỒNG BỘ**
-            // Gán thông tin từ form khách vãng lai vào cả hai loại trường (guest_* và shipping_*)
+            // Gán thông tin từ form của khách vãng lai
             $order->guest_name = $validatedData['guest_name'];
-            $order->guest_email = $validatedData['guest_email'];
             $order->guest_phone = $validatedData['guest_phone'];
-
-            $order->shipping_name = $validatedData['guest_name'];
-            $order->shipping_phone = $validatedData['guest_phone'];
-            $order->shipping_email = $validatedData['guest_email'];
-
-            $order->shipping_address_line = $validatedData['guest_address_line'];
+            $order->guest_email = $validatedData['guest_email'];
             $order->province_id = $validatedData['guest_province_id'];
             $order->district_id = $validatedData['guest_district_id'];
             $order->ward_id = $validatedData['guest_ward_id'];
+
+            // Lưu địa chỉ chi tiết vào cột mới
+            $order->shipping_address_line = $validatedData['guest_address_line'];
         }
     }
-
     private function calculateOrderTotals(array $items, int $deliveryServiceId, ?int $promotionId): array
     {
         $subtotal = 0;
@@ -325,7 +343,7 @@ class OrderController extends Controller
         $validPromotionId = null;
         if ($promotionId) {
             $promotion = Promotion::find($promotionId);
-            if ($promotion && $promotion->isEffectiveFor($subtotal)) {
+            if ($promotion && $promotion->isEffective()) {
                 $discountAmount = $promotion->calculateDiscount($subtotal);
                 $validPromotionId = $promotion->id;
             }
@@ -344,23 +362,27 @@ class OrderController extends Controller
 
     private function syncOrderItems(Order $order, array $items): void
     {
-        $syncData = [];
         $productIds = array_column($items, 'product_id');
         $products = Product::find($productIds)->keyBy('id');
 
+        // Xóa tất cả các mục đơn hàng (order items) cũ trước khi thêm mới
+        $order->items()->delete();
+
+        // Lặp qua và tạo các mục đơn hàng mới
         foreach ($items as $itemData) {
             $product = $products->get($itemData['product_id']);
             if ($product) {
                 if ($product->stock_quantity < $itemData['quantity']) {
                     throw new \Exception("Sản phẩm '{$product->name}' không đủ số lượng tồn kho.");
                 }
-                $syncData[$itemData['product_id']] = [
-                    'quantity' => $itemData['quantity'],
-                    'price' => $product->price,
-                ];
+                // Sử dụng create() để tạo OrderItem mới liên kết với Order
+                $order->items()->create([
+                    'product_id' => $itemData['product_id'],
+                    'quantity'   => $itemData['quantity'],
+                    'price'      => $product->price,
+                ]);
             }
         }
-        $order->items()->sync($syncData);
     }
 
     private function handleStockAndPromotionOnStatusChange(Order $order, ?string $oldStatus, string $newStatus): void

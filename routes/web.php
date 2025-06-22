@@ -310,7 +310,7 @@ Route::prefix('api')->name('api.')->group(function () {
     // --- GEOGRAPHY API ---
     Route::get('/provinces/{province}/districts', [GeographyApiController::class, 'getDistrictsByProvince'])->name('provinces.districts');
     Route::get('/districts/{district}/wards', [GeographyApiController::class, 'getWardsByDistrict'])->name('districts.wards');
-
+    Route::get('/products/all-for-order', [OrderController::class, 'getProductsForOrderCreation'])->name('api.orders.products-for-creation')->middleware('auth:admin');
     // --- CUSTOMER API ---
     Route::prefix('customer')->name('customer.')->group(function () {
         // API để lấy danh sách sản phẩm (có lọc, phân trang) cho front-end

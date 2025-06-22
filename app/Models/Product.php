@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\HasOne;  
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Number;
 
@@ -66,7 +66,7 @@ class Product extends Model
     /**
      * Các hình ảnh của sản phẩm.
      */
-    public function images(): HasMany
+  public function images(): HasMany
     {
         return $this->hasMany(ProductImage::class);
     }
@@ -76,10 +76,9 @@ class Product extends Model
      * Định nghĩa quan hệ đặc biệt để lấy ra chỉ một ảnh đầu tiên (hoặc ảnh đại diện).
      * `ofMany('id', 'min')` sẽ lấy ảnh có ID nhỏ nhất làm ảnh đầu tiên.
      */
-    public function firstImage()
+    public function firstImage(): HasOne
     {
-        // hasOne sẽ tự động lấy bản ghi đầu tiên nó tìm thấy.
-        return $this->hasOne(ProductImage::class)->orderBy('id', 'asc');
+        return $this->hasOne(ProductImage::class)->ofMany('id', 'min');
     }
 
     /**

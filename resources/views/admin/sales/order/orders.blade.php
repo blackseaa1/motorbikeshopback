@@ -142,7 +142,7 @@
         'deliveryServices' => $deliveryServices,
         'promotions' => $promotions,
         'orderStatuses' => $orderStatuses,
-        'allProductsForJs' => $allProductsForJs
+        // 'allProductsForJs' => $allProductsForJs
     ])
     @include('admin.sales.order.modals.view_order_modal')
     @include('admin.sales.order.modals.update_order_modal', ['orderStatuses' => $orderStatuses, 'deliveryServices' => $deliveryServices])

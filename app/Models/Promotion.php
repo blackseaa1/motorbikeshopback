@@ -157,4 +157,11 @@ class Promotion extends Model
     {
         return $this->hasMany(Order::class);
     }
+    public function calculateDiscount(float $subtotal): float
+    {
+        if ($this->discount_percentage > 0) {
+            return ($subtotal * $this->discount_percentage) / 100;
+        }
+        return 0;
+    }
 }

@@ -6,26 +6,22 @@
 <div class="card card-body mb-3 product-item-row" data-row-index="{{ $rowIndex }}">
     <div class="row g-3 align-items-center">
         <div class="col-md-2 d-flex justify-content-center">
-            <img src="{{ asset('assets_admin/images/no-image.png') }}" alt="Ảnh sản phẩm"
-                class="img-fluid rounded border product-image" style="width: 80px; height: 80px; object-fit: contain;">
+            {{-- SỬA LỖI TẠI ĐÂY: Thêm class "product-image" --}}
+            <img src="https://placehold.co/400x400/EFEFEF/AAAAAA&text=Product" alt="Ảnh sản phẩm"
+                class="img-fluid rounded border product-thumbnail product-image"
+                style="width: 80px; height: 80px; object-fit: contain;">
         </div>
 
         <div class="col-md-10">
             <div class="row g-2 align-items-end">
                 <div class="col-12 col-lg-5">
                     <label for="product_id_{{ $rowIndex }}" class="form-label mb-1 visually-hidden">Sản phẩm</label>
-                    {{-- Đặt tên (name) cho select để gửi product_id đi --}}
-                    <select class="form-control selectpicker product-select" data-live-search="true"
-                        id="product_id_{{ $rowIndex }}" name="items[{{ $rowIndex }}][product_id]"
-                        title="-- Tìm & chọn sản phẩm --" required>
-                        @foreach($allProductsForJs as $product)
-                            <option value="{{ $product->id }}" data-price="{{ $product->price }}"
-                                data-stock="{{ $product->stock_quantity }}"
-                                data-image-url="{{ optional($product->firstImage)->image_url_small ?? asset('assets_admin/images/no-image.png') }}"
-                                data-subtext="Tồn kho: {{ $product->stock_quantity }}">
-                                {{ $product->name }}
-                            </option>
-                        @endforeach
+                    {{-- SỬA CHỮA: THÊM THUỘC TÍNH name="items[{{ $rowIndex }}][product_id]" --}}
+                    <select class="form-control selectpicker product-select" id="product_id_{{ $rowIndex }}"
+                        name="items[{{ $rowIndex }}][product_id]" {{-- DÒNG CẦN THÊM/SỬA --}} data-live-search="true"
+                        title="Chọn sản phẩm..." required>
+                        {{-- Placeholder để JS tự điền vào --}}
+                        <option class="product-select-placeholder" value=""></option>
                     </select>
                 </div>
 
