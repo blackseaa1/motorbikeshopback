@@ -27,7 +27,7 @@ class DeliveryService extends Model
         'shipping_fee' => 'decimal:2',
     ];
 
-    protected $appends = ['logo_full_url', 'status_text', 'status_badge_class', 'formatted_shipping_fee']; // Đảm bảo các accessor được append
+    protected $appends = ['logo_full_url', 'status_text', 'status_badge_class', 'formatted_shipping_fee'];
 
     //======================================================================
     // RELATIONSHIPS
@@ -48,10 +48,12 @@ class DeliveryService extends Model
      */
     public function getLogoFullUrlAttribute(): string
     {
-        $logoPath = $this->attributes['logo_url'];
+        // ĐÃ SỬA: Sử dụng data_get để truy cập an toàn, tránh lỗi Undefined array key
+        $logoPath = data_get($this->attributes, 'logo_url');
+
         if ($logoPath && Storage::disk('public')->exists($logoPath)) {
             // Thêm timestamp của updated_at để cache-busting
-            return Storage::url($logoPath) . '?v=' . $this->updated_at->timestamp;
+            return Storage::url($logoPath) . '?v=' . ($this->updated_at ? $this->updated_at->timestamp : time());
         }
         return 'https://placehold.co/150x50/EFEFEF/AAAAAA&text=Logo';
     }

@@ -4,13 +4,30 @@
  * Xử lý JavaScript cho trang quản lý Đơn hàng.
  * ===================================================================
  */
+
+// BƯỚC 1: Thêm một biến cờ (flag) để kiểm tra
+if (typeof window.orderManagerInitialized === 'undefined') {
+    window.orderManagerInitialized = false;
+}
+
 function initializeOrderManager() {
+    // BƯỚC 2: Kiểm tra ngay khi bắt đầu hàm
+    // Nếu đã khởi tạo rồi, thì thoát ngay lập tức
+    if (window.orderManagerInitialized) {
+        return;
+    }
+
     const pageContainer = document.getElementById('adminOrdersPage');
     if (!pageContainer) return;
 
     console.log("Khởi tạo JS cho trang Quản lý Đơn hàng...");
 
     const allProducts = JSON.parse(pageContainer.dataset.products || '[]');
+    const allPromotions = JSON.parse(pageContainer.dataset.promotions || '[]');
+    const allCustomers = JSON.parse(pageContainer.dataset.customers || '[]');
+    const allProvinces = JSON.parse(pageContainer.dataset.provinces || '[]');
+    const allDeliveryServices = JSON.parse(pageContainer.dataset.deliveryServices || '[]');
+
     const hasValidationErrors = pageContainer.dataset.errors === 'true';
     const formMarker = pageContainer.dataset.formMarker || null;
 
@@ -22,520 +39,1062 @@ function initializeOrderManager() {
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
     if (!csrfToken) {
         console.error('Lỗi nghiêm trọng: Không tìm thấy CSRF Token!');
-        // Không return ở đây vì các chức năng không yêu cầu CSRF token vẫn có thể hoạt động
+        return;
     }
 
-    const { showAppLoader, hideAppLoader, showAppInfoModal, setupAjaxForm, displayValidationErrors } = window;
+    // --- GLOBAL HELPERS (from admin_layout.js, ensuring they are available) ---
+    // Make sure these functions are defined globally or passed into this scope if needed.
+    // Assuming admin_layout.js is loaded before order_manager.js and defines these globally.
+    const showAppLoader = window.showAppLoader;
+    const hideAppLoader = window.hideAppLoader;
+    const showAppInfoModal = window.showAppInfoModal;
 
-    const createOrderModalEl = document.getElementById('createOrderModal');
-    const viewOrderModalEl = document.getElementById('viewOrderModal');
-    const updateOrderModalEl = document.getElementById('updateOrderModal');
-    const deleteOrderModalEl = document.getElementById('deleteOrderModal');
-
-    const createOrderForm = document.getElementById('createOrderForm');
-    const updateOrderForm = document.getElementById('updateOrderForm');
-    const deleteOrderForm = document.getElementById('deleteOrderForm');
-
-    const ordersTableBody = document.getElementById('orders-table-body');
-    const productItemsContainer = document.getElementById('product_items_container_modal');
-    // productItemCounter chỉ cần thiết cho modal tạo mới, sẽ được xử lý trong addProductItem
-    let productItemCounter = productItemsContainer ? productItemsContainer.querySelectorAll('.product-item-row-modal').length : 0;
-
-
-    // --- HÀM TRỢ GIÚP ---
-
-    function clearValidationErrors(form) {
-        if (!form) return;
-        form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
-        form.querySelectorAll('.invalid-feedback').forEach(el => el.textContent = '');
+    if (!showAppLoader || !hideAppLoader || !showAppInfoModal) {
+        console.error('Các hàm trợ giúp toàn cục (showAppLoader, hideAppLoader, showAppInfoModal) chưa được định nghĩa.');
+        return;
     }
 
-    const refreshSelectPickers = () => {
-        if ($.fn.selectpicker) {
-            $('.selectpicker').selectpicker('render'); // Sử dụng 'render' thay vì 'destroy' và khởi tạo lại
-        }
-    };
+    // --- CÁC BIẾN CHO MODAL TẠO & CẬP NHẬT ---
+    let productItemIndex = 0; // Để theo dõi số lượng dòng sản phẩm trong modal tạo/cập nhật
+    const removedItemIds = new Set(); // Để lưu ID các order_item bị xóa khi chỉnh sửa
+
+    // ===================================================================
+    // FUNCTIONS
+    // ===================================================================
 
     /**
-     * NÂNG CẤP: Hàm tạo dòng sản phẩm có hình ảnh cho modal UPDATE
+     * Định dạng số thành tiền tệ Việt Nam.
+     * @param {number} amount
+     * @returns {string}
      */
-    const createUpdateProductRow = (item = {}) => {
-        const itemIndex = Date.now() + Math.random(); // Dùng timestamp + random để đảm bảo index là duy nhất
-        const productData = item.product || allProducts.find(p => p.id == item.product_id) || {}; // Lấy dữ liệu sản phẩm từ item hoặc tìm trong allProducts
+    function formatCurrency(amount) {
+        return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
+    }
 
-        const productsOptions = allProducts.map(product =>
-            `<option value="${product.id}" data-price="${product.price}" data-stock="${product.stock_quantity}" ${item.product_id == product.id ? 'selected' : ''}>
-                ${product.name} (Kho: ${product.stock_quantity})
-            </option>`
-        ).join('');
+    /**
+     * Thêm một dòng sản phẩm mới vào modal tạo/cập nhật.
+     * @param {HTMLElement} container - Container để thêm dòng sản phẩm vào (e.g., product_items_container_modal, product_items_container_update)
+     * @param {Array} products - Danh sách sản phẩm
+     * @param {Object} itemData - Dữ liệu sản phẩm (optional)
+     * @param {string} formIdentifier - Identifier của form (để xử lý lỗi validation)
+     */
+    function addProductItem(container, products, itemData = {}, formIdentifier = 'create_order_form') {
+        const newIndex = productItemIndex++;
+        const productOptions = products.map(p => `
+            <option value="${p.id}" data-price="${p.price}" data-stock="${p.stock_quantity}" ${itemData.product_id == p.id ? 'selected' : ''}>
+                ${p.name} (Tồn: ${p.stock_quantity})
+            </option>
+        `).join('');
 
-        const newRowHtml = `
-            <div class="row product-item-row-update mb-3 align-items-center" data-index="${itemIndex}">
-                <input type="hidden" name="items[${itemIndex}][order_item_id]" value="${item.id || ''}">
-                <div class="col-md-1 text-center">
-                    <img src="${productData.thumbnail_url || 'https://placehold.co/70x70/EFEFEF/AAAAAA&text=No+Image'}"
-                         class="img-fluid rounded product-thumbnail-update"
-                         alt="Ảnh sản phẩm" style="width: 60px; height: 60px; object-fit: cover;">
-                </div>
-                <div class="col-md-6">
-                    <select name="items[${itemIndex}][product_id]" class="form-select selectpicker product-select-update" data-live-search="true" data-width="100%" title="-- Chọn sản phẩm --">
-                        ${productsOptions}
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <input type="number" name="items[${itemIndex}][quantity]" class="form-control" placeholder="Số lượng" min="1" value="${item.quantity || 1}">
-                </div>
-                <div class="col-md-2">
-                    <button type="button" class="btn btn-danger remove-product-item-update-btn w-100"><i class="bi bi-trash"></i></button>
+        const orderItemIdInput = itemData.order_item_id ? `<input type="hidden" name="items[${newIndex}][order_item_id]" value="${itemData.order_item_id}">` : '';
+        const quantityValue = itemData.quantity ?? 1;
+
+        const rowHtml = `
+            <div class="card card-body mb-2 product-item-row-modal" data-row-index="${newIndex}">
+                <div class="row align-items-center">
+                    ${orderItemIdInput}
+                    <div class="col-md-5">
+                        <label for="product_id_${newIndex}" class="form-label">Sản phẩm <span class="text-danger">*</span></label>
+                        <select class="form-control selectpicker product-select ${hasValidationErrors && window.LaravelErrors && window.LaravelErrors[`items.${newIndex}.product_id`] ? 'is-invalid' : ''}"
+                            data-live-search="true" id="product_id_${newIndex}" name="items[${newIndex}][product_id]" required>
+                            <option value="">-- Chọn sản phẩm --</option>
+                            ${productOptions}
+                        </select>
+                        ${hasValidationErrors && window.LaravelErrors && window.LaravelErrors[`items.${newIndex}.product_id`] ? `<div class="text-danger mt-1">${window.LaravelErrors[`items.${newIndex}.product_id`][0]}</div>` : ''}
+                    </div>
+                    <div class="col-md-3">
+                        <label for="quantity_${newIndex}" class="form-label">Số lượng <span class="text-danger">*</span></label>
+                        <input type="number" class="form-control quantity-input ${hasValidationErrors && window.LaravelErrors && window.LaravelErrors[`items.${newIndex}.quantity`] ? 'is-invalid' : ''}"
+                            id="quantity_${newIndex}" name="items[${newIndex}][quantity]" min="1" value="${quantityValue}" required>
+                        ${hasValidationErrors && window.LaravelErrors && window.LaravelErrors[`items.${newIndex}.quantity`] ? `<div class="text-danger mt-1">${window.LaravelErrors[`items.${newIndex}.quantity`][0]}</div>` : ''}
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Thành tiền</label>
+                        <p class="form-control-plaintext product-subtotal-display">
+                            <span class="product-subtotal-value">0</span> ₫
+                        </p>
+                    </div>
+                    <div class="col-md-1 text-end">
+                        <button type="button" class="btn btn-danger btn-sm remove-product-item" title="Xóa sản phẩm">
+                            <i class="bi bi-x-circle-fill"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
         `;
-        $('#product_items_container_update').append(newRowHtml);
-        // Không refreshSelectPickers ở đây, sẽ refresh sau khi tất cả các dòng được thêm
-    };
 
-    const createProductRow = () => {
-        if (!productItemsContainer) return; // Đảm bảo container tồn tại
-        const itemIndex = Date.now() + Math.random();
-        const productsOptions = allProducts.map(product =>
-            `<option value="${product.id}" data-price="${product.price}" data-stock="${product.stock_quantity}">${product.name} (Kho: ${product.stock_quantity})</option>`
-        ).join('');
+        container.insertAdjacentHTML('beforeend', rowHtml);
 
-        const newRowHtml = `
-            <div class="product-item-row-modal mb-2" data-index="${itemIndex}">
-                <select name="product_ids[]" class="form-select selectpicker" data-live-search="true" data-width="100%">
-                    <option value="">-- Chọn sản phẩm --</option>
-                    ${productsOptions}
-                </select>
-                <input type="number" name="quantities[]" class="form-control product-quantity" placeholder="SL" min="1" value="1">
-                <button type="button" class="btn btn-danger remove-product-item-modal"><i class="bi bi-trash"></i></button>
-            </div>
-        `;
-        $(productItemsContainer).append(newRowHtml);
-        // Không refreshSelectPickers ở đây, sẽ refresh sau khi tất cả các dòng được thêm
-        productItemCounter++; // Tăng biến đếm sản phẩm cho modal tạo mới
-    };
+        const newRow = container.querySelector(`[data-row-index="${newIndex}"]`);
+        const productSelect = newRow.querySelector('.product-select');
+        const quantityInput = newRow.querySelector('.quantity-input');
+        const removeButton = newRow.querySelector('.remove-product-item');
 
-    // --- CÁC HÀM XỬ LÝ LOGIC (Đã chuyển ra scope chính) ---
+        // Initialize selectpicker for the new dropdown
+        $(productSelect).selectpicker(); // Khởi tạo selectpicker cho phần tử mới
 
-    function toggleCustomerFields() {
-        const existingFields = document.getElementById('existing_customer_fields_modal');
-        const guestFields = document.getElementById('guest_customer_fields_modal');
-        if (!existingFields || !guestFields) return;
+        // Attach event listeners for the new row
+        productSelect.addEventListener('change', () => handleProductChange(newRow, allProducts, formIdentifier));
+        quantityInput.addEventListener('input', () => handleQuantityChange(newRow, allProducts, formIdentifier));
+        removeButton.addEventListener('click', () => removeProductItem(newRow, formIdentifier));
 
-        if (document.getElementById('customer_type_existing_modal').checked) {
-            existingFields.style.display = 'block';
-            guestFields.style.display = 'none';
+        // Calculate initial subtotal for the new row
+        calculateRowSubtotal(newRow, allProducts);
+        // Recalculate full order summary
+        updateSummary(formIdentifier);
+    }
+
+    /**
+     * Cập nhật thành tiền cho một dòng sản phẩm và tổng cộng của đơn hàng.
+     * @param {HTMLElement} row - Dòng sản phẩm HTML element.
+     * @param {Array} products - Danh sách sản phẩm.
+     */
+    function calculateRowSubtotal(row, products) {
+        const productId = row.querySelector('.product-select').value;
+        const quantity = parseInt(row.querySelector('.quantity-input').value) || 0;
+        const product = products.find(p => p.id == productId);
+        const price = product ? parseFloat(product.price) : 0;
+        const subtotal = price * quantity;
+        row.querySelector('.product-subtotal-value').textContent = new Intl.NumberFormat('vi-VN').format(subtotal);
+    }
+
+    /**
+     * Xử lý khi sản phẩm trong một dòng được thay đổi.
+     * @param {HTMLElement} row - Dòng sản phẩm HTML element.
+     * @param {Array} products - Danh sách sản phẩm.
+     * @param {string} formIdentifier - Identifier của form.
+     */
+    function handleProductChange(row, products, formIdentifier) {
+        const productId = row.querySelector('.product-select').value;
+        const product = products.find(p => p.id == productId);
+        const quantityInput = row.querySelector('.quantity-input');
+
+        // Cập nhật stock_quantity trong option của selectpicker nếu cần (đã có trong data-stock)
+        // và reset số lượng về 1 khi đổi sản phẩm
+        if (product) {
+            quantityInput.value = 1;
+            // Clear any previous validation errors for this row if product changed
+            row.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+            row.querySelectorAll('.text-danger.mt-1').forEach(el => el.remove());
         } else {
-            existingFields.style.display = 'none';
-            guestFields.style.display = 'flex';
+            quantityInput.value = 0;
         }
-        refreshSelectPickers(); // Sử dụng hàm chung
+
+        calculateRowSubtotal(row, products);
+        updateSummary(formIdentifier);
     }
 
-    // Hàm tải địa chỉ cho MODAL TẠO MỚI
-    async function loadDistricts(provinceId, selectedDistrictId = null) {
-        const districtSelect = $('#guest_district_id_modal');
-        const wardSelect = $('#guest_ward_id_modal');
-        districtSelect.empty().append('<option value="">-- Chọn Quận/Huyện --</option>');
-        wardSelect.empty().append('<option value="">-- Chọn Phường/Xã --</option>');
-        refreshSelectPickers(); // Refresh sau khi clear
-        if (provinceId) {
-            try {
-                const response = await fetch(`/api/provinces/${provinceId}/districts`);
-                const data = await response.json();
-                $.each(data, (id, name) => districtSelect.append(new Option(name, id)));
-                if (selectedDistrictId) districtSelect.val(selectedDistrictId);
-                refreshSelectPickers(); // Refresh sau khi điền dữ liệu
-            } catch (error) { console.error('Lỗi khi tải quận/huyện:', error); }
+    /**
+     * Xử lý khi số lượng sản phẩm thay đổi.
+     * @param {HTMLElement} row - Dòng sản phẩm HTML element.
+     * @param {Array} products - Danh sách sản phẩm.
+     * @param {string} formIdentifier - Identifier của form.
+     */
+    function handleQuantityChange(row, products, formIdentifier) {
+        const productId = row.querySelector('.product-select').value;
+        const quantityInput = row.querySelector('.quantity-input');
+        const quantity = parseInt(quantityInput.value) || 0;
+        const product = products.find(p => p.id == productId);
+
+        if (product && quantity > product.stock_quantity) {
+            // Hiển thị cảnh báo hoặc tự động điều chỉnh số lượng
+            // Ví dụ: quantityInput.value = product.stock_quantity;
+            // showAppInfoModal(`Số lượng sản phẩm "${product.name}" trong kho chỉ còn ${product.stock_quantity}.`, 'warning');
         }
+
+        calculateRowSubtotal(row, products);
+        updateSummary(formIdentifier);
     }
 
-    async function loadWards(districtId, selectedWardId = null) {
-        const wardSelect = $('#guest_ward_id_modal');
-        wardSelect.empty().append('<option value="">-- Chọn Phường/Xã --</option>');
-        refreshSelectPickers(); // Refresh sau khi clear
-        if (districtId) {
-            try {
-                const response = await fetch(`/api/districts/${districtId}/wards`);
-                const data = await response.json();
-                $.each(data, (id, name) => wardSelect.append(new Option(name, id)));
-                if (selectedWardId) wardSelect.val(selectedWardId);
-                refreshSelectPickers(); // Refresh sau khi điền dữ liệu
-            } catch (error) { console.error('Lỗi khi tải phường/xã:', error); }
+    /**
+     * Xóa một dòng sản phẩm khỏi modal.
+     * @param {HTMLElement} row - Dòng sản phẩm HTML element.
+     * @param {string} formIdentifier - Identifier của form.
+     */
+    function removeProductItem(row, formIdentifier) {
+        const orderItemId = row.querySelector('input[name$="[order_item_id]"]')?.value;
+        if (orderItemId) {
+            // If it's an existing order item, add its ID to the removed items set
+            removedItemIds.add(orderItemId);
+            // Append a hidden input to the form to signal backend about removal
+            const container = formIdentifier === 'create_order_form' ? document.getElementById('removed_items_container') : document.getElementById('removed_items_container_update');
+            const hiddenInput = document.createElement('input');
+            hiddenInput.type = 'hidden';
+            hiddenInput.name = 'removed_items[]';
+            hiddenInput.value = orderItemId;
+            container.appendChild(hiddenInput);
+        }
+        row.remove();
+        updateSummary(formIdentifier);
+    }
+
+    /**
+     * Cập nhật tóm tắt đơn hàng (tổng phụ, phí vận chuyển, giảm giá, tổng cộng).
+     * @param {string} formIdentifier - Identifier của form ('create_order_form' or 'update_order_form')
+     */
+    function updateSummary(formIdentifier) {
+        let subtotal = 0;
+        let shippingFee = 0;
+        let discountAmount = 0;
+
+        const productItemsContainer = formIdentifier === 'create_order_form' ?
+            document.getElementById('product_items_container_modal') :
+            document.getElementById('product_items_container_update');
+
+        productItemsContainer.querySelectorAll('.product-item-row-modal').forEach(row => {
+            const productId = row.querySelector('.product-select').value;
+            const quantity = parseInt(row.querySelector('.quantity-input').value) || 0;
+            const product = allProducts.find(p => p.id == productId);
+            const price = product ? parseFloat(product.price) : 0;
+            subtotal += price * quantity;
+        });
+
+        // Get shipping fee
+        const deliveryServiceSelect = formIdentifier === 'create_order_form' ?
+            document.getElementById('delivery_service_id') :
+            document.getElementById('delivery_service_id_update');
+        const selectedDeliveryServiceOption = deliveryServiceSelect.options[deliveryServiceSelect.selectedIndex];
+        if (selectedDeliveryServiceOption) {
+            shippingFee = parseFloat(selectedDeliveryServiceOption.dataset.shippingFee || 0);
+        }
+
+        // Get promotion discount
+        const promotionSelect = formIdentifier === 'create_order_form' ?
+            document.getElementById('promotion_id') :
+            document.getElementById('promotion_id_update');
+        const selectedPromotionOption = promotionSelect.options[promotionSelect.selectedIndex];
+        let discountPercentage = 0;
+        if (selectedPromotionOption && selectedPromotionOption.value) {
+            discountPercentage = parseFloat(selectedPromotionOption.dataset.discountPercent || 0);
+            discountAmount = subtotal * (discountPercentage / 100);
+        }
+
+        const grandTotal = Math.max(0, subtotal - discountAmount + shippingFee);
+
+        // Update display elements
+        const subtotalElem = formIdentifier === 'create_order_form' ? document.getElementById('create-order-subtotal') : document.getElementById('update-order-subtotal');
+        const shippingFeeElem = formIdentifier === 'create_order_form' ? document.getElementById('create-order-shipping-fee') : document.getElementById('update-order-shipping-fee');
+        const discountAmountElem = formIdentifier === 'create_order_form' ? document.getElementById('create-order-discount-amount') : document.getElementById('update-order-discount-amount');
+        const discountRowElem = formIdentifier === 'create_order_form' ? document.getElementById('create-order-discount-row') : document.getElementById('update-order-discount-row');
+        const grandTotalElem = formIdentifier === 'create_order_form' ? document.getElementById('create-order-grand-total') : document.getElementById('update-order-grand-total');
+
+        subtotalElem.textContent = formatCurrency(subtotal);
+        shippingFeeElem.textContent = formatCurrency(shippingFee);
+        discountAmountElem.textContent = `-${formatCurrency(discountAmount)}`;
+
+        if (discountAmount > 0) {
+            discountRowElem.classList.remove('d-none');
+        } else {
+            discountRowElem.classList.add('d-none');
+        }
+        grandTotalElem.textContent = formatCurrency(grandTotal);
+    }
+
+    /**
+     * Điền dữ liệu đơn hàng vào modal chỉnh sửa.
+     * @param {Object} order - Dữ liệu đơn hàng.
+     */
+    async function fillUpdateModal(order) {
+        const updateOrderModal = document.getElementById('updateOrderModal');
+        const updateOrderForm = document.getElementById('updateOrderForm');
+
+        updateOrderForm.action = `/admin/sales/orders/${order.id}`; // Cập nhật action URL
+        document.getElementById('updateModalOrderIdStrong').textContent = order.id;
+
+        // Reset form
+        updateOrderForm.reset();
+        removedItemIds.clear(); // Clear removed items set for new update session
+        document.getElementById('removed_items_container_update').innerHTML = ''; // Clear hidden inputs
+
+        // Fill customer and guest info
+        const customerIdSelect = document.getElementById('customer_id_update');
+        const guestInfoFields = document.getElementById('guest_info_fields_update');
+        const customerAddressFields = document.getElementById('customer_address_fields_update');
+
+        if (order.customer_id) {
+            // Registered customer
+            $(customerIdSelect).val(order.customer_id).selectpicker('refresh');
+            guestInfoFields.classList.add('d-none');
+            customerAddressFields.classList.remove('d-none');
+
+            // Load customer addresses for the selected customer
+            await populateCustomerAddresses(order.customer_id, document.getElementById('customer_shipping_address_id_update'), order.shipping_address_id); // Pass shipping_address_id if available on order
+            // If order has a specific address_line, update the guest address fields for view purposes (even if guest fields are hidden)
+            // Or just update the selected address in the dropdown.
+            if (order.shipping_address_id) {
+                $(document.getElementById('customer_shipping_address_id_update')).val(order.shipping_address_id).selectpicker('refresh');
+            } else {
+                // If no specific address_id is saved on order, use the order's explicit address fields
+                // This might happen if the customer's default address was used but not linked by ID.
+                document.getElementById('guest_name_update').value = order.guest_name || order.customer.name;
+                document.getElementById('guest_email_update').value = order.guest_email || order.customer.email;
+                document.getElementById('guest_phone_update').value = order.guest_phone || order.customer.phone;
+                document.getElementById('shipping_address_line_update').value = order.shipping_address_line;
+
+                await populateProvinces(document.getElementById('province_id_update'), order.province_id);
+                if (order.province_id) await populateDistricts(order.province_id, document.getElementById('district_id_update'), order.district_id);
+                if (order.district_id) await populateWards(order.district_id, document.getElementById('ward_id_update'), order.ward_id);
+
+                guestInfoFields.classList.remove('d-none'); // Show guest fields as fallback for display
+                customerAddressFields.classList.add('d-none');
+            }
+        } else {
+            // Guest customer
+            $(customerIdSelect).val('').selectpicker('refresh');
+            guestInfoFields.classList.remove('d-none');
+            customerAddressFields.classList.add('d-none');
+
+            document.getElementById('guest_name_update').value = order.guest_name;
+            document.getElementById('guest_email_update').value = order.guest_email;
+            document.getElementById('guest_phone_update').value = order.guest_phone;
+            document.getElementById('shipping_address_line_update').value = order.shipping_address_line;
+
+            await populateProvinces(document.getElementById('province_id_update'), order.province_id);
+            if (order.province_id) await populateDistricts(order.province_id, document.getElementById('district_id_update'), order.district_id);
+            if (order.district_id) await populateWards(order.district_id, document.getElementById('ward_id_update'), order.ward_id);
+        }
+
+        // Fill other order details
+        $(document.getElementById('status_update')).val(order.status).selectpicker('refresh');
+        $(document.getElementById('payment_method_update')).val(order.payment_method).selectpicker('refresh');
+        $(document.getElementById('delivery_service_id_update')).val(order.delivery_service_id).selectpicker('refresh');
+        $(document.getElementById('promotion_id_update')).val(order.promotion_id || '').selectpicker('refresh');
+        document.getElementById('notes_update').value = order.notes || '';
+
+        // Fill order items
+        const productItemsContainerUpdate = document.getElementById('product_items_container_update');
+        productItemsContainerUpdate.innerHTML = ''; // Clear existing items
+        productItemIndex = 0; // Reset index for update modal
+
+        order.items.forEach(item => {
+            addProductItem(productItemsContainerUpdate, allProducts, {
+                product_id: item.product_id,
+                quantity: item.quantity,
+                order_item_id: item.id // Pass the order_item_id
+            }, 'update_order_form');
+        });
+
+        // If there are no items, add an empty row
+        if (order.items.length === 0) {
+            addProductItem(productItemsContainerUpdate, allProducts, {}, 'update_order_form');
+        }
+
+        updateSummary('update_order_form'); // Update summary after filling all details
+    }
+
+    /**
+     * Điền dữ liệu đơn hàng vào modal xem chi tiết.
+     * @param {Object} order - Dữ liệu đơn hàng.
+     */
+    function fillViewModal(order) {
+        document.getElementById('viewModalOrderIdStrong').textContent = order.id;
+
+        // General Info
+        document.getElementById('viewDetailOrderId').textContent = order.id;
+        document.getElementById('viewDetailOrderCreatedAt').textContent = new Date(order.created_at).toLocaleString('vi-VN');
+        const statusBadge = document.getElementById('viewDetailOrderStatusBadge');
+        statusBadge.textContent = order.status_text;
+        statusBadge.className = `badge ${order.status_badge_class}`;
+
+        // Customer Info
+        document.getElementById('viewDetailOrderCustomerType').textContent = order.customer_id ? 'Khách hàng đăng ký' : 'Khách hàng vãng lai';
+        document.getElementById('viewDetailOrderCustomerName').textContent = order.customer_name;
+        document.getElementById('viewDetailOrderCustomerEmail').textContent = order.guest_email || (order.customer ? order.customer.email : 'N/A');
+        document.getElementById('viewDetailOrderCustomerPhone').textContent = order.guest_phone || (order.customer ? order.customer.phone : 'N/A');
+        document.getElementById('viewDetailOrderCreatedBy').textContent = order.created_by_admin?.name || 'Hệ thống/Khách hàng';
+
+        // Shipping Info
+        document.getElementById('viewDetailOrderShippingAddress').textContent = order.shipping_address_full;
+        document.getElementById('viewDetailOrderPaymentMethod').textContent = order.payment_method === 'cod' ? 'Thanh toán khi nhận hàng (COD)' :
+            (order.payment_method === 'bank_transfer' ? 'Chuyển khoản ngân hàng' :
+                (order.payment_method === 'online_payment' ? 'Thanh toán online' : order.payment_method));
+        document.getElementById('viewDetailOrderDeliveryService').textContent = order.delivery_service?.name || 'N/A';
+        document.getElementById('viewDetailOrderNotes').textContent = order.notes || 'Không có';
+
+        // Order Items
+        const orderItemsContainer = document.getElementById('viewDetailOrderItems');
+        orderItemsContainer.innerHTML = '';
+        order.items.forEach(item => {
+            const row = `
+                <tr>
+                    <td>${item.product?.name || 'Sản phẩm đã xóa'}</td>
+                    <td class="text-center">${item.quantity}</td>
+                    <td class="text-end">${formatCurrency(item.price)}</td>
+                    <td class="text-end">${formatCurrency(item.subtotal)}</td>
+                </tr>
+            `;
+            orderItemsContainer.insertAdjacentHTML('beforeend', row);
+        });
+
+        // Summary
+        document.getElementById('viewDetailOrderSubtotal').textContent = formatCurrency(order.subtotal);
+        document.getElementById('viewDetailOrderShippingFee').textContent = formatCurrency(order.shipping_fee);
+        document.getElementById('viewDetailOrderDiscount').textContent = `-${formatCurrency(order.discount_amount)}`;
+        const viewDetailDiscountRow = document.getElementById('view-detail-discount-row');
+        if (order.promotion_id && order.discount_amount > 0) {
+            viewDetailDiscountRow.classList.remove('d-none');
+            document.getElementById('viewDetailOrderPromotionCode').textContent = `(${order.promotion?.code || 'N/A'})`;
+        } else {
+            viewDetailDiscountRow.classList.add('d-none');
+            document.getElementById('viewDetailOrderPromotionCode').textContent = '';
+        }
+        document.getElementById('viewDetailOrderGrandTotal').textContent = formatCurrency(order.grand_total);
+
+
+        // Fill print invoice area
+        document.getElementById('print-order-id').textContent = order.id;
+        document.getElementById('print-created-at').textContent = new Date(order.created_at).toLocaleString('vi-VN');
+        document.getElementById('print-status').textContent = order.status_text;
+        document.getElementById('print-customer-name').textContent = order.customer_name;
+        document.getElementById('print-customer-email').textContent = order.guest_email || (order.customer ? order.customer.email : 'N/A');
+        document.getElementById('print-customer-phone').textContent = order.guest_phone || (order.customer ? order.customer.phone : 'N/A');
+        document.getElementById('print-shipping-address-full').textContent = order.shipping_address_full;
+        document.getElementById('print-payment-method').textContent = document.getElementById('viewDetailOrderPaymentMethod').textContent; // Re-use formatted text
+        document.getElementById('print-delivery-service').textContent = order.delivery_service?.name || 'N/A';
+        document.getElementById('print-notes').textContent = order.notes || 'Không có';
+
+        const printOrderItemsContainer = document.getElementById('print-order-items');
+        printOrderItemsContainer.innerHTML = '';
+        order.items.forEach(item => {
+            const row = `
+                <tr>
+                    <td style="border: 1px solid #eee; padding: 8px;">${item.product?.name || 'Sản phẩm đã xóa'}</td>
+                    <td style="border: 1px solid #eee; padding: 8px; text-align: center;">${item.quantity}</td>
+                    <td style="border: 1px solid #eee; padding: 8px; text-align: right;">${formatCurrency(item.price)}</td>
+                    <td style="border: 1px solid #eee; padding: 8px; text-align: right;">${formatCurrency(item.subtotal)}</td>
+                </tr>
+            `;
+            printOrderItemsContainer.insertAdjacentHTML('beforeend', row);
+        });
+
+        document.getElementById('print-subtotal').textContent = formatCurrency(order.subtotal);
+        document.getElementById('print-shipping').textContent = formatCurrency(order.shipping_fee);
+        document.getElementById('print-discount').textContent = `-${formatCurrency(order.discount_amount)}`;
+        const printDiscountRow = document.getElementById('print-discount-row');
+        if (order.promotion_id && order.discount_amount > 0) {
+            printDiscountRow.classList.remove('d-none');
+            document.getElementById('print-promotion-code').textContent = order.promotion?.code || 'N/A';
+        } else {
+            printDiscountRow.classList.add('d-none');
+            document.getElementById('print-promotion-code').textContent = '';
+        }
+        document.getElementById('print-grand-total').textContent = formatCurrency(order.grand_total);
+
+    }
+
+    /**
+     * Tải danh sách quận/huyện dựa trên ID tỉnh/thành.
+     * @param {number} provinceId
+     * @param {HTMLElement} districtSelectElement
+     * @param {number} selectedId
+     */
+    async function populateDistricts(provinceId, districtSelectElement, selectedId = null) {
+        districtSelectElement.innerHTML = '<option value="">-- Đang tải Quận/Huyện --</option>';
+        $(districtSelectElement).selectpicker('refresh');
+        if (!provinceId) {
+            districtSelectElement.innerHTML = '<option value="">-- Chọn Quận/Huyện --</option>';
+            $(districtSelectElement).selectpicker('refresh');
+            return;
+        }
+        try {
+            const response = await fetch(`/api/provinces/${provinceId}/districts`);
+            const districts = await response.json();
+            districtSelectElement.innerHTML = '<option value="">-- Chọn Quận/Huyện --</option>';
+            districts.forEach(district => {
+                const option = new Option(district.name, district.id);
+                districtSelectElement.add(option);
+            });
+            $(districtSelectElement).val(selectedId).selectpicker('refresh');
+            $(districtSelectElement).trigger('changed.bs.select'); // Trigger change event for wards
+        } catch (error) {
+            console.error('Lỗi khi tải danh sách quận/huyện:', error);
+            districtSelectElement.innerHTML = '<option value="">-- Lỗi tải dữ liệu --</option>';
+            $(districtSelectElement).selectpicker('refresh');
         }
     }
 
     /**
-     * SỬA LỖI: Tinh chỉnh lại hàm load địa chỉ để đảm bảo refresh đúng lúc.
+     * Tải danh sách phường/xã dựa trên ID quận/huyện.
+     * @param {number} districtId
+     * @param {HTMLElement} wardSelectElement
+     * @param {number} selectedId
      */
-    async function loadDistrictsForUpdate(provinceId, selectedDistrictId = null) {
-        const districtSelect = $('#district_id_update');
-        const wardSelect = $('#ward_id_update'); // Giữ lại để clear
-        districtSelect.empty().append('<option value="">-- Chọn Quận/Huyện --</option>');
-        wardSelect.empty().append('<option value="">-- Chọn Phường/Xã --</option>'); // Clear wardSelect
-        if (provinceId) {
-            try {
-                const response = await fetch(`/api/provinces/${provinceId}/districts`);
-                const data = await response.json();
-                $.each(data, (id, name) => districtSelect.append(new Option(name, id)));
-                districtSelect.val(selectedDistrictId);
-            } catch (error) { console.error('Lỗi khi tải quận/huyện cho modal update:', error); }
+    async function populateWards(districtId, wardSelectElement, selectedId = null) {
+        wardSelectElement.innerHTML = '<option value="">-- Đang tải Phường/Xã --</option>';
+        $(wardSelectElement).selectpicker('refresh');
+        if (!districtId) {
+            wardSelectElement.innerHTML = '<option value="">-- Chọn Phường/Xã --</option>';
+            $(wardSelectElement).selectpicker('refresh');
+            return;
         }
-        districtSelect.selectpicker('render'); // Render ngay sau khi thêm option
-        wardSelect.selectpicker('render'); // Render ngay sau khi clear
-    }
-
-    async function loadWardsForUpdate(districtId, selectedWardId = null) {
-        const wardSelect = $('#ward_id_update');
-        wardSelect.empty().append('<option value="">-- Chọn Phường/Xã --</option>');
-        if (districtId) {
-            try {
-                const response = await fetch(`/api/districts/${districtId}/wards`);
-                const data = await response.json();
-                $.each(data, (id, name) => wardSelect.append(new Option(name, id)));
-                wardSelect.val(selectedWardId);
-            } catch (error) { console.error('Lỗi khi tải phường/xã cho modal update:', error); }
-        }
-        wardSelect.selectpicker('render'); // Render ngay sau khi thêm option
-    }
-
-
-    // Hàm addProductItem cũ được đổi tên và cập nhật để dùng createProductRow
-    // và xử lý số lượng sản phẩm cho modal tạo mới.
-    function addProductItem() {
-        if (!productItemsContainer) return;
-        createProductRow(); // Gọi hàm tạo dòng sản phẩm mới
-        if (productItemsContainer.querySelectorAll('.product-item-row-modal').length === 0) {
-            // Nếu đây là sản phẩm đầu tiên được thêm, đảm bảo biến đếm được khởi tạo
-            productItemCounter = 1;
-        }
-        refreshSelectPickers(); // Refresh sau khi thêm sản phẩm
-    }
-
-
-    // --- CÁC HÀM HIỂN THỊ MODAL ---
-
-    async function handleShowViewModal(orderId, fetchUrl) {
-        if (!viewOrderModalEl) return;
-        showAppLoader();
         try {
-            const response = await fetch(fetchUrl, {
-                headers: { 'Accept': 'application/json' }
+            const response = await fetch(`/api/districts/${districtId}/wards`);
+            const wards = await response.json();
+            wardSelectElement.innerHTML = '<option value="">-- Chọn Phường/Xã --</option>';
+            wards.forEach(ward => {
+                const option = new Option(ward.name, ward.id);
+                wardSelectElement.add(option);
             });
-            if (!response.ok) throw new Error('Không thể tải dữ liệu đơn hàng.');
-            const order = await response.json();
+            $(wardSelectElement).val(selectedId).selectpicker('refresh');
+        } catch (error) {
+            console.error('Lỗi khi tải danh sách phường/xã:', error);
+            wardSelectElement.innerHTML = '<option value="">-- Lỗi tải dữ liệu --</option>';
+            $(wardSelectElement).selectpicker('refresh');
+        }
+    }
 
-            // ---- BƯỚC 1: ĐIỀN DỮ LIỆU VÀO GIAO DIỆN XEM CHI TIẾT (như cũ) ----
-            viewOrderModalEl.querySelector('#viewModalOrderIdStrong').textContent = `#${order.id}`;
-            viewOrderModalEl.querySelector('#viewDetailOrderId').textContent = `#${order.id}`;
-            viewOrderModalEl.querySelector('#viewDetailOrderCreatedAt').textContent = new Date(order.created_at).toLocaleString('vi-VN');
-            viewOrderModalEl.querySelector('#viewDetailOrderStatusBadge').innerHTML = `<span class="badge ${order.status_badge_class}">${order.status_text}</span>`;
+    /**
+     * Điền các option cho select Tỉnh/Thành phố.
+     * @param {HTMLElement} provinceSelectElement
+     * @param {number} selectedId
+     */
+    function populateProvinces(provinceSelectElement, selectedId = null) {
+        provinceSelectElement.innerHTML = '<option value="">-- Chọn Tỉnh/Thành --</option>';
+        allProvinces.forEach(province => {
+            const option = new Option(province.name, province.id);
+            provinceSelectElement.add(option);
+        });
+        $(provinceSelectElement).val(selectedId).selectpicker('refresh');
+    }
 
-            // Thông tin khách hàng & địa chỉ
-            viewOrderModalEl.querySelector('#viewDetailCustomerType').textContent = order.customer_id ? 'Khách hàng hiện có' : 'Khách vãng lai';
-            viewOrderModalEl.querySelector('#viewDetailCustomerName').textContent = order.customer_name;
-            viewOrderModalEl.querySelector('#viewDetailCustomerEmail').textContent = order.guest_email || (order.customer ? order.customer.email : 'N/A');
-            viewOrderModalEl.querySelector('#viewDetailCustomerPhone').textContent = order.guest_phone || (order.customer ? order.customer.phone : 'N/A');
-            viewOrderModalEl.querySelector('#viewDetailOrderFullAddress').textContent = order.full_address;
+    /**
+     * Điền các option cho select Khách hàng.
+     * @param {HTMLElement} customerSelectElement
+     * @param {number} selectedId
+     */
+    function populateCustomers(customerSelectElement, selectedId = null) {
+        customerSelectElement.innerHTML = '<option value="">-- Khách hàng vãng lai --</option>';
+        allCustomers.forEach(customer => {
+            const option = new Option(`${customer.name} (${customer.email || customer.phone})`, customer.id);
+            customerSelectElement.add(option);
+        });
+        $(customerSelectElement).val(selectedId).selectpicker('refresh');
+    }
 
-            // Thông tin đơn hàng
-            viewOrderModalEl.querySelector('#viewDetailOrderPaymentMethod').textContent = order.payment_method === 'cod' ? 'Thanh toán khi nhận hàng (COD)' : 'VNPAY';
-            viewOrderModalEl.querySelector('#viewDetailOrderDeliveryService').textContent = order.delivery_service ? order.delivery_service.name : 'N/A';
-            viewOrderModalEl.querySelector('#viewDetailOrderPromotionCode').textContent = order.promotion ? order.promotion.code : 'Không áp dụng';
-            viewOrderModalEl.querySelector('#viewDetailOrderNotes').textContent = order.notes || 'Không có ghi chú';
-            viewOrderModalEl.querySelector('#viewDetailOrderCreatedByAdmin').textContent = order.created_by_admin ? order.created_by_admin.name : 'N/A';
+    /**
+     * Tải và điền danh sách địa chỉ của một khách hàng.
+     * @param {number} customerId
+     * @param {HTMLElement} addressSelectElement
+     * @param {number} selectedAddressId
+     */
+    async function populateCustomerAddresses(customerId, addressSelectElement, selectedAddressId = null) {
+        addressSelectElement.innerHTML = '<option value="">-- Đang tải địa chỉ --</option>';
+        $(addressSelectElement).selectpicker('refresh');
 
+        if (!customerId) {
+            addressSelectElement.innerHTML = '<option value="">-- Chọn địa chỉ --</option>';
+            $(addressSelectElement).selectpicker('refresh');
+            return;
+        }
 
-            // Chi tiết sản phẩm
-            const orderItemsBody = viewOrderModalEl.querySelector('#viewOrderItemsBody');
-            orderItemsBody.innerHTML = '';
-            order.items.forEach(item => {
-                const row = `
-                    <tr>
-                        <td>
-                            <div class="d-flex align-items-center">
-                                <img src="${item.product?.thumbnail_url || 'https://placehold.co/50x50/EFEFEF/AAAAAA&text=No+Image'}" alt="${item.product?.name || 'Sản phẩm'}" style="width: 50px; height: 50px; object-fit: cover; margin-right: 10px;">
-                                <span>${item.product?.name || 'Sản phẩm không tồn tại'}</span>
-                            </div>
-                        </td>
-                        <td>${item.quantity}</td>
-                        <td>${(item.price || 0).toLocaleString('vi-VN')} ₫</td>
-                        <td class="text-end">${((item.quantity || 0) * (item.price || 0)).toLocaleString('vi-VN')} ₫</td>
-                    </tr>
-                `;
-                orderItemsBody.insertAdjacentHTML('beforeend', row);
+        try {
+            const response = await fetch(`/api/customer/${customerId}/addresses`); // You might need to define this API route
+            const addresses = await response.json();
+            addressSelectElement.innerHTML = '<option value="">-- Chọn địa chỉ --</option>';
+            addresses.forEach(address => {
+                const option = new Option(`${address.address_line}, ${address.ward?.name}, ${address.district?.name}, ${address.province?.name}`, address.id);
+                addressSelectElement.add(option);
             });
-
-            // Tổng kết
-            viewOrderModalEl.querySelector('#viewOrderSubtotal').textContent = `${order.subtotal.toLocaleString('vi-VN')} ₫`;
-            viewOrderModalEl.querySelector('#viewOrderShippingFee').textContent = `${(order.delivery_service?.shipping_fee || 0).toLocaleString('vi-VN')} ₫`;
-            viewOrderModalEl.querySelector('#viewOrderDiscount').textContent = `-${order.discount_amount.toLocaleString('vi-VN')} ₫`;
-            viewOrderModalEl.querySelector('#viewOrderGrandTotal').textContent = order.formatted_total_price;
-
-            // ---- BƯỚC 2: ĐIỀN DỮ LIỆU VÀO MẪU HÓA ĐƠN IN ẤN ----
-            const populatePrintTemplate = (order) => {
-                document.getElementById('print-invoice-id').textContent = order.id;
-                document.getElementById('print-invoice-date').textContent = new Date(order.created_at).toLocaleDateString('vi-VN');
-                document.getElementById('print-invoice-status').textContent = order.status_text;
-
-                document.getElementById('print-customer-name').textContent = order.customer_name;
-                document.getElementById('print-customer-phone').textContent = order.guest_phone || (order.customer ? order.customer.phone : 'N/A');
-                document.getElementById('print-customer-email').textContent = order.guest_email || (order.customer ? order.customer.email : 'N/A');
-                document.getElementById('print-customer-address').textContent = order.full_address;
-
-                const itemsBody = document.getElementById('print-items-body');
-                itemsBody.innerHTML = ''; // Xóa dữ liệu cũ
-                order.items.forEach(item => {
-                    const row = `
-                        <tr class="item ${order.items.indexOf(item) === order.items.length - 1 ? 'last' : ''}">
-                            <td>${item.product ? item.product.name : 'Sản phẩm không tồn tại'}</td>
-                            <td style="text-align: center;">${item.quantity}</td>
-                            <td class="text-right">${(item.price * item.quantity).toLocaleString('vi-VN')} ₫</td>
-                        </tr>
-                    `;
-                    itemsBody.insertAdjacentHTML('beforeend', row);
-                });
-
-                document.getElementById('print-subtotal').textContent = `${order.subtotal.toLocaleString('vi-VN')} ₫`;
-                document.getElementById('print-shipping').textContent = `${(order.delivery_service?.shipping_fee || 0).toLocaleString('vi-VN')} ₫`;
-                document.getElementById('print-discount').textContent = `-${order.discount_amount.toLocaleString('vi-VN')} ₫`;
-                document.getElementById('print-grand-total').textContent = order.formatted_total_price;
-            };
-
-            populatePrintTemplate(order);
+            $(addressSelectElement).val(selectedAddressId).selectpicker('refresh');
+        } catch (error) {
+            console.error('Lỗi khi tải địa chỉ khách hàng:', error);
+            addressSelectElement.innerHTML = '<option value="">-- Lỗi tải dữ liệu --</option>';
+            $(addressSelectElement).selectpicker('refresh');
+        }
+    }
 
 
-            const editFromViewBtn = viewOrderModalEl.querySelector('#editOrderFromViewBtn');
-            if (editFromViewBtn) {
-                const originalButton = ordersTableBody.querySelector(`.edit-order-btn[data-id="${order.id}"]`);
-                if (originalButton) {
-                    editFromViewBtn.dataset.id = order.id;
-                    editFromViewBtn.dataset.url = originalButton.dataset.url;
-                    editFromViewBtn.dataset.updateUrl = originalButton.dataset.updateUrl;
+    /**
+     * Xử lý hiển thị/ẩn thông tin khách vãng lai/địa chỉ khách hàng đăng ký.
+     * @param {HTMLElement} customerSelect - Selectbox chọn khách hàng
+     * @param {HTMLElement} guestFieldsContainer - Container chứa các trường khách vãng lai
+     * @param {HTMLElement} customerAddressContainer - Container chứa select địa chỉ của khách hàng đăng ký
+     * @param {HTMLElement} customerShippingAddressSelect - Selectbox chọn địa chỉ của khách hàng đăng ký
+     * @param {string} formIdentifier - 'create_order_form' or 'update_order_form'
+     */
+    async function handleCustomerSelectChange(customerSelect, guestFieldsContainer, customerAddressContainer, customerShippingAddressSelect, formIdentifier) {
+        const customerId = customerSelect.value;
 
-                    editFromViewBtn.onclick = function () { // Sử dụng onclick để dễ dàng gán lại
-                        const viewModalInstance = bootstrap.Modal.getInstance(viewOrderModalEl);
-                        if (viewModalInstance) viewModalInstance.hide();
-                        handleShowUpdateModal(this.dataset.id, this.dataset.url, this.dataset.updateUrl);
-                    };
+        if (customerId) {
+            guestFieldsContainer.classList.add('d-none');
+            customerAddressContainer.classList.remove('d-none');
+            await populateCustomerAddresses(customerId, customerShippingAddressSelect);
+        } else {
+            guestFieldsContainer.classList.remove('d-none');
+            customerAddressContainer.classList.add('d-none');
+            // Reset guest address fields when switching back to guest
+            const provinceSelect = formIdentifier === 'create_order_form' ? document.getElementById('province_id') : document.getElementById('province_id_update');
+            const districtSelect = formIdentifier === 'create_order_form' ? document.getElementById('district_id') : document.getElementById('district_id_update');
+            const wardSelect = formIdentifier === 'create_order_form' ? document.getElementById('ward_id') : document.getElementById('ward_id_update');
+            const shippingAddressLineInput = formIdentifier === 'create_order_form' ? document.getElementById('shipping_address_line') : document.getElementById('shipping_address_line_update');
+
+            populateProvinces(provinceSelect);
+            populateDistricts(null, districtSelect);
+            populateWards(null, wardSelect);
+            shippingAddressLineInput.value = '';
+        }
+    }
+
+
+    /**
+     * Hàm in hóa đơn.
+     */
+    function printOrder() {
+        const orderViewContent = document.getElementById('order-view-content');
+        const invoicePrintArea = document.getElementById('invoice-print-area');
+
+        // Hide normal view, show print area
+        orderViewContent.classList.add('d-none');
+        invoicePrintArea.classList.remove('d-none');
+
+        // Delay print to ensure DOM is ready for print
+        setTimeout(() => {
+            window.print();
+            // Restore normal view after printing
+            orderViewContent.classList.remove('d-none');
+            invoicePrintArea.classList.add('d-none');
+        }, 500);
+    }
+
+    /**
+     * Xử lý lỗi validation từ Laravel và hiển thị trong modal.
+     * @param {Object} errors - Đối tượng lỗi từ Laravel.
+     * @param {string} formIdentifier - 'create_order_form' or 'update_order_form'
+     */
+    function displayValidationErrors(errors, formIdentifier) {
+        // Clear previous errors
+        document.querySelectorAll(`#${formIdentifier === 'create_order_form' ? 'createOrderModal' : 'updateOrderModal'} .is-invalid`).forEach(el => el.classList.remove('is-invalid'));
+        document.querySelectorAll(`#${formIdentifier === 'create_order_form' ? 'createOrderModal' : 'updateOrderModal'} .text-danger.mt-1`).forEach(el => el.remove());
+
+        for (const [key, value] of Object.entries(errors)) {
+            let inputElement = null;
+            if (key.startsWith('items.')) {
+                // Handle nested item errors
+                const parts = key.split('.'); // e.g., items.0.product_id
+                const index = parts[1];
+                const field = parts[2];
+                const row = document.querySelector(`#${formIdentifier === 'create_order_form' ? 'product_items_container_modal' : 'product_items_container_update'} [data-row-index="${index}"]`);
+                if (row) {
+                    if (field === 'product_id') {
+                        inputElement = row.querySelector('.product-select');
+                    } else if (field === 'quantity') {
+                        inputElement = row.querySelector('.quantity-input');
+                    }
+                }
+            } else {
+                inputElement = document.getElementById(`${key}${formIdentifier === 'create_order_form' ? '' : '_update'}`);
+            }
+
+            if (inputElement) {
+                inputElement.classList.add('is-invalid');
+                const errorDiv = document.createElement('div');
+                errorDiv.classList.add('text-danger', 'mt-1');
+                errorDiv.textContent = value[0]; // First error message
+                inputElement.parentNode.appendChild(errorDiv);
+
+                // For selectpicker, also add is-invalid to the button
+                if ($(inputElement).hasClass('selectpicker')) {
+                    const button = $(inputElement).next('.bootstrap-select').find('button');
+                    button.addClass('is-invalid');
                 }
             }
-
-            // Hiển thị modal xem chi tiết
-            const modalInstance = bootstrap.Modal.getInstance(viewOrderModalEl) || new bootstrap.Modal(viewOrderModalEl);
-            modalInstance.show();
-        } catch (error) {
-            console.error('Lỗi khi tải dữ liệu đơn hàng để xem:', error);
-            showAppInfoModal('Lỗi khi tải dữ liệu đơn hàng: ' + error.message, 'error', 'Lỗi tải dữ liệu');
-        } finally {
-            hideAppLoader();
         }
     }
 
     /**
-     * SỬA LỖI & NÂNG CẤP: Hàm hiển thị modal update
+     * Thiết lập các Event Listener.
      */
-    async function handleShowUpdateModal(orderId, fetchUrl, updateUrl) {
-        if (!updateOrderModalEl || !updateOrderForm) return;
-        showAppLoader();
-        try {
-            clearValidationErrors(updateOrderForm);
-            updateOrderForm.reset();
-            $('#product_items_container_update, #removed_items_container_update').empty();
-            // Reset các selectpicker về trạng thái ban đầu
-            $('.selectpicker').val('default').selectpicker('render'); // Reset giá trị và render
-
-            const response = await fetch(fetchUrl, { headers: { 'Accept': 'application/json' } });
-            if (!response.ok) throw new Error((await response.json()).message || 'Không thể tải dữ liệu.');
-            const order = await response.json();
-
-            updateOrderForm.action = updateUrl;
-            $('#updateModalOrderIdStrong').text(`#${order.id}`);
-
-            const isEditable = !['approved', 'completed', 'cancelled', 'returned', 'failed'].includes(order.status);
-
-            // Điền dữ liệu text và các select đơn giản
-            $('#guest_name_update').val(order.guest_name || order.customer?.name || '');
-            $('#guest_phone_update').val(order.guest_phone || order.customer?.phone || '');
-            $('#guest_email_update').val(order.guest_email || order.customer?.email || '');
-            $('#shipping_address_line_update').val(order.shipping_address_line);
-            $('#payment_method_update').val(order.payment_method);
-            $('#status_update').val(order.status);
-            $('#notes_update').val(order.notes || '');
-
-            // Điền dữ liệu cho các selectpicker phức tạp và render ngay
-            $('#delivery_service_id_update').val(order.delivery_service_id).selectpicker('render');
-            $('#promotion_id_update').val(order.promotion_id).selectpicker('render');
-            $('#province_id_update').val(order.province_id).selectpicker('render');
-
-            // Tải và chọn địa chỉ một cách tuần tự
-            if (order.province_id) {
-                await loadDistrictsForUpdate(order.province_id, order.district_id);
-            }
-            if (order.district_id) {
-                await loadWardsForUpdate(order.district_id, order.ward_id);
-            }
-
-            // Render các sản phẩm đã có
-            order.items.forEach(item => createUpdateProductRow(item));
-            $('.selectpicker').selectpicker('render'); // Render lại tất cả 1 lần cuối để chắc chắn
-
-            // Vô hiệu hóa form nếu không được phép sửa
-            $(updateOrderForm).find('input, select, textarea, button').prop('disabled', !isEditable);
-            $('#saveUpdateOrderBtn, [data-bs-dismiss="modal"]').prop('disabled', false);
-
-            const modalInstance = new bootstrap.Modal(updateOrderModalEl);
-            modalInstance.show();
-        } catch (error) {
-            console.error('Lỗi khi tải dữ liệu đơn hàng để chỉnh sửa:', error);
-            showAppInfoModal(error.message, 'error', 'Lỗi');
-        } finally {
-            hideAppLoader();
-        }
-    }
-
-    function handleShowConfirmDeleteModal(orderId, orderName, deleteUrl) {
-        if (!deleteOrderModalEl || !deleteOrderForm) return;
-        clearValidationErrors(deleteOrderForm);
-        deleteOrderForm.action = deleteUrl;
-        deleteOrderModalEl.querySelector('#deleteOrderName').textContent = `#${orderId} - ${orderName}`;
-
-        const modalInstance = bootstrap.Modal.getInstance(deleteOrderModalEl) || new bootstrap.Modal(deleteOrderModalEl);
-        modalInstance.show();
-    }
-
-    // --- THIẾT LẬP BAN ĐẦU & GẮN EVENT LISTENERS ---
-
     function setupEventListeners() {
-        if (ordersTableBody) {
-            // Listener cho các nút trên bảng
-            ordersTableBody.addEventListener('click', async (event) => {
-                const button = event.target.closest('button');
-                if (!button) return;
-                event.preventDefault();
+        // Init selectpickers
+        $('.selectpicker').selectpicker();
 
-                const { id, name, url, updateUrl, deleteUrl } = button.dataset;
+        // --- CREATE ORDER MODAL ---
+        const createOrderModal = document.getElementById('createOrderModal');
+        const createOrderForm = document.getElementById('createOrderForm');
+        const addProductItemBtn = document.getElementById('add_product_item_modal');
+        const createProductItemsContainer = document.getElementById('product_items_container_modal');
 
-                if (button.classList.contains('view-order-btn')) await handleShowViewModal(id, url);
-                else if (button.classList.contains('edit-order-btn')) await handleShowUpdateModal(id, url, updateUrl);
-                else if (button.classList.contains('delete-order-btn')) handleShowConfirmDeleteModal(id, name, deleteUrl);
-            });
-        }
+        const createCustomerIdSelect = document.getElementById('customer_id');
+        const createGuestInfoFields = document.getElementById('guest_info_fields');
+        const createCustomerAddressFields = document.getElementById('customer_address_fields');
+        const createCustomerShippingAddressSelect = document.getElementById('customer_shipping_address_id');
 
-        // Listener cho các nút trong MODAL VIEW
-        if (viewOrderModalEl) {
-            viewOrderModalEl.addEventListener('click', function (event) {
-                const button = event.target.closest('button');
-                if (!button) return;
+        const createProvinceSelect = document.getElementById('province_id');
+        const createDistrictSelect = document.getElementById('district_id');
+        const createWardSelect = document.getElementById('ward_id');
 
-                // SỬA LỖI: Cập nhật logic cho nút in
-                if (button.id === 'printOrderBtn') {
-                    const body = document.body;
+        // Populate initial data for create modal
+        populateCustomers(createCustomerIdSelect);
+        populateProvinces(createProvinceSelect);
 
-                    // Thêm class để kích hoạt CSS in
-                    body.classList.add('is-printing');
-
-                    // Gọi hàm in của trình duyệt
-                    window.print();
-
-                    // Sự kiện `afterprint` là cách tốt nhất để xóa class
-                    window.addEventListener('afterprint', () => {
-                        body.classList.remove('is-printing');
-                    }, { once: true }); // `once: true` để listener tự hủy sau khi chạy 1 lần
-
-                    // Fallback cho một số trình duyệt, tự động xóa class sau 1 giây
-                    setTimeout(() => {
-                        body.classList.remove('is-printing');
-                    }, 1000);
-                }
-            });
-        }
-
-        // Listener cho modal update
-        if (updateOrderModalEl) {
-            // Nút Thêm sản phẩm
-            $('#add_product_item_update_btn').on('click', () => {
-                createUpdateProductRow();
-                $('.selectpicker').selectpicker('render'); // Refresh sau khi thêm dòng mới
-            });
-
-            // Nút Xóa sản phẩm
-            $('#product_items_container_update').on('click', '.remove-product-item-update-btn', function () {
-                const row = $(this).closest('.product-item-row-update');
-                const orderItemId = row.find('input[type="hidden"]').val();
-                if (orderItemId) {
-                    $('#removed_items_container_update').append(`<input type="hidden" name="removed_item_ids[]" value="${orderItemId}">`);
-                }
-                row.remove();
-            });
-
-            // SỬA LỖI: Dùng sự kiện 'changed.bs.select' để cập nhật ảnh
-            $('#product_items_container_update').on('changed.bs.select', '.product-select-update', function () {
-                const selectedProductId = $(this).val();
-                const row = $(this).closest('.product-item-row-update');
-                const imgTag = row.find('.product-thumbnail-update');
-                const selectedProduct = allProducts.find(p => p.id == selectedProductId);
-                imgTag.attr('src', selectedProduct?.thumbnail_url || 'https://placehold.co/70x70/EFEFEF/AAAAAA&text=No+Image');
-            });
-
-            // Sự kiện thay đổi địa chỉ
-            $('#province_id_update').on('changed.bs.select', function () { loadDistrictsForUpdate($(this).val()); });
-            $('#district_id_update').on('changed.bs.select', function () { loadWardsForUpdate($(this).val()); });
-        }
-
-        // Listener cho modal create
-        if (createOrderModalEl) {
-            const customerTypeRadios = createOrderModalEl.querySelectorAll('input[name="customer_type"]');
-            const addProductItemButton = createOrderModalEl.querySelector('#add_product_item_modal');
-            const guestProvinceSelect = $('#guest_province_id_modal');
-            const guestDistrictSelect = $('#guest_district_id_modal');
-
-            customerTypeRadios.forEach(radio => radio.addEventListener('change', toggleCustomerFields));
-            if (addProductItemButton) addProductItemButton.addEventListener('click', addProductItem); // Gọi addProductItem
-
-            $(productItemsContainer).on('click', '.remove-product-item-modal', function () {
-                if ($(productItemsContainer).find('.product-item-row-modal').length > 1) {
-                    $(this).closest('.product-item-row-modal').remove();
-                } else {
-                    showAppInfoModal('Phải có ít nhất một sản phẩm trong đơn hàng.', 'warning');
-                }
-            });
-
-            guestProvinceSelect.on('changed.bs.select', function () { loadDistricts($(this).val()); }); // Dùng changed.bs.select
-            guestDistrictSelect.on('changed.bs.select', function () { loadWards($(this).val()); }); // Dùng changed.bs.select
-
-            createOrderModalEl.addEventListener('shown.bs.modal', toggleCustomerFields);
-        }
-
-        const reloadCallback = () => setTimeout(() => window.location.reload(), 1200);
-
-        if (createOrderForm) setupAjaxForm('createOrderForm', 'createOrderModal', reloadCallback, (res) => {
-            if (res.errors) displayValidationErrors(createOrderForm, res.errors)
-        });
-        if (updateOrderForm) setupAjaxForm('updateOrderForm', 'updateOrderModal', reloadCallback, (res) => {
-            if (res.errors) displayValidationErrors(updateOrderForm, res.errors)
-        });
-        if (deleteOrderForm) setupAjaxForm('deleteOrderForm', 'deleteOrderModal', reloadCallback, (res) => {
-            if (res.errors) displayValidationErrors(deleteOrderForm, res.errors)
+        // Handle customer selection change (toggle guest/registered customer address fields)
+        $(createCustomerIdSelect).on('changed.bs.select', function () {
+            handleCustomerSelectChange(this, createGuestInfoFields, createCustomerAddressFields, createCustomerShippingAddressSelect, 'create_order_form');
         });
 
-        // Chỉ thêm sản phẩm nếu chưa có khi modal tạo đơn hàng mở lần đầu hoặc có lỗi validation
-        if (createOrderModalEl && (productItemsContainer.querySelectorAll('.product-item-row-modal').length === 0 || hasValidationErrors)) {
-            createOrderModalEl.addEventListener('shown.bs.modal', () => {
-                if (productItemsContainer.querySelectorAll('.product-item-row-modal').length === 0) {
-                    addProductItem(); // Gọi addProductItem để tạo dòng và refresh
-                }
-            }, { once: true }); // Chỉ chạy một lần
+        // Handle province/district change for guest customer address
+        $(createProvinceSelect).on('changed.bs.select', function () {
+            populateDistricts(this.value, createDistrictSelect);
+            populateWards(null, createWardSelect); // Clear wards when province changes
+        });
+        $(createDistrictSelect).on('changed.bs.select', function () {
+            populateWards(this.value, createWardSelect);
+        });
 
-            // Nếu có lỗi validation và form_marker chỉ ra modal tạo đơn hàng, tự động thêm sản phẩm
-            if (hasValidationErrors && formMarker === 'create_order_form' && productItemsContainer.querySelectorAll('.product-item-row-modal').length === 0) {
-                addProductItem(); // Gọi addProductItem để tạo dòng và refresh
+        addProductItemBtn.addEventListener('click', () => addProductItem(createProductItemsContainer, allProducts, {}, 'create_order_form'));
+
+        // Handle changes within the create order form to update summary
+        $(createOrderForm).on('change', '.product-select, .quantity-input', function () {
+            const row = this.closest('.product-item-row-modal');
+            if (row) {
+                calculateRowSubtotal(row, allProducts);
+            }
+            updateSummary('create_order_form');
+        });
+        $(createOrderModal).on('changed.bs.select', '#delivery_service_id, #promotion_id', function () {
+            updateSummary('create_order_form');
+        });
+
+
+        // Handle validation errors on page load for create modal
+        if (hasValidationErrors && formMarker === 'create_order_form') {
+            $('#createOrderModal').modal('show');
+            displayValidationErrors(window.LaravelErrors, 'create_order_form');
+            // Re-populate product items if there were old inputs for them
+            if (oldInputs && oldInputs.items) {
+                createProductItemsContainer.innerHTML = ''; // Clear initial empty row
+                productItemIndex = 0; // Reset index for re-populating
+                oldInputs.items.forEach((item, index) => {
+                    addProductItem(createProductItemsContainer, allProducts, item, 'create_order_form');
+                });
+            }
+            // Re-populate geography dropdowns if there were old inputs
+            if (oldInputs.province_id) {
+                populateProvinces(createProvinceSelect, oldInputs.province_id);
+                if (oldInputs.district_id) {
+                    populateDistricts(oldInputs.province_id, createDistrictSelect, oldInputs.district_id);
+                    if (oldInputs.ward_id) {
+                        populateWards(oldInputs.district_id, createWardSelect, oldInputs.ward_id);
+                    }
+                }
+            }
+            // Handle customer type selection persistence after validation error
+            if (oldInputs.customer_id) {
+                $(createCustomerIdSelect).val(oldInputs.customer_id).selectpicker('refresh');
+                handleCustomerSelectChange(createCustomerIdSelect, createGuestInfoFields, createCustomerAddressFields, createCustomerShippingAddressSelect, 'create_order_form');
+                if (oldInputs.shipping_address_id) {
+                    populateCustomerAddresses(oldInputs.customer_id, createCustomerShippingAddressSelect, oldInputs.shipping_address_id);
+                }
+            } else {
+                // For guest, ensure fields are visible
+                createGuestInfoFields.classList.remove('d-none');
+                createCustomerAddressFields.classList.add('d-none');
+            }
+            updateSummary('create_order_form'); // Final summary update for old inputs
+        } else {
+            // For initial load, always add one product item to create modal
+            addProductItem(createProductItemsContainer, allProducts, {}, 'create_order_form');
+        }
+
+
+        // --- UPDATE ORDER MODAL ---
+        const updateOrderModal = document.getElementById('updateOrderModal');
+        const updateOrderForm = document.getElementById('updateOrderForm');
+        const addProductItemUpdateBtn = document.getElementById('add_product_item_update_btn');
+        const updateProductItemsContainer = document.getElementById('product_items_container_update');
+
+        const updateCustomerIdSelect = document.getElementById('customer_id_update');
+        const updateGuestInfoFields = document.getElementById('guest_info_fields_update');
+        const updateCustomerAddressFields = document.getElementById('customer_address_fields_update');
+        const updateCustomerShippingAddressSelect = document.getElementById('customer_shipping_address_id_update');
+
+        const updateProvinceSelect = document.getElementById('province_id_update');
+        const updateDistrictSelect = document.getElementById('district_id_update');
+        const updateWardSelect = document.getElementById('ward_id_update');
+
+
+        // Populate initial data for update modal dropdowns (customers, provinces)
+        populateCustomers(updateCustomerIdSelect);
+        populateProvinces(updateProvinceSelect);
+
+        // Handle customer selection change (toggle guest/registered customer address fields)
+        $(updateCustomerIdSelect).on('changed.bs.select', function () {
+            handleCustomerSelectChange(this, updateGuestInfoFields, updateCustomerAddressFields, updateCustomerShippingAddressSelect, 'update_order_form');
+        });
+
+        // Handle province/district change for guest customer address in update modal
+        $(updateProvinceSelect).on('changed.bs.select', function () {
+            populateDistricts(this.value, updateDistrictSelect);
+            populateWards(null, updateWardSelect);
+        });
+        $(updateDistrictSelect).on('changed.bs.select', function () {
+            populateWards(this.value, updateWardSelect);
+        });
+
+        addProductItemUpdateBtn.addEventListener('click', () => addProductItem(updateProductItemsContainer, allProducts, {}, 'update_order_form'));
+
+        // Handle changes within the update order form to update summary
+        $(updateOrderForm).on('change', '.product-select, .quantity-input', function () {
+            const row = this.closest('.product-item-row-modal');
+            if (row) {
+                calculateRowSubtotal(row, allProducts);
+            }
+            updateSummary('update_order_form');
+        });
+        $(updateOrderModal).on('changed.bs.select', '#delivery_service_id_update, #promotion_id_update', function () {
+            updateSummary('update_order_form');
+        });
+
+
+        // Handle view button click
+        document.querySelectorAll('.view-order-btn').forEach(button => {
+            button.addEventListener('click', async function () {
+                const orderId = this.dataset.id;
+                const fetchUrl = this.dataset.viewUrl;
+                showAppLoader();
+                try {
+                    const response = await fetch(fetchUrl);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    const data = await response.json();
+                    fillViewModal(data.order);
+                    $('#viewOrderModal').modal('show');
+                } catch (error) {
+                    console.error('Error fetching order details:', error);
+                    showAppInfoModal('Không thể tải chi tiết đơn hàng.', 'error');
+                } finally {
+                    hideAppLoader();
+                }
+            });
+        });
+
+        // Handle print button click
+        document.getElementById('printOrderBtn').addEventListener('click', printOrder);
+
+        // Handle edit from view modal button click
+        document.getElementById('editOrderFromViewBtn').addEventListener('click', function () {
+            const orderId = document.getElementById('viewDetailOrderId').textContent;
+            // Fetch the order data again for safety and fill update modal
+            const fetchUrl = `/admin/sales/orders/${orderId}`;
+            showAppLoader();
+            fetch(fetchUrl)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    $('#viewOrderModal').modal('hide'); // Hide view modal first
+                    fillUpdateModal(data.order);
+                    $('#updateOrderModal').modal('show');
+                })
+                .catch(error => {
+                    console.error('Error fetching order details for update:', error);
+                    showAppInfoModal('Không thể tải dữ liệu để chỉnh sửa đơn hàng.', 'error');
+                })
+                .finally(() => {
+                    hideAppLoader();
+                });
+        });
+
+        // Handle update button click
+        document.querySelectorAll('.update-order-btn').forEach(button => {
+            button.addEventListener('click', async function () {
+                const orderId = this.dataset.id;
+                const fetchUrl = this.dataset.fetchUrl; // API endpoint to fetch order data
+                showAppLoader();
+                try {
+                    const response = await fetch(fetchUrl);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    const data = await response.json();
+                    fillUpdateModal(data.order);
+                    $('#updateOrderModal').modal('show');
+                } catch (error) {
+                    console.error('Error fetching order details for update:', error);
+                    showAppInfoModal('Không thể tải dữ liệu đơn hàng để chỉnh sửa.', 'error');
+                } finally {
+                    hideAppLoader();
+                }
+            });
+        });
+
+        // Handle validation errors on page load for update modal
+        if (hasValidationErrors && formMarker === 'update_order_form' && window.LaravelOldInputForUpdate) {
+            $('#updateOrderModal').modal('show');
+            displayValidationErrors(window.LaravelErrors, 'update_order_form');
+            const oldOrder = window.LaravelOldInputForUpdate; // This would need to be passed from controller if validation fails
+            // Re-fill update modal with old input values (this requires careful handling from Laravel backend)
+            // For simplicity, we assume 'oldInputs' might contain enough info to reconstruct the state.
+            // A more robust solution would be to pass the entire 'order' object back to the view
+            // and reconstruct the modal using that data and the old input overrides.
+            // For now, if validation fails, the user will see the errors but the previous data might not be fully restored
+            // unless you have a mechanism to pass back the "original" order object + "old" inputs.
+            // For now, just display errors.
+        }
+
+        // Handle delete button click
+        document.querySelectorAll('.delete-order-btn').forEach(button => {
+            button.addEventListener('click', function () {
+                const orderId = this.dataset.id;
+                const orderName = this.dataset.name;
+                const deleteUrl = this.dataset.deleteUrl;
+
+                document.getElementById('deleteOrderName').textContent = orderName;
+                const deleteForm = document.getElementById('deleteOrderForm');
+                deleteForm.action = deleteUrl;
+
+                // Clear password input and errors on modal open
+                const adminPasswordInput = document.getElementById('adminPasswordDeleteOrder');
+                if (adminPasswordInput) {
+                    adminPasswordInput.value = '';
+                    adminPasswordInput.classList.remove('is-invalid');
+                    const errorDiv = adminPasswordInput.nextElementSibling;
+                    if (errorDiv && errorDiv.classList.contains('text-danger')) {
+                        errorDiv.remove();
+                    }
+                }
+            });
+        });
+
+        // Handle approve order button click
+        document.querySelectorAll('.approve-order-btn').forEach(button => {
+            button.addEventListener('click', async function () {
+                const orderId = this.dataset.id;
+                const orderName = this.dataset.name;
+                const approveUrl = this.dataset.approveUrl;
+
+                if (confirm(`Bạn có chắc chắn muốn DUYỆT ${orderName} không?`)) {
+                    showAppLoader();
+                    try {
+                        const response = await fetch(approveUrl, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': csrfToken
+                            }
+                        });
+
+                        const data = await response.json();
+
+                        if (response.ok) {
+                            showAppInfoModal(data.message, 'success');
+                            // Reload page or update table row
+                            window.location.reload();
+                        } else {
+                            showAppInfoModal(data.message || 'Có lỗi xảy ra khi duyệt đơn hàng.', 'error');
+                            if (data.errors) {
+                                console.error('Validation errors:', data.errors);
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Lỗi duyệt đơn hàng:', error);
+                        showAppInfoModal('Lỗi kết nối máy chủ hoặc lỗi không xác định khi duyệt đơn hàng.', 'error');
+                    } finally {
+                        hideAppLoader();
+                    }
+                }
+            });
+        });
+
+        // Re-initialize selectpickers when modals are shown (important for dynamic content)
+        $('#createOrderModal').on('shown.bs.modal', function () {
+            $('.selectpicker', this).selectpicker('refresh');
+            updateSummary('create_order_form'); // Initial summary calculation when modal opens
+        });
+
+        $('#updateOrderModal').on('shown.bs.modal', function () {
+            $('.selectpicker', this).selectpicker('refresh');
+            updateSummary('update_order_form'); // Initial summary calculation when modal opens
+        });
+
+        // Handle case where form has errors on page load and was for update modal
+        if (hasValidationErrors && formMarker === 'update_order_form') {
+            const originalOrderId = pageContainer.dataset.originalOrderId; // You need to pass this from controller
+            if (originalOrderId) {
+                // Re-fetch the original order data and then overlay with old inputs
+                fetch(`/admin/sales/orders/${originalOrderId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        const order = data.order;
+                        // Populate modal with original order data first
+                        fillUpdateModal(order);
+                        // Then override with old input values
+                        const oldInputs = window.LaravelOldInputForUpdate; // This would need to be a global variable or passed via data-attribute
+                        if (oldInputs) {
+                            // Example: fill some basic fields
+                            document.getElementById('guest_name_update').value = oldInputs.guest_name || '';
+                            document.getElementById('guest_email_update').value = oldInputs.guest_email || '';
+                            document.getElementById('guest_phone_update').value = oldInputs.guest_phone || '';
+                            document.getElementById('shipping_address_line_update').value = oldInputs.shipping_address_line || '';
+                            document.getElementById('notes_update').value = oldInputs.notes || '';
+
+                            // Update selectpickers
+                            $(document.getElementById('status_update')).val(oldInputs.status).selectpicker('refresh');
+                            $(document.getElementById('payment_method_update')).val(oldInputs.payment_method).selectpicker('refresh');
+                            $(document.getElementById('delivery_service_id_update')).val(oldInputs.delivery_service_id).selectpicker('refresh');
+                            $(document.getElementById('promotion_id_update')).val(oldInputs.promotion_id || '').selectpicker('refresh');
+
+                            // Re-handle customer type selection and addresses if customer_id was changed
+                            if (oldInputs.customer_id) {
+                                $(updateCustomerIdSelect).val(oldInputs.customer_id).selectpicker('refresh');
+                                handleCustomerSelectChange(updateCustomerIdSelect, updateGuestInfoFields, updateCustomerAddressFields, updateCustomerShippingAddressSelect, 'update_order_form');
+                                if (oldInputs.shipping_address_id) {
+                                    populateCustomerAddresses(oldInputs.customer_id, updateCustomerShippingAddressSelect, oldInputs.shipping_address_id);
+                                }
+                            } else {
+                                // For guest, ensure fields are visible
+                                updateGuestInfoFields.classList.remove('d-none');
+                                updateCustomerAddressFields.classList.add('d-none');
+                                if (oldInputs.province_id) {
+                                    populateProvinces(updateProvinceSelect, oldInputs.province_id);
+                                    if (oldInputs.district_id) {
+                                        populateDistricts(oldInputs.province_id, updateDistrictSelect, oldInputs.district_id);
+                                        if (oldInputs.ward_id) {
+                                            populateWards(oldInputs.district_id, updateWardSelect, oldInputs.ward_id);
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Reconstruct product items from old input
+                            if (oldInputs.items) {
+                                updateProductItemsContainer.innerHTML = '';
+                                productItemIndex = 0;
+                                oldInputs.items.forEach((item) => {
+                                    addProductItem(updateProductItemsContainer, allProducts, item, 'update_order_form');
+                                });
+                            }
+                            updateSummary('update_order_form'); // Final summary update for old inputs
+                        }
+                        displayValidationErrors(window.LaravelErrors, 'update_order_form');
+                        $('#updateOrderModal').modal('show');
+                    })
+                    .catch(error => console.error('Error re-filling update modal after validation failure:', error));
             }
         }
     }
 
     // --- KHỞI CHẠY ---
     setupEventListeners();
+
+    // BƯỚC 3: Đặt cờ thành true ở cuối hàm để đánh dấu đã khởi tạo
+    window.orderManagerInitialized = true;
+
     console.log("JS cho quản lý Đơn hàng đã được khởi tạo thành công.");
 }
+
+
+// Gọi hàm chính
+document.addEventListener('DOMContentLoaded', initializeOrderManager);
+
+// Re-run initialization on Turbo/Turbolinks load if used
+document.addEventListener('turbo:load', function () {
+    // Đảm bảo initializeOrderManager chỉ chạy một lần duy nhất
+    // trong suốt vòng đời của Turbo Drive hoặc DOMContentLoaded.
+    // Loại bỏ việc reset cờ để không khởi tạo lại quá nhiều.
+    initializeOrderManager();
+});

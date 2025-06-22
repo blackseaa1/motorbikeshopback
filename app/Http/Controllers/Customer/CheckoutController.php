@@ -95,6 +95,10 @@ class CheckoutController extends Controller
                 'guest_name' => $shippingAddressInfo['name'],
                 'guest_email' => $shippingAddressInfo['email'],
                 'guest_phone' => $shippingAddressInfo['phone'],
+
+                /* SỬA ĐỔI: Thêm dòng sau */
+                'shipping_address_line' => $shippingAddressInfo['full_address_line'],
+
                 'province_id' => $shippingAddressInfo['province_id'],
                 'district_id' => $shippingAddressInfo['district_id'],
                 'ward_id' => $shippingAddressInfo['ward_id'],
