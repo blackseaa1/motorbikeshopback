@@ -21,6 +21,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Illuminate\Validation\ValidationException;
 
 class OrderController extends Controller
 {
@@ -241,6 +242,63 @@ class OrderController extends Controller
         });
 
         return response()->json($productsData);
+    }
+    /**
+     * API: Tính toán tóm tắt đơn hàng (subtotal, shipping, discount, total)
+     * dựa trên dữ liệu gửi từ frontend (items, delivery_service, promotion).
+     * @param \Illuminate\Http\Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function calculateOrderSummaryApi(Request $request): JsonResponse
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'items'                 => ['nullable', 'array'], // Cho phép rỗng nếu chưa có sản phẩm
+                'items.*.product_id'    => ['required', 'integer', 'exists:products,id'],
+                'items.*.quantity'      => ['required', 'integer', 'min:1'],
+                'delivery_service_id'   => ['nullable', 'integer', 'exists:delivery_services,id'], // Có thể rỗng ban đầu
+                'promotion_id'          => ['nullable', 'integer', 'exists:promotions,id'],
+            ]);
+
+            // Nếu có lỗi validation, trả về 422
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            $validated = $validator->validated();
+
+            $items = $validated['items'] ?? [];
+            $deliveryServiceId = $validated['delivery_service_id'] ?? null;
+            $promotionId = $validated['promotion_id'] ?? null;
+
+            // Sử dụng lại hàm tính toán tổng đơn hàng đã có
+            $calculation = $this->calculateOrderTotals($items, $deliveryServiceId, $promotionId);
+
+            // Trả về dữ liệu JSON đã tính toán
+            return response()->json([
+                'success' => true,
+                'summary' => [
+                    'subtotal'        => $calculation['subtotal'],
+                    'shipping_fee'    => $calculation['shipping_fee'],
+                    'discount_amount' => $calculation['discount_amount'],
+                    'total_price'     => $calculation['grand_total'],
+                    'promotion_id'    => $calculation['promotion_id'], // Có thể trả về ID khuyến mãi hợp lệ
+                ]
+            ]);
+        } catch (ValidationException $e) {
+            // Xử lý các lỗi validation cụ thể để trả về
+            return response()->json([
+                'success' => false,
+                'message' => 'Dữ liệu đầu vào không hợp lệ.',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            Log::error("Lỗi API tính toán tóm tắt đơn hàng: " . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+            return response()->json(['success' => false, 'message' => 'Đã xảy ra lỗi khi tính toán tóm tắt đơn hàng.'], 500);
+        }
     }
 
     // =========================================================================

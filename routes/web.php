@@ -298,6 +298,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/products', [ProductController::class, 'searchProductsApi'])->name('products.search.api');
         // API lấy danh sách địa chỉ của một khách hàng
         Route::get('/customers/{customer}/addresses', [CustomerAccountController::class, 'getAddressesApi'])->name('customers.addresses.api');
+        Route::post('/sales/orders/calculate-summary', [OrderController::class, 'calculateOrderSummaryApi'])->name('admin.orders.calculateSummary');
     });
     // --- KẾT THÚC: THÊM CÁC API NỘI BỘ CHO ADMIN ---
 });
