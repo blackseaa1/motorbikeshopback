@@ -25,7 +25,11 @@
                             </p>
                             <p class="mb-1"><strong>Điện thoại:</strong> <span id="viewDetailCustomerPhone"></span></p>
                             <p class="mb-1"><strong>Email:</strong> <span id="viewDetailCustomerEmail"></span></p>
-                            <p class="mb-1"><strong>Địa chỉ giao hàng:</strong> <span
+
+                            {{-- Sửa đổi ở khu vực xem trực tiếp --}}
+                            <p class="mb-1"><strong>Địa chỉ chi tiết:</strong> <span
+                                    id="viewDetailShippingAddressLine"></span></p>
+                            <p class="mb-1"><strong>Địa chỉ đầy đủ:</strong> <span
                                     id="viewDetailOrderFullAddress"></span></p>
                         </div>
 
@@ -40,7 +44,6 @@
                                     id="viewDetailOrderPromotionCode"></span>
                             </p>
                             <p class="mb-1"><strong>Ghi chú:</strong> <span id="viewDetailOrderNotes"></span></p>
-                            {{-- SỬA LỖI: Thêm dòng này --}}
                             <p class="mb-1"><strong>Người tạo đơn:</strong> <span
                                     id="viewDetailOrderCreatedByAdmin">N/A</span></p>
                         </div>
@@ -84,7 +87,7 @@
 
                 {{-- BẮT ĐẦU MẪU HÓA ĐƠN ĐỂ IN (ẨN ĐI MẶC ĐỊNH) --}}
                 <div id="invoice-print-template" style="display: none;">
-             
+
                     <div class="invoice-box">
                         <table>
                             <tr class="top">
@@ -92,7 +95,6 @@
                                     <table>
                                         <tr>
                                             <td class="title">
-                                                {{-- Giữ nguyên thẻ img của bạn --}}
                                                 <img src="{{ asset('assets_admin/images/hoadon.png') }}"
                                                     alt="Company logo" class="invoice-company-logo" />
                                             </td>
@@ -111,20 +113,20 @@
                                     <table>
                                         <tr>
                                             <td>
-                                                {{-- === BẮT ĐẦU NỘI DUNG THAY ĐỔI === --}}
                                                 <strong>TỪ CỬA HÀNG:</strong><br>
                                                 Thanhdo Shop<br>
                                                 62 Châu Văn Liêm, Phú Đô, Nam Từ Liêm, Hà Nội<br>
                                                 Email: thanhdoshop@gmail.com<br>
                                                 SĐT: 0394831886 - 0973634129
-                                                {{-- === KẾT THÚC NỘI DUNG THAY ĐỔI === --}}
                                             </td>
                                             <td class="text-right">
                                                 <strong>GIAO ĐẾN:</strong><br>
                                                 <strong id="print-customer-name"></strong><br>
                                                 <span id="print-customer-phone"></span><br>
                                                 <span id="print-customer-email"></span><br>
-                                                <span id="print-customer-address"></span>
+
+                                                <span id="print-customer-address-line" style="display: block;"></span>
+                                                <span id="print-customer-address-full"></span>
                                             </td>
                                         </tr>
                                     </table>

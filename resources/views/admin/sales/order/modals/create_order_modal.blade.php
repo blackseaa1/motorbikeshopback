@@ -59,13 +59,13 @@
                                     <input type="text" class="form-control" id="guest_phone" name="guest_phone"
                                         required>
                                 </div>
+
                                 <div class="mb-3">
                                     <label for="shipping_address_line" class="form-label">Địa chỉ chi tiết (Số nhà,
                                         đường...)</label>
                                     <input type="text" class="form-control" id="shipping_address_line"
                                         name="shipping_address_line">
                                 </div>
-
                                 <div class="mb-3">
                                     <label for="guest_province_id_modal" class="form-label">Tỉnh/Thành phố</label>
                                     <select class="form-select selectpicker" data-live-search="true"

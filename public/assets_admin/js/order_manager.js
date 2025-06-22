@@ -79,8 +79,8 @@ function initializeOrderManager() {
         const form = document.getElementById(formId);
         if (!form) return;
 
-        const addressSelectGroup = form.querySelector('.customer-address-select-group'); // Thay đổi ID nếu cần
-        const manualAddressFields = form.querySelector('.manual-address-fields-group'); // Thay đổi ID nếu cần
+        const addressSelectGroup = form.querySelector('.customer-address-select-group');
+        const manualAddressFields = form.querySelector('.manual-address-fields-group');
 
         if (addressSelectGroup) addressSelectGroup.style.display = showSelect ? 'block' : 'none';
         if (manualAddressFields) manualAddressFields.style.display = showSelect ? 'none' : 'block';
@@ -129,13 +129,10 @@ function initializeOrderManager() {
         $('#product_items_container_update').append(newRowHtml);
     };
 
-    // Tìm đến hàm addProductItem(context = 'create', item = null)
     function addProductItem(context = 'create', item = null) {
-        // ... (các dòng khai báo biến container, index, ... giữ nguyên)
         if (!productItemsContainer) return;
         const itemIndex = Date.now() + Math.random();
         const productsOptions = allProducts.map(product =>
-            // SỬA ĐỔI QUAN TRỌNG: Sử dụng 'p.thumbnail_url' thay vì 'p.image_url'
             `<option value="${product.id}" data-price="${product.price}" data-stock="${product.stock_quantity}">${product.name} (Kho: ${product.stock_quantity})</option>`
         ).join('');
 
@@ -233,10 +230,6 @@ function initializeOrderManager() {
         }
         wardSelect.selectpicker('render');
     }
-
-    // Function to add a product item to the modal (used by both create and update)
-    // This is the function being modified in the prompt
-    // function addProductItem() is defined above and the modification is applied there.
 
 
     // --- CÁC HÀM HIỂN THỊ MODAL ---
@@ -377,7 +370,10 @@ function initializeOrderManager() {
             $('#guest_name_update').val(order.guest_name || order.customer?.name || '');
             $('#guest_phone_update').val(order.guest_phone || order.customer?.phone || '');
             $('#guest_email_update').val(order.guest_email || order.customer?.email || '');
-            $('#shipping_address_line_update').val(order.shipping_address_line);
+
+            // THÊM LẠI DÒNG NÀY: Điền dữ liệu shipping_address_line vào input
+            $('#shipping_address_line_update').val(order.shipping_address_line || '');
+
             $('#payment_method_update').val(order.payment_method);
             $('#status_update').val(order.status);
             $('#notes_update').val(order.notes || '');
