@@ -61,7 +61,7 @@ class OrderController extends Controller
             ->with('firstImage') // Eager load quan hệ 'firstImage'
             ->orderBy('name')
             ->get();
-
+        // dd($allProductsForJs);
         return view('admin.sales.order.orders', compact(
             'orders',
             'customers',
@@ -264,20 +264,40 @@ class OrderController extends Controller
     private function assignCustomerAndAddress(Order &$order, array $validatedData): void
     {
         if ($validatedData['customer_type'] === 'existing') {
-            $address = CustomerAddress::with('customer')->findOrFail($validatedData['shipping_address_id']);
+            // **THAY ĐỔI Ở ĐÂY: Tải thêm thông tin customer và address**
+            $address = CustomerAddress::with('customer', 'province', 'district', 'ward')->findOrFail($validatedData['shipping_address_id']);
+
             $order->customer_id = $validatedData['customer_id'];
-            $order->guest_name = null;
-            $order->guest_email = null;
-            $order->guest_phone = null;
+
+            // **THÊM CÁC DÒNG NÀY VÀO**
+            $order->shipping_name = $address->full_name;
+            $order->shipping_phone = $address->phone;
+            // Lấy email từ chính khách hàng, không phải từ địa chỉ
+            $order->shipping_email = $address->customer->email;
+            // **KẾT THÚC PHẦN THÊM**
+
             $order->shipping_address_line = $address->address_line;
             $order->province_id = $address->province_id;
             $order->district_id = $address->district_id;
             $order->ward_id = $address->ward_id;
-        } else {
+
+            // Xóa thông tin khách vãng lai nếu có
+            $order->guest_name = null;
+            $order->guest_email = null;
+            $order->guest_phone = null;
+        } else { // Khách vãng lai
             $order->customer_id = null;
+
+            // **SỬA LẠI CÁC DÒNG NÀY ĐỂ ĐỒNG BỘ**
+            // Gán thông tin từ form khách vãng lai vào cả hai loại trường (guest_* và shipping_*)
             $order->guest_name = $validatedData['guest_name'];
             $order->guest_email = $validatedData['guest_email'];
             $order->guest_phone = $validatedData['guest_phone'];
+
+            $order->shipping_name = $validatedData['guest_name'];
+            $order->shipping_phone = $validatedData['guest_phone'];
+            $order->shipping_email = $validatedData['guest_email'];
+
             $order->shipping_address_line = $validatedData['guest_address_line'];
             $order->province_id = $validatedData['guest_province_id'];
             $order->district_id = $validatedData['guest_district_id'];

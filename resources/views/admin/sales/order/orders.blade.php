@@ -134,6 +134,7 @@
             </div>
         </div>
     </div>
+    
     {{-- BAO GỒM CÁC MODAL --}}
     @include('admin.sales.order.modals.create_order_modal', [
         'customers' => $customers,
@@ -141,12 +142,11 @@
         'deliveryServices' => $deliveryServices,
         'promotions' => $promotions,
         'orderStatuses' => $orderStatuses,
-        'allProductsForJs' => $allProductsForJs // Đảm bảo biến này được truyền vào
+        'allProductsForJs' => $allProductsForJs
     ])
-        {{-- XÓA DÒNG INCLUDE MODAL MINI CART CŨ (NẾU CÓ) --}}
     @include('admin.sales.order.modals.view_order_modal')
     @include('admin.sales.order.modals.update_order_modal', ['orderStatuses' => $orderStatuses, 'deliveryServices' => $deliveryServices])
-        @include('admin.sales.order.modals.delete_order_modal')
+    @include('admin.sales.order.modals.delete_order_modal')
 
 @endsection
 

@@ -27,18 +27,7 @@ class ProductImage extends Model
      * @var array
      */
     protected $appends = ['image_full_url'];
-    public function getImageFullUrlAttribute(): string
-    {
-        $path = $this->image_url; // Lấy đường dẫn lưu trong CSDL
 
-        // Nếu đường dẫn tồn tại và file có thật trong storage
-        if ($path && Storage::disk('public')->exists($path)) {
-            return Storage::url($path); // Trả về URL đầy đủ
-        }
-
-        // Nếu không, trả về ảnh mặc định
-        return asset('https://placehold.co/400x400/EFEFEF/AAAAAA&text=Image');
-    }
     /**
      * Sản phẩm mà hình ảnh này thuộc về.
      */
@@ -50,13 +39,13 @@ class ProductImage extends Model
     /**
      * SỬA ĐỔI 3: Thêm Accessor để lấy URL đầy đủ của ảnh.
      */
-    // public function getImageFullUrlAttribute(): string
-    // {
-    //     $path = $this->image_url; // Dùng thuộc tính image_url
-    //     if ($path && Storage::disk('public')->exists($path)) {
-    //         return Storage::url($path);
-    //     }
-    //     // Trả về ảnh placeholder cho sản phẩm
-    //     return 'https://placehold.co/400x400/EFEFEF/AAAAAA&text=Image';
-    // }
+    public function getImageFullUrlAttribute(): string
+    {
+        $path = $this->image_url; // Dùng thuộc tính image_url
+        if ($path && Storage::disk('public')->exists($path)) {
+            return Storage::disk('public')->url($this->path);
+        }
+        // Trả về ảnh placeholder cho sản phẩm
+        return 'https://placehold.co/400x400/EFEFEF/AAAAAA&text=Image';
+    }
 }

@@ -76,10 +76,10 @@ class Product extends Model
      * Định nghĩa quan hệ đặc biệt để lấy ra chỉ một ảnh đầu tiên (hoặc ảnh đại diện).
      * `ofMany('id', 'min')` sẽ lấy ảnh có ID nhỏ nhất làm ảnh đầu tiên.
      */
-    public function firstImage(): HasOne
+    public function firstImage()
     {
-        // Lấy một bản ghi ProductImage liên quan có 'id' nhỏ nhất.
-        return $this->hasOne(ProductImage::class)->ofMany('id', 'min');
+        // hasOne sẽ tự động lấy bản ghi đầu tiên nó tìm thấy.
+        return $this->hasOne(ProductImage::class)->orderBy('id', 'asc');
     }
 
     /**

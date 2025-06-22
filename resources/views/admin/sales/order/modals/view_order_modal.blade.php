@@ -37,10 +37,8 @@
                             <p class="mb-1"><strong>Dịch vụ vận chuyển:</strong> <span
                                     id="viewDetailOrderDeliveryService"></span></p>
                             <p class="mb-1"><strong>Mã khuyến mãi:</strong> <span
-                                    id="viewDetailOrderPromotionCode"></span>
-                            </p>
+                                    id="viewDetailOrderPromotionCode"></span></p>
                             <p class="mb-1"><strong>Ghi chú:</strong> <span id="viewDetailOrderNotes"></span></p>
-                            {{-- SỬA LỖI: Thêm dòng này --}}
                             <p class="mb-1"><strong>Người tạo đơn:</strong> <span
                                     id="viewDetailOrderCreatedByAdmin">N/A</span></p>
                         </div>
@@ -82,9 +80,9 @@
                     </div>
                 </div>
 
-                {{-- BẮT ĐẦU MẪU HÓA ĐƠN ĐỂ IN (ẨN ĐI MẶC ĐỊNH) --}}
+                {{-- MẪU HÓA ĐƠN ĐỂ IN (ẨN ĐI MẶC ĐỊNH) --}}
                 <div id="invoice-print-template" style="display: none;">
-             
+                    {{-- CSS và HTML cho hóa đơn in --}}
                     <div class="invoice-box">
                         <table>
                             <tr class="top">
@@ -92,9 +90,9 @@
                                     <table>
                                         <tr>
                                             <td class="title">
-                                                {{-- Giữ nguyên thẻ img của bạn --}}
                                                 <img src="{{ asset('assets_admin/images/hoadon.png') }}"
-                                                    alt="Company logo" class="invoice-company-logo" />
+                                                    alt="Company logo" class="invoice-company-logo"
+                                                    style="max-width: 150px;" />
                                             </td>
                                             <td class="text-right">
                                                 <strong>HÓA ĐƠN</strong><br>
@@ -111,13 +109,11 @@
                                     <table>
                                         <tr>
                                             <td>
-                                                {{-- === BẮT ĐẦU NỘI DUNG THAY ĐỔI === --}}
                                                 <strong>TỪ CỬA HÀNG:</strong><br>
                                                 Thanhdo Shop<br>
                                                 62 Châu Văn Liêm, Phú Đô, Nam Từ Liêm, Hà Nội<br>
                                                 Email: thanhdoshop@gmail.com<br>
                                                 SĐT: 0394831886 - 0973634129
-                                                {{-- === KẾT THÚC NỘI DUNG THAY ĐỔI === --}}
                                             </td>
                                             <td class="text-right">
                                                 <strong>GIAO ĐẾN:</strong><br>
@@ -163,7 +159,6 @@
                         </div>
                     </div>
                 </div>
-                {{-- KẾT THÚC MẪU HÓA ĐƠN --}}
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-info" id="printOrderBtn">
