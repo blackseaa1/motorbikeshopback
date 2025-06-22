@@ -54,6 +54,9 @@ class Order extends Model
         'payment_method',
         'notes',
         'created_by_admin_id',
+        'subtotal',       // THÊM DÒNG NÀY
+        'shipping_fee',   // THÊM DÒNG NÀY
+        'discount_amount', // THÊM DÒNG NÀY
     ];
 
     protected $casts = [
@@ -206,19 +209,18 @@ class Order extends Model
 
     public function getCustomerNameAttribute(): string
     {
-        // SỬA ĐỔI: Logic lấy tên khách hàng
+        // SỬA ĐỔI: Sử dụng customer->name thay vì customer->full_name
         return ($this->customer_id && $this->relationLoaded('customer') && $this->customer)
-            ? ($this->customer->full_name ?? '')
+            ? ($this->customer->name ?? '') // SỬA ĐỔI DÒNG NÀY
             : ($this->guest_name ?? '');
     }
-
     public function getShippingFeeAttribute(): float
     {
         // SỬA ĐỔI: Thêm kiểm tra đã load relationship chưa
-        if (!$this->relationLoaded('deliveryService')) {
-            $this->load('deliveryService');
+        if (isset($this->attributes['shipping_fee'])) {
+            return (float) $this->attributes['shipping_fee'];
         }
-        return $this->deliveryService->shipping_fee ?? 0;
+        return 0;
     }
 
     //======================================================================

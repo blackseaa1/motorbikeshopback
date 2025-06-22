@@ -90,20 +90,39 @@ class CheckoutController extends Controller
         try {
             $shippingAddressInfo = $this->getShippingAddressInfo($validatedData, $customer);
 
+            // Fetch shipping fee
+            $deliveryService = DeliveryService::find($validatedData['delivery_service_id']);
+            if (!$deliveryService) {
+                return back()->with('error', 'Dịch vụ vận chuyển không hợp lệ.')->withInput();
+            }
+
+            // Get subtotal, shipping_fee, and discount_amount from CartManager or recalculate
+            $subtotal = $cartDetails['subtotal'];
+            $shippingFee = $deliveryService->shipping_fee; // Get shipping fee from the selected service
+            $discountAmount = $cartDetails['discount_amount']; // Get discount from CartManager after applying promo
+
+            // Calculate total price including subtotal, shipping, and discount
+            $totalPrice = $subtotal + $shippingFee - $discountAmount;
+
             $order = Order::create([
                 'customer_id' => $customer?->id,
-                'guest_name' => $shippingAddressInfo['name'],
-                'guest_email' => $shippingAddressInfo['email'],
-                'guest_phone' => $shippingAddressInfo['phone'],
+                'guest_name' => $customer ? null : $shippingAddressInfo['name'],
+                'guest_email' => $customer ? null : $shippingAddressInfo['email'],
+                'guest_phone' => $customer ? null : $shippingAddressInfo['phone'],
+                'shipping_address_line' => $shippingAddressInfo['full_address_line'],
                 'province_id' => $shippingAddressInfo['province_id'],
                 'district_id' => $shippingAddressInfo['district_id'],
                 'ward_id' => $shippingAddressInfo['ward_id'],
                 'status' => Order::STATUS_PENDING,
-                'total_price' => $cartDetails['grand_total'],
+                'total_price' => $totalPrice, // Update to calculated total_price
+                'subtotal' => $subtotal, // ADD THIS LINE
+                'shipping_fee' => $shippingFee, // ADD THIS LINE
+                'discount_amount' => $discountAmount, // ADD THIS LINE
                 'promotion_id' => $cartDetails['promotion_info']->id ?? null,
                 'delivery_service_id' => $validatedData['delivery_service_id'],
                 'payment_method' => $validatedData['payment_method'],
                 'notes' => $validatedData['notes'] ?? null,
+                'created_by_admin_id' => null, // Set to null for customer orders
             ]);
 
             foreach ($cartDetails['items'] as $item) {
@@ -113,7 +132,11 @@ class CheckoutController extends Controller
                     'price' => $item->product->price,
                 ]);
 
-                // Logic trừ tồn kho đã được di chuyển sang Admin\Sales\OrderController@updateStatus
+                // Deduct stock quantity
+                $product = Product::find($item->product_id);
+                if ($product) {
+                    $product->decrement('stock_quantity', $item->quantity);
+                }
             }
 
             DB::commit();

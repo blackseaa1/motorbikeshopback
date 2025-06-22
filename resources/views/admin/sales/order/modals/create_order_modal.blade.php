@@ -1,204 +1,197 @@
+{{-- resources/views/admin/sales/order/modals/create_order_modal.blade.php --}}
 <div class="modal fade" id="createOrderModal" tabindex="-1" aria-labelledby="createOrderModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-centered">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="createOrderModalLabel">
-                    <i class="bi bi-plus-circle-fill me-2"></i>Tạo Đơn Hàng Mới
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="createOrderModalLabel"><i class="bi bi-plus-circle me-2"></i>Tạo Đơn Hàng Mới</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <form id="createOrderForm" action="{{ route('admin.sales.orders.store') }}" method="POST" novalidate>
+                <form id="createOrderForm" action="{{ route('admin.sales.orders.store') }}" method="POST">
                     @csrf
-                    <input type="hidden" name="_form_identifier" value="create_order_form"> {{-- THÊM DÒNG NÀY --}}
 
-                    {{-- THÔNG TIN KHÁCH HÀNG --}}
-                    <h5 class="mb-3">1. Thông tin khách hàng</h5>
                     <div class="mb-3">
-                        <label class="form-label">Loại khách hàng</label>
-                        <div>
-                            <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="radio" name="customer_type" id="customer_type_existing_modal" value="existing" {{ old('customer_type', 'existing') == 'existing' ? 'checked' : '' }}>
-                                <label class="form-check-label" for="customer_type_existing_modal">Khách hàng hiện có</label>
-                            </div>
-                            <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="radio" name="customer_type" id="customer_type_guest_modal" value="guest" {{ old('customer_type') == 'guest' ? 'checked' : '' }}>
-                                <label class="form-check-label" for="customer_type_guest_modal">Khách vãng lai</label>
-                            </div>
+                        <label class="form-label d-block">Loại Khách Hàng:</label>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="customer_type" id="existingCustomer" value="existing" checked>
+                            <label class="form-check-label" for="existingCustomer">Khách hàng có sẵn</label>
                         </div>
-                        @error('customer_type')<div class="text-danger">{{ $message }}</div>@enderror
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="customer_type" id="guestCustomer" value="guest">
+                            <label class="form-check-label" for="guestCustomer">Khách vãng lai</label>
+                        </div>
+                        <div class="text-danger mt-1" data-field="customer_type"></div>
                     </div>
 
-                    {{-- Khối cho khách hàng hiện có --}}
-                    <div id="existing_customer_fields_modal" class="mb-3" style="{{ old('customer_type', 'existing') == 'existing' ? '' : 'display:none;' }}">
-                        <label for="customer_id_modal" class="form-label">Chọn khách hàng</label>
-                        <select class="form-select selectpicker @error('customer_id') is-invalid @enderror" data-live-search="true" id="customer_id_modal" name="customer_id">
-                            <option value="">-- Chọn khách hàng --</option>
-                            @foreach($customers as $customer)
-                                <option value="{{ $customer->id }}" {{ old('customer_id') == $customer->id ? 'selected' : '' }}>
-                                    {{ $customer->full_name }} ({{ $customer->email }})
-                                </option>
-                            @endforeach
-                        </select>
-                        @error('customer_id')<div class="text-danger">{{ $message }}</div>@enderror
-                    </div>
-
-                    {{-- Khối cho khách vãng lai --}}
-                    <div id="guest_customer_fields_modal" class="row" style="{{ old('customer_type') == 'guest' ? '' : 'display:none;' }}">
-                        <div class="col-md-4 mb-3">
-                            <label for="guest_name_modal" class="form-label">Tên khách hàng</label>
-                            <input type="text" class="form-control @error('guest_name') is-invalid @enderror" id="guest_name_modal" name="guest_name" value="{{ old('guest_name') }}">
-                            @error('guest_name')<div class="text-danger">{{ $message }}</div>@enderror
-                        </div>
-                        <div class="col-md-4 mb-3">
-                            <label for="guest_email_modal" class="form-label">Email</label>
-                            <input type="email" class="form-control @error('guest_email') is-invalid @enderror" id="guest_email_modal" name="guest_email" value="{{ old('guest_email') }}">
-                            @error('guest_email')<div class="text-danger">{{ $message }}</div>@enderror
-                        </div>
-                        <div class="col-md-4 mb-3">
-                            <label for="guest_phone_modal" class="form-label">Số điện thoại</label>
-                            <input type="text" class="form-control @error('guest_phone') is-invalid @enderror" id="guest_phone_modal" name="guest_phone" value="{{ old('guest_phone') }}">
-                            @error('guest_phone')<div class="text-danger">{{ $message }}</div>@enderror
-                        </div>
-                        <div class="col-12 mb-3">
-                            <label for="guest_address_line_modal" class="form-label">Dòng địa chỉ cụ thể (ví dụ: Số nhà, tên đường)</label>
-                            <input type="text" class="form-control @error('guest_address_line') is-invalid @enderror" id="guest_address_line_modal" name="guest_address_line" value="{{ old('guest_address_line') }}">
-                            @error('guest_address_line')<div class="text-danger">{{ $message }}</div>@enderror
-                        </div>
-                        <div class="col-md-4 mb-3">
-                            <label for="guest_province_id_modal" class="form-label">Tỉnh/Thành phố</label>
-                            <select class="form-select selectpicker @error('guest_province_id') is-invalid @enderror" data-live-search="true" id="guest_province_id_modal" name="guest_province_id">
-                                <option value="">-- Chọn Tỉnh/Thành phố --</option>
-                                @foreach($provinces as $province)
-                                    <option value="{{ $province->id }}" {{ old('guest_province_id') == $province->id ? 'selected' : '' }}>{{ $province->name }}</option>
+                    {{-- Phần cho khách hàng có sẵn --}}
+                    <div id="existingCustomerFields">
+                        <div class="mb-3">
+                            <label for="customer_id" class="form-label">Chọn Khách Hàng <span class="text-danger">*</span></label>
+                            <select class="form-select selectpicker" data-live-search="true" id="customer_id" name="customer_id" title="Chọn khách hàng...">
+                                {{-- Options sẽ được điền bằng JS từ window.pageData.customers --}}
+                                @foreach($customers as $customer)
+                                    <option value="{{ $customer->id }}" data-tokens="{{ $customer->name }} {{ $customer->email }} {{ $customer->phone }}">
+                                        {{ $customer->name }} ({{ $customer->email }})
+                                    </option>
                                 @endforeach
                             </select>
-                            @error('guest_province_id')<div class="text-danger">{{ $message }}</div>@enderror
+                            <div class="text-danger mt-1" data-field="customer_id"></div>
                         </div>
-                        <div class="col-md-4 mb-3">
-                            <label for="guest_district_id_modal" class="form-label">Quận/Huyện</label>
-                            <select class="form-select selectpicker @error('guest_district_id') is-invalid @enderror" data-live-search="true" id="guest_district_id_modal" name="guest_district_id">
-                                <option value="">-- Chọn Quận/Huyện --</option>
-                                {{-- Districts sẽ được load động bằng JS --}}
+                        <div class="mb-3" id="shippingAddressSelectContainer">
+                            <label for="shipping_address_id" class="form-label">Chọn Địa Chỉ Giao Hàng <span class="text-danger">*</span></label>
+                            <select class="form-select selectpicker" id="shipping_address_id" name="shipping_address_id" title="Chọn địa chỉ...">
+                                {{-- Options sẽ được điền bằng JS khi chọn khách hàng --}}
                             </select>
-                            @error('guest_district_id')<div class="text-danger">{{ $message }}</div>@enderror
-                        </div>
-                        <div class="col-md-4 mb-3">
-                            <label for="guest_ward_id_modal" class="form-label">Phường/Xã</label>
-                            <select class="form-select selectpicker @error('guest_ward_id') is-invalid @enderror" data-live-search="true" id="guest_ward_id_modal" name="guest_ward_id">
-                                <option value="">-- Chọn Phường/Xã --</option>
-                                {{-- Wards sẽ được load động bằng JS --}}
-                            </select>
-                            @error('guest_ward_id')<div class="text-danger">{{ $message }}</div>@enderror
+                            <div class="text-danger mt-1" data-field="shipping_address_id"></div>
                         </div>
                     </div>
 
-                    <hr class="my-4">
-
-                    {{-- SẢN PHẨM TRONG ĐƠN HÀNG --}}
-                    <h5 class="mb-3">2. Sản phẩm trong đơn hàng</h5>
-                    <div id="product_items_container_modal">
-                        @if(old('product_ids'))
-                            @foreach(old('product_ids') as $index => $oldProductId)
-                                <div class="product-item-row-modal" data-index="{{ $index }}">
-                                    <select name="product_ids[]" class="form-select selectpicker @error('product_ids.'.$index) is-invalid @enderror" data-live-search="true">
-                                        <option value="">-- Chọn sản phẩm --</option>
-                                        @foreach($products as $product)
-                                            <option value="{{ $product->id }}" {{ $oldProductId == $product->id ? 'selected' : '' }} data-price="{{ $product->price }}" data-stock="{{ $product->stock_quantity }}">
-                                                {{ $product->name }} (Kho: {{ $product->stock_quantity }})
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                    <input type="number" name="quantities[]" class="form-control @error('quantities.'.$index) is-invalid @enderror" placeholder="Số lượng" min="1" value="{{ old('quantities.'.$index) }}">
-                                    <button type="button" class="btn btn-danger remove-product-item-modal"><i class="bi bi-trash"></i></button>
-                                </div>
-                                @error('product_ids.'.$index)<div class="text-danger">{{ $message }}</div>@enderror
-                                @error('quantities.'.$index)<div class="text-danger">{{ $message }}</div>@enderror
-                            @endforeach
-                        @else
-                            <div class="product-item-row-modal" data-index="0">
-                                <select name="product_ids[]" class="form-select selectpicker" data-live-search="true">
-                                    <option value="">-- Chọn sản phẩm --</option>
-                                    @foreach($products as $product)
-                                        <option value="{{ $product->id }}" data-price="{{ $product->price }}" data-stock="{{ $product->stock_quantity }}">
-                                            {{ $product->name }} (Kho: {{ $product->stock_quantity }})
+                    {{-- Phần cho khách vãng lai --}}
+                    <div id="guestCustomerFields" class="d-none">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="guest_name" class="form-label">Tên Khách Hàng <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="guest_name" name="guest_name">
+                                <div class="text-danger mt-1" data-field="guest_name"></div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="guest_email" class="form-label">Email <span class="text-danger">*</span></label>
+                                <input type="email" class="form-control" id="guest_email" name="guest_email">
+                                <div class="text-danger mt-1" data-field="guest_email"></div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="guest_phone" class="form-label">Số Điện Thoại <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="guest_phone" name="guest_phone">
+                                <div class="text-danger mt-1" data-field="guest_phone"></div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="province_id_create" class="form-label">Tỉnh/Thành phố <span class="text-danger">*</span></label>
+                                <select class="form-select selectpicker" data-live-search="true" id="province_id_create" name="province_id" title="Chọn tỉnh/thành...">
+                                    <option value="">Chọn tỉnh/thành...</option>
+                                    {{-- Options sẽ được điền bằng JS từ window.pageData.provinces --}}
+                                    @foreach($provinces as $province)
+                                        <option value="{{ $province->id }}">
+                                            {{ $province->name }}
                                         </option>
                                     @endforeach
                                 </select>
-                                <input type="number" name="quantities[]" class="form-control" placeholder="Số lượng" min="1" value="1">
-                                <button type="button" class="btn btn-danger remove-product-item-modal"><i class="bi bi-trash"></i></button>
+                                <div class="text-danger mt-1" data-field="province_id"></div>
                             </div>
-                        @endif
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="district_id_create" class="form-label">Quận/Huyện <span class="text-danger">*</span></label>
+                                <select class="form-select selectpicker" data-live-search="true" id="district_id_create" name="district_id" title="Chọn quận/huyện...">
+                                    <option value="">Chọn quận/huyện...</option>
+                                </select>
+                                <div class="text-danger mt-1" data-field="district_id"></div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="ward_id_create" class="form-label">Phường/Xã <span class="text-danger">*</span></label>
+                                <select class="form-select selectpicker" data-live-search="true" id="ward_id_create" name="ward_id" title="Chọn phường/xã...">
+                                    <option value="">Chọn phường/xã...</option>
+                                </select>
+                                <div class="text-danger mt-1" data-field="ward_id"></div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="shipping_address_line" class="form-label">Địa chỉ chi tiết (số nhà, đường) <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="shipping_address_line" name="shipping_address_line">
+                            <div class="text-danger mt-1" data-field="shipping_address_line"></div>
+                        </div>
                     </div>
-                    <button type="button" class="btn btn-success mt-2" id="add_product_item_modal"><i class="bi bi-plus"></i> Thêm sản phẩm</button>
-                    @error('product_ids')<div class="text-danger mt-2">{{ $message }}</div>@enderror
-                    @error('quantities')<div class="text-danger mt-2">{{ $message }}</div>@enderror
 
-                    <hr class="my-4">
+                    <hr>
 
-                    {{-- THÔNG TIN VẬN CHUYỂN, THANH TOÁN, KHUYẾN MÃI, GHI CHÚ --}}
-                    <h5 class="mb-3">3. Thông tin khác</h5>
+                    <h5 class="mb-3">Sản phẩm đơn hàng</h5>
+                    <div id="productItemsContainer">
+                        {{-- Product item rows will be added here by JavaScript --}}
+                    </div>
+                    <button type="button" class="btn btn-outline-primary btn-sm mb-3" id="addProductItemBtn">
+                        <i class="bi bi-plus-lg me-2"></i>Thêm sản phẩm
+                    </button>
+                    <div class="text-danger mt-1" data-field="items"></div>
+                    <div class="text-danger mt-1" data-field="items.*.product_id"></div>
+                    <div class="text-danger mt-1" data-field="items.*.quantity"></div>
+                    <div class="text-danger" id="product_stock_error_create"></div>
+
+
+                    <hr>
+
+                    <h5 class="mb-3">Thông tin thanh toán & vận chuyển</h5>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="payment_method_create" class="form-label">Phương Thức Thanh Toán <span class="text-danger">*</span></label>
+                            <select class="form-select selectpicker" id="payment_method_create" name="payment_method" title="Chọn phương thức...">
+                                <option value="cod">Thanh toán khi nhận hàng (COD)</option>
+                                <option value="bank_transfer">Chuyển khoản ngân hàng</option>
+                            </select>
+                            <div class="text-danger mt-1" data-field="payment_method"></div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="delivery_service_id_create" class="form-label">Dịch Vụ Vận Chuyển <span class="text-danger">*</span></label>
+                            <select class="form-select selectpicker" id="delivery_service_id_create" name="delivery_service_id" title="Chọn dịch vụ...">
+                                {{-- Options sẽ được điền bằng JS từ window.pageData.deliveryServices --}}
+                                @foreach($deliveryServices as $service)
+                                    <option value="{{ $service->id }}" data-shipping-fee="{{ $service->shipping_fee }}">
+                                        {{ $service->name }} ({{ number_format($service->shipping_fee) }} ₫)
+                                    </option>
+                                @endforeach
+                            </select>
+                            <div class="text-danger mt-1" data-field="delivery_service_id"></div>
+                        </div>
+                    </div>
+
                     <div class="mb-3">
-                        <label for="delivery_service_id_modal" class="form-label">Dịch vụ vận chuyển</label>
-                        <select class="form-select selectpicker @error('delivery_service_id') is-invalid @enderror" id="delivery_service_id_modal" name="delivery_service_id">
-                            <option value="">-- Chọn dịch vụ vận chuyển --</option>
-                            @foreach($deliveryServices as $service)
-                                <option value="{{ $service->id }}" {{ old('delivery_service_id') == $service->id ? 'selected' : '' }}>
-                                    {{ $service->name }} (Phí: {{ number_format($service->shipping_fee) }} ₫)
+                        <label for="promotion_id_create" class="form-label">Mã Khuyến Mãi</label>
+                        <select class="form-select selectpicker" data-live-search="true" id="promotion_id_create" name="promotion_id" title="Chọn mã khuyến mãi...">
+                            <option value="">Không áp dụng</option>
+                            {{-- Options sẽ được điền bằng JS từ window.pageData.promotions --}}
+                            @foreach($promotions as $promo)
+                                <option value="{{ $promo->id }}"
+                                    data-discount-percentage="{{ $promo->discount_percentage }}">
+                                    {{ $promo->code }} ({{ $promo->formatted_discount }})
                                 </option>
                             @endforeach
                         </select>
-                        @error('delivery_service_id')<div class="text-danger">{{ $message }}</div>@enderror
+                        <div class="text-danger mt-1" data-field="promotion_id"></div>
                     </div>
 
                     <div class="mb-3">
-                        <label for="payment_method_modal" class="form-label">Phương thức thanh toán</label>
-                        <select class="form-select @error('payment_method') is-invalid @enderror" id="payment_method_modal" name="payment_method">
-                            <option value="">-- Chọn phương thức thanh toán --</option>
-                            <option value="cod" {{ old('payment_method') == 'cod' ? 'selected' : '' }}>Thanh toán khi nhận hàng (COD)</option>
-                            <option value="vnpay" {{ old('payment_method') == 'vnpay' ? 'selected' : '' }}>VNPAY</option>
-                        </select>
-                        @error('payment_method')<div class="text-danger">{{ $message }}</div>@enderror
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="promotion_id_modal" class="form-label">Mã khuyến mãi (tùy chọn)</label>
-                        <select class="form-select selectpicker @error('promotion_id') is-invalid @enderror" data-live-search="true" id="promotion_id_modal" name="promotion_id">
-                            <option value="">-- Không áp dụng --</option>
-                            @foreach($promotions as $promotion)
-                                <option value="{{ $promotion->id }}" {{ old('promotion_id') == $promotion->id ? 'selected' : '' }}>
-                                    {{ $promotion->code }} (Giảm: {{ $promotion->discount_percentage }}%)
-                                </option>
-                            @endforeach
-                        </select>
-                        @error('promotion_id')<div class="text-danger">{{ $message }}</div>@enderror
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="notes_modal" class="form-label">Ghi chú cho đơn hàng (tùy chọn)</label>
-                        <textarea class="form-control" id="notes_modal" name="notes" rows="3">{{ old('notes') }}</textarea>
-                        @error('notes')<div class="text-danger">{{ $message }}</div>@enderror
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="status_modal" class="form-label">Trạng thái ban đầu của đơn hàng</label>
-                        <select class="form-select @error('status') is-invalid @enderror" id="status_modal" name="status">
+                        <label for="status_create" class="form-label">Trạng Thái Đơn Hàng <span class="text-danger">*</span></label>
+                        <select class="form-select selectpicker" id="status_create" name="status" title="Chọn trạng thái...">
+                            {{-- Options sẽ được điền bằng JS từ window.pageData.initialOrderStatuses --}}
                             @foreach($initialOrderStatuses as $key => $value)
-                                <option value="{{ $key }}" {{ old('status', \App\Models\Order::STATUS_PENDING) == $key ? 'selected' : '' }}>
+                                <option value="{{ $key }}" {{ $key === \App\Models\Order::STATUS_PENDING ? 'selected' : '' }}>
                                     {{ $value }}
                                 </option>
                             @endforeach
                         </select>
-                        @error('status')<div class="text-danger">{{ $message }}</div>@enderror
+                        <div class="text-danger mt-1" data-field="status"></div>
                     </div>
 
+                    <div class="mb-3">
+                        <label for="notes_create" class="form-label">Ghi Chú</label>
+                        <textarea class="form-control" id="notes_create" name="notes" rows="3"></textarea>
+                        <div class="text-danger mt-1" data-field="notes"></div>
+                    </div>
+
+                    <hr>
+
+                    <div class="order-summary-details text-end">
+                        <p class="mb-1"><span class="strong-label">Tổng phụ:</span> <span id="create-order-subtotal">0 ₫</span></p>
+                        <p class="mb-1"><span class="strong-label">Phí vận chuyển:</span> <span id="create-order-shipping-fee">0 ₫</span></p>
+                        <p class="mb-1 text-success"><span class="strong-label">Giảm giá:</span> <span id="create-order-discount">-0 ₫</span></p>
+                        <h4 class="mt-2"><span class="strong-label">Tổng cộng:</span> <span id="create-order-grand-total" class="text-danger">0 ₫</span></h4>
+                    </div>
+
+                    <div class="modal-footer d-flex justify-content-between">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" class="btn btn-primary">Tạo Đơn Hàng</button>
+                    </div>
                 </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy bỏ</button>
-                <button type="submit" class="btn btn-primary" form="createOrderForm">
-                    <i class="bi bi-floppy-fill me-1"></i> Tạo Đơn Hàng
-                </button>
             </div>
         </div>
     </div>

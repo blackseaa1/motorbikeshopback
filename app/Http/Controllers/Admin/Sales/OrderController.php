@@ -11,16 +11,18 @@ use App\Models\DeliveryService;
 use App\Models\Province;
 use App\Models\District;
 use App\Models\Ward;
-use App\Models\OrderItem; // Thêm dòng này
+use App\Models\OrderItem; // Đảm bảo đã import
+use App\Models\CustomerAddress;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\RedirectResponse; // Giữ lại nếu có các phần khác vẫn dùng
 use Illuminate\View\View;
-use Illuminate\Validation\ValidationException; // Thêm dòng này
+use Illuminate\Validation\ValidationException;
 
 class OrderController extends Controller
 {
@@ -29,7 +31,7 @@ class OrderController extends Controller
      */
     public function index(Request $request): View
     {
-        $query = Order::with(['customer', 'deliveryService'])->latest();
+        $query = Order::with(['customer', 'deliveryService', 'province', 'district', 'ward', 'promotion'])->latest();
 
         if ($request->filled('status') && $request->status !== 'all') {
             $query->where('status', $request->status);
@@ -41,31 +43,23 @@ class OrderController extends Controller
                 $q->where('id', 'like', "%{$searchTerm}%")
                     ->orWhere('guest_name', 'like', "%{$searchTerm}%")
                     ->orWhereHas('customer', function ($subQ) use ($searchTerm) {
-                        $subQ->where('name', 'like', "%{$searchTerm}%");
+                        $subQ->where('name', 'like', "%{$searchTerm}%")
+                            ->orWhere('email', 'like', "%{$searchTerm}%")
+                            ->orWhere('phone', 'like', "%{$searchTerm}%");
                     });
             });
         }
 
-        $orders = $query->paginate(20)->withQueryString();
+        $orders = $query->paginate(10);
 
-        $orderStatuses = [
-            Order::STATUS_PENDING,
-            Order::STATUS_PROCESSING,
-            Order::STATUS_SHIPPED,
-            Order::STATUS_DELIVERED,
-            Order::STATUS_COMPLETED,
-            Order::STATUS_CANCELLED,
-            Order::STATUS_RETURNED,
-            Order::STATUS_FAILED,
-            Order::STATUS_APPROVED,
-        ];
+        $orderStatuses = Order::STATUSES;
 
-        // Dữ liệu cho form tạo đơn hàng (modal)
-        $customers = Customer::orderBy('name')->get();
+        $customers = Customer::select('id', 'name', 'email', 'phone')->orderBy('name')->get();
+        // Lấy tất cả sản phẩm đang active để thêm vào đơn hàng
         $products = Product::active()->orderBy('name')->get();
-        $deliveryServices = DeliveryService::where('status', 'active')->get();
-        $promotions = Promotion::where('status', Promotion::STATUS_MANUAL_ACTIVE)->get();
-        $provinces = Province::orderBy('name')->get();
+        $deliveryServices = DeliveryService::where('status', 'active')->get(['id', 'name', 'shipping_fee']);
+        $promotions = Promotion::where('status', 'active')->get(['id', 'code', 'description', 'discount_percentage']);
+        $provinces = Province::orderBy('name')->get(['id', 'name']);
         $initialOrderStatuses = $this->getInitialOrderStatuses();
 
         return view('admin.sales.order.orders', compact(
@@ -81,389 +75,349 @@ class OrderController extends Controller
     }
 
     /**
-     * Hiển thị chi tiết một đơn hàng cụ thể.
-     * SỬA ĐỔI: Trả về JSON nếu là yêu cầu AJAX.
+     * Lấy danh sách quận/huyện theo tỉnh/thành.
      */
-    public function show(Order $order): View|JsonResponse
+    public function getDistricts(Request $request): JsonResponse
     {
-        $order->load([
-            'items.product.images', // Tải ảnh sản phẩm
-            'customer',
-            'promotion',
-            'province',
-            'district',
-            'ward',
-            'deliveryService',
-            'createdByAdmin'
-        ]);
+        $provinceId = $request->input('province_id');
+        $districts = District::where('province_id', $provinceId)->get(['id', 'name']);
+        return response()->json($districts);
+    }
 
-        if (request()->expectsJson()) {
-            return response()->json($order);
+    /**
+     * Lấy danh sách phường/xã theo quận/huyện.
+     */
+    public function getWards(Request $request): JsonResponse
+    {
+        $districtId = $request->input('district_id');
+        $wards = Ward::where('district_id', $districtId)->get(['id', 'name']);
+        return response()->json($wards);
+    }
+
+    /**
+     * Lấy thông tin chi tiết sản phẩm. (Có thể không cần dùng trực tiếp nếu đã load tất cả products vào JS)
+     */
+    public function getProductDetails(Request $request): JsonResponse
+    {
+        $product = Product::select('id', 'name', 'price', 'stock_quantity')
+            ->find($request->product_id);
+
+        if (!$product) {
+            return response()->json(['error' => 'Sản phẩm không tồn tại.'], 404);
         }
 
-        return view('admin.sales.order.modals.order_show', compact('order'));
+        return response()->json($product);
     }
 
     /**
-     * Phương thức hiển thị form tạo đơn hàng mới cho admin.
-     * SỬA ĐỔI: Phương thức này không còn được gọi trực tiếp qua route nữa
-     * vì form đã được chuyển vào modal trên trang index.
-     * Vẫn giữ code để tham khảo.
+     * Lấy địa chỉ khách hàng.
      */
-    public function create(): View
+    public function getCustomerAddresses(Request $request): JsonResponse
     {
-        $customers = Customer::orderBy('name')->get();
-        $products = Product::active()->orderBy('name')->get();
-        $deliveryServices = DeliveryService::where('status', 'active')->get();
-        $promotions = Promotion::where('status', Promotion::STATUS_MANUAL_ACTIVE)->get();
-        $provinces = Province::orderBy('name')->get();
-        $initialOrderStatuses = $this->getInitialOrderStatuses();
+        $customerId = $request->input('customer_id');
+        $customer = Customer::find($customerId);
 
-        return view('admin.sales.order.create', compact(
-            'customers',
-            'products',
-            'deliveryServices',
-            'promotions',
-            'provinces',
-            'initialOrderStatuses'
-        ));
+        if (!$customer) {
+            return response()->json(['error' => 'Khách hàng không tồn tại.'], 404);
+        }
+
+        $addresses = $customer->addresses()->with(['province', 'district', 'ward'])->get();
+
+        return response()->json($addresses);
     }
 
-    /**
-     * Phương thức lưu đơn hàng mới do admin tạo.
-     * SỬA ĐỔI: Trả về JsonResponse.
-     */
-    public function store(Request $request): JsonResponse|RedirectResponse
-    {
-        $validatedData = $request->validate([
-            'customer_type' => ['required', Rule::in(['existing', 'guest'])],
-            'customer_id' => ['nullable', 'exists:customers,id', 'required_if:customer_type,existing'],
-            'guest_name' => ['nullable', 'string', 'max:255', 'required_if:customer_type,guest'],
-            'guest_email' => ['nullable', 'email', 'max:255', 'required_if:customer_type,guest'],
-            'guest_phone' => ['nullable', 'string', 'max:20', 'required_if:customer_type,guest'],
-            'guest_address_line' => ['nullable', 'string', 'max:255', 'required_if:customer_type,guest'],
-            'guest_province_id' => ['nullable', 'exists:provinces,id', 'required_if:customer_type,guest'],
-            'guest_district_id' => ['nullable', 'exists:districts,id', 'required_if:customer_type,guest'],
-            'guest_ward_id' => ['nullable', 'exists:wards,id', 'required_if:customer_type,guest'],
-            'delivery_service_id' => ['required', 'exists:delivery_services,id'],
-            'payment_method' => ['required', Rule::in(['cod', 'vnpay'])],
-            'promotion_id' => ['nullable', 'exists:promotions,id'],
-            'notes' => ['nullable', 'string', 'max:1000'],
-            'status' => ['required', Rule::in(array_keys($this->getInitialOrderStatuses()))],
-            'product_ids' => ['required', 'array', 'min:1'],
-            'product_ids.*' => ['required', 'exists:products,id'],
-            'quantities' => ['required', 'array', 'min:1'],
-            'quantities.*' => ['required', 'integer', 'min:1'],
-        ]);
 
-        DB::beginTransaction();
+    /**
+     * Lưu đơn hàng mới được tạo bởi Admin.
+     */
+    public function store(Request $request): JsonResponse
+    {
         try {
-            $customer = null;
-            $guestName = null;
-            $guestEmail = null;
-            $guestPhone = null;
-            $provinceId = null;
-            $districtId = null;
-            $wardId = null;
-            $shippingAddressLine = null;
+            $validatedData = $request->validate([
+                'customer_type' => ['required', Rule::in(['existing', 'guest'])],
+                'customer_id' => ['nullable', 'required_if:customer_type,existing', 'exists:customers,id'],
+                'shipping_address_id' => ['nullable', 'required_if:customer_type,existing', 'exists:customer_addresses,id'],
+                'guest_name' => ['nullable', 'required_if:customer_type,guest', 'string', 'max:255'],
+                'guest_email' => ['nullable', 'required_if:customer_type,guest', 'email', 'max:255'],
+                'guest_phone' => ['nullable', 'required_if:customer_type,guest', 'string', 'max:100'],
+                'province_id' => ['nullable', 'required_if:customer_type,guest', 'exists:provinces,id'],
+                'district_id' => ['nullable', 'required_if:customer_type,guest', 'exists:districts,id'],
+                'ward_id' => ['nullable', 'required_if:customer_type,guest', 'exists:wards,id'],
+                'shipping_address_line' => ['nullable', 'required_if:customer_type,guest', 'string', 'max:255'],
+                'payment_method' => ['required', Rule::in(['cod', 'bank_transfer'])],
+                'delivery_service_id' => ['required', 'exists:delivery_services,id'],
+                'promotion_id' => ['nullable', 'exists:promotions,id'],
+                'notes' => ['nullable', 'string', 'max:1000'],
+                'status' => ['required', Rule::in(array_keys(Order::STATUSES))],
+                'items' => ['required', 'array', 'min:1'],
+                'items.*.product_id' => ['required', 'exists:products,id'],
+                'items.*.quantity' => ['required', 'integer', 'min:1'],
+                'items.*.price' => ['nullable', 'numeric', 'min:0'], // Added for safety, will be recalculated
+            ], [
+                'customer_id.required_if' => 'Vui lòng chọn khách hàng có sẵn nếu loại khách hàng là \'Khách hàng có sẵn\'.',
+                'customer_id.exists' => 'Khách hàng không tồn tại.',
+                'shipping_address_id.required_if' => 'Vui lòng chọn địa chỉ giao hàng nếu loại khách hàng là \'Khách hàng có sẵn\'.',
+                'shipping_address_id.exists' => 'Địa chỉ giao hàng không tồn tại.',
+                'guest_name.required_if' => 'Tên khách vãng lai là bắt buộc.',
+                'guest_email.required_if' => 'Email khách vãng lai là bắt buộc.',
+                'guest_phone.required_if' => 'Số điện thoại khách vãng lai là bắt buộc.',
+                'province_id.required_if' => 'Tỉnh/Thành phố là bắt buộc nếu là khách vãng lai.',
+                'district_id.required_if' => 'Quận/Huyện là bắt buộc nếu là khách vãng lai.',
+                'ward_id.required_if' => 'Phường/Xã là bắt buộc nếu là khách vãng lai.',
+                'shipping_address_line.required_if' => 'Địa chỉ chi tiết là bắt buộc nếu là khách vãng lai.',
+                'payment_method.required' => 'Phương thức thanh toán là bắt buộc.',
+                'delivery_service_id.required' => 'Dịch vụ vận chuyển là bắt buộc.',
+                'delivery_service_id.exists' => 'Dịch vụ vận chuyển không tồn tại.',
+                'promotion_id.exists' => 'Mã khuyến mãi không tồn tại.',
+                'items.required' => 'Đơn hàng phải có ít nhất một sản phẩm.',
+                'items.array' => 'Dữ liệu sản phẩm không hợp lệ.',
+                'items.*.product_id.required' => 'Mã sản phẩm là bắt buộc.',
+                'items.*.product_id.exists' => 'Sản phẩm không tồn tại.',
+                'items.*.quantity.required' => 'Số lượng sản phẩm là bắt buộc.',
+                'items.*.quantity.integer' => 'Số lượng phải là số nguyên.',
+                'items.*.quantity.min' => 'Số lượng sản phẩm phải ít nhất là :min.',
+                'status.required' => 'Trạng thái đơn hàng là bắt buộc.',
+                'status.in' => 'Trạng thái đơn hàng không hợp lệ.',
+            ]);
 
+            DB::beginTransaction();
+
+            $customer = null;
+            $shippingAddressInfo = [];
             if ($validatedData['customer_type'] === 'existing') {
                 $customer = Customer::find($validatedData['customer_id']);
-                $customerAddress = $customer->addresses()->where('is_default', true)->first();
-                if (!$customerAddress) {
-                    DB::rollBack();
-                    return response()->json(['success' => false, 'message' => 'Khách hàng đã chọn chưa có địa chỉ mặc định.'], 422);
+                $address = CustomerAddress::with(['province', 'district', 'ward'])
+                    ->find($validatedData['shipping_address_id']);
+                if (!$customer || !$address || $address->customer_id !== $customer->id) {
+                    // Cần ném ValidationException với định dạng errors để JS bắt được
+                    throw ValidationException::withMessages(['shipping_address_id' => 'Địa chỉ không thuộc về khách hàng đã chọn.']);
                 }
-                $provinceId = $customerAddress->province_id;
-                $districtId = $customerAddress->district_id;
-                $wardId = $customerAddress->ward_id;
-                $shippingAddressLine = $customerAddress->address_line;
-            } else {
-                $guestName = $validatedData['guest_name'];
-                $guestEmail = $validatedData['guest_email'];
-                $guestPhone = $validatedData['guest_phone'];
-                $provinceId = $validatedData['guest_province_id'];
-                $districtId = $validatedData['guest_district_id'];
-                $wardId = $validatedData['guest_ward_id'];
-                $shippingAddressLine = $validatedData['guest_address_line'];
+                $shippingAddressInfo = [
+                    'name' => $address->full_name,
+                    'email' => $customer->email,
+                    'phone' => $address->phone,
+                    'province_id' => $address->province_id,
+                    'district_id' => $address->district_id,
+                    'ward_id' => $address->ward_id,
+                    'full_address_line' => $address->address_line,
+                ];
+            } else { // guest
+                $shippingAddressInfo = [
+                    'name' => $validatedData['guest_name'],
+                    'email' => $validatedData['guest_email'],
+                    'phone' => $validatedData['guest_phone'],
+                    'province_id' => $validatedData['province_id'],
+                    'district_id' => $validatedData['district_id'],
+                    'ward_id' => $validatedData['ward_id'],
+                    'full_address_line' => $validatedData['shipping_address_line'],
+                ];
             }
 
             $subtotal = 0;
             $orderItemsData = [];
-            foreach ($validatedData['product_ids'] as $index => $productId) {
-                $product = Product::find($productId);
-                $quantity = $validatedData['quantities'][$index];
+            $productIds = collect($validatedData['items'])->pluck('product_id')->toArray();
+            $products = Product::whereIn('id', $productIds)->get()->keyBy('id');
 
-                if (!$product) { // Sản phẩm không tồn tại
-                    DB::rollBack();
-                    return response()->json(['success' => false, 'message' => "Sản phẩm với ID {$productId} không tồn tại."], 422);
+            foreach ($validatedData['items'] as $item) {
+                $product = $products->get($item['product_id']);
+                if (!$product) {
+                    throw ValidationException::withMessages(['items' => 'Một hoặc nhiều sản phẩm không tồn tại.']);
                 }
-                if ($product->stock_quantity < $quantity) {
-                    DB::rollBack();
-                    return response()->json(['success' => false, 'message' => "Sản phẩm \"{$product->name}\" không đủ số lượng trong kho. (Còn: {$product->stock_quantity})"], 422);
+                if ($product->stock_quantity < $item['quantity']) {
+                    throw ValidationException::withMessages(['items' => "Sản phẩm {$product->name} chỉ còn {$product->stock_quantity} trong kho."]);
                 }
-
-                $itemPrice = $product->price;
-                $subtotal += $itemPrice * $quantity;
-
+                $itemPrice = $product->price; // Luôn lấy giá từ database để tránh bị sửa đổi từ frontend
+                $subtotal += ($itemPrice * $item['quantity']);
                 $orderItemsData[] = [
-                    'product_id' => $productId,
-                    'quantity' => $quantity,
+                    'product_id' => $product->id,
+                    'quantity' => $item['quantity'],
                     'price' => $itemPrice,
                 ];
             }
-
-            $deliveryService = DeliveryService::find($validatedData['delivery_service_id']);
-            $shippingFee = $deliveryService->shipping_fee ?? 0;
 
             $promotion = null;
             $discountAmount = 0;
             if ($validatedData['promotion_id']) {
                 $promotion = Promotion::find($validatedData['promotion_id']);
-                if ($promotion && $promotion->isEffective()) {
+                if ($promotion && $promotion->status === 'active' && now()->between($promotion->start_date, $promotion->end_date)) {
                     $discountAmount = ($subtotal * $promotion->discount_percentage) / 100;
+                    $discountAmount = min($discountAmount, $subtotal);
+                } else {
+                    throw ValidationException::withMessages(['promotion_id' => 'Mã khuyến mãi không hợp lệ hoặc đã hết hạn.']);
                 }
             }
 
-            $totalPrice = $subtotal + $shippingFee - $discountAmount;
+            $deliveryService = DeliveryService::find($validatedData['delivery_service_id']);
+            if (!$deliveryService) {
+                throw ValidationException::withMessages(['delivery_service_id' => 'Dịch vụ vận chuyển không hợp lệ.']);
+            }
+            $shippingFee = $deliveryService->shipping_fee;
+
+            $totalPrice = ($subtotal + $shippingFee - $discountAmount);
+            if ($totalPrice < 0) $totalPrice = 0;
 
             $order = Order::create([
-                'customer_id' => $customer?->id,
-                'guest_name' => $guestName,
-                'guest_email' => $guestEmail,
-                'guest_phone' => $guestPhone,
-                'province_id' => $provinceId,
-                'district_id' => $districtId,
-                'ward_id' => $wardId,
-                'status' => $validatedData['status'],
+                'customer_id' => $customer ? $customer->id : null,
+                'guest_name' => $customer ? null : $shippingAddressInfo['name'],
+                'guest_email' => $customer ? null : $shippingAddressInfo['email'],
+                'guest_phone' => $customer ? null : $shippingAddressInfo['phone'],
+                'promotion_id' => $promotion ? $promotion->id : null,
+                'subtotal' => $subtotal,
+                'shipping_fee' => $shippingFee,
+                'discount_amount' => $discountAmount,
                 'total_price' => $totalPrice,
-                'promotion_id' => $promotion->id ?? null,
-                'delivery_service_id' => $validatedData['delivery_service_id'],
+                'status' => $validatedData['status'],
+                'province_id' => $shippingAddressInfo['province_id'],
+                'district_id' => $shippingAddressInfo['district_id'],
+                'ward_id' => $shippingAddressInfo['ward_id'],
+                'shipping_address_line' => $shippingAddressInfo['full_address_line'],
                 'payment_method' => $validatedData['payment_method'],
+                'delivery_service_id' => $validatedData['delivery_service_id'],
                 'notes' => $validatedData['notes'] ?? null,
                 'created_by_admin_id' => Auth::guard('admin')->id(),
-                // 'address_line' => $shippingAddressLine, // Thêm nếu có cột này trong DB
             ]);
 
             foreach ($orderItemsData as $itemData) {
                 $order->items()->create($itemData);
+                Product::where('id', $itemData['product_id'])->decrement('stock_quantity', $itemData['quantity']);
             }
 
-            // LOGIC: Trừ tồn kho và tăng lượt sử dụng mã giảm giá NẾU đơn hàng được tạo với trạng thái DUYỆT
-            if ($order->status === Order::STATUS_APPROVED) {
-                $order->load('items.product');
-                foreach ($order->items as $item) {
-                    $product = Product::find($item->product_id);
-                    if ($product) {
-                        $product->decrement('stock_quantity', $item->quantity);
-                    }
-                }
-
-                if ($order->promotion_id) {
-                    $promotion->increment('uses_count');
-                }
+            if ($promotion) {
+                $promotion->increment('uses_count');
             }
 
             DB::commit();
 
-            return response()->json(['success' => true, 'message' => 'Đơn hàng mới đã được tạo thành công!', 'order_id' => $order->id]);
+            return response()->json(['message' => 'Đơn hàng đã được tạo thành công!', 'order_id' => $order->id], 201);
+        } catch (ValidationException $e) {
+            DB::rollBack();
+            return response()->json(['message' => 'Lỗi nhập liệu!', 'errors' => $e->errors()], 422);
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Lỗi khi admin tạo đơn hàng: ' . $e->getMessage());
-            return response()->json(['success' => false, 'message' => 'Đã có lỗi xảy ra trong quá trình tạo đơn hàng. Vui lòng thử lại.'], 500);
+            Log::error("Lỗi khi tạo đơn hàng từ Admin: " . $e->getMessage());
+            return response()->json(['message' => 'Có lỗi xảy ra khi tạo đơn hàng. Vui lòng thử lại.', 'error' => $e->getMessage()], 500);
         }
     }
-
     /**
-     * SỬA LỖI & NÂNG CẤP: Phương thức cập nhật đơn hàng.
+     * Cập nhật thông tin đơn hàng và trạng thái.
      */
     public function update(Request $request, Order $order): JsonResponse
     {
-        // Chỉ cho phép chỉnh sửa toàn bộ nếu đơn hàng chưa được duyệt
-        if ($order->status === Order::STATUS_APPROVED) {
-            return response()->json(['message' => 'Không thể chỉnh sửa đơn hàng đã được duyệt.'], 403);
-        }
-        if (in_array($order->status, [Order::STATUS_COMPLETED, Order::STATUS_CANCELLED, Order::STATUS_RETURNED, Order::STATUS_FAILED])) {
-            return response()->json(['message' => 'Không thể chỉnh sửa đơn hàng đã hoàn thành hoặc đã hủy.'], 403);
-        }
-
-        $validatedData = $request->validate([
-            'guest_name' => ['required', 'string', 'max:255'],
-            'guest_phone' => ['required', 'string', 'max:20'],
-            'guest_email' => ['required', 'email', 'max:255'],
-            'shipping_address_line' => ['required', 'string', 'max:255'],
-            'province_id' => ['required', 'exists:provinces,id'],
-            'district_id' => ['required', 'exists:districts,id'],
-            'ward_id' => ['required', 'exists:wards,id'],
-            'payment_method' => ['required', Rule::in(['cod', 'vnpay'])],
-            'delivery_service_id' => ['required', 'exists:delivery_services,id'],
-            'promotion_id' => ['nullable', 'exists:promotions,id'],
-            'status' => ['required', Rule::in(array_keys(Order::STATUSES))],
-            'notes' => ['nullable', 'string', 'max:1000'],
-            'removed_item_ids' => ['nullable', 'array'],
-            'removed_item_ids.*' => ['exists:order_items,id'],
-            'items' => ['required', 'array', 'min:1'],
-            'items.*.product_id' => ['required', 'exists:products,id'],
-            'items.*.quantity' => ['required', 'integer', 'min:1'],
-            'items.*.order_item_id' => ['nullable', 'exists:order_items,id'],
-        ], [
-            'items.required' => 'Đơn hàng phải có ít nhất một sản phẩm.',
-            'items.min' => 'Đơn hàng phải có ít nhất một sản phẩm.',
-        ]);
-
-        DB::beginTransaction();
         try {
-            // 1. Cập nhật thông tin chính của đơn hàng
-            $order->fill($request->only([
-                'guest_name',
-                'guest_phone',
-                'guest_email',
-                'shipping_address_line',
-                'province_id',
-                'district_id',
-                'ward_id',
-                'payment_method',
-                'delivery_service_id',
-                'promotion_id',
-                'status',
-                'notes'
-            ]));
+            $validatedData = $request->validate([
+                'status' => ['required', Rule::in(array_keys(Order::STATUSES))],
+                'delivery_service_id' => ['required', 'exists:delivery_services,id'],
+                'notes' => ['nullable', 'string', 'max:1000'],
+            ], [
+                'status.required' => 'Trạng thái đơn hàng là bắt buộc.',
+                'status.in' => 'Trạng thái đơn hàng không hợp lệ.',
+                'delivery_service_id.required' => 'Dịch vụ vận chuyển là bắt buộc.',
+                'delivery_service_id.exists' => 'Dịch vụ vận chuyển không tồn tại.',
+            ]);
 
-            // 2. Xóa các sản phẩm đã bị loại bỏ
-            if (!empty($validatedData['removed_item_ids'])) {
-                OrderItem::whereIn('id', $validatedData['removed_item_ids'])->where('order_id', $order->id)->delete();
+            DB::beginTransaction();
+
+            $oldStatus = $order->status;
+            $newStatus = $validatedData['status'];
+
+            $order->status = $newStatus;
+            $order->delivery_service_id = $validatedData['delivery_service_id'];
+            $order->notes = $validatedData['notes'] ?? null;
+
+            $deliveryService = DeliveryService::find($validatedData['delivery_service_id']);
+            if ($deliveryService) {
+                $order->shipping_fee = $deliveryService->shipping_fee;
+                // Recalculate total_price based on potentially new shipping_fee
+                // We assume subtotal and discount_amount are fixed for update
+                $order->total_price = ($order->subtotal + $order->shipping_fee - $order->discount_amount);
+                if ($order->total_price < 0) $order->total_price = 0;
             }
 
-            // 3. Cập nhật hoặc Thêm mới sản phẩm
-            foreach ($validatedData['items'] as $itemData) {
-                $product = Product::find($itemData['product_id']);
-                if ($product->stock_quantity < $itemData['quantity']) {
-                    throw ValidationException::withMessages(['items' => "Sản phẩm '{$product->name}' không đủ số lượng trong kho."]);
-                }
-
-                OrderItem::updateOrCreate(
-                    [
-                        'id' => $itemData['order_item_id'] ?? null, // Cập nhật nếu có ID
-                        'order_id' => $order->id,
-                    ],
-                    [
-                        'product_id' => $itemData['product_id'],
-                        'quantity' => $itemData['quantity'],
-                        'price' => $product->price, // Lấy giá mới nhất của sản phẩm
-                    ]
-                );
-            }
-
-            // 4. Tải lại quan hệ và tính toán lại tổng tiền
-            $order->load('items.product', 'promotion', 'deliveryService');
-            $subtotal = $order->items->sum(fn($item) => $item->price * $item->quantity);
-            $shippingFee = $order->deliveryService->shipping_fee ?? 0;
-            $discountAmount = 0;
-            if ($order->promotion) {
-                $discountAmount = ($subtotal * $order->promotion->discount_percentage) / 100;
-            }
-            $order->total_price = $subtotal + $shippingFee - $discountAmount;
+            $this->handleOrderStatusTransition($order, $oldStatus, $newStatus);
 
             $order->save();
 
             DB::commit();
-            return response()->json(['message' => 'Cập nhật đơn hàng thành công!']);
+
+            return response()->json(['message' => 'Cập nhật đơn hàng thành công!', 'order' => $order->fresh()], 200);
         } catch (ValidationException $e) {
             DB::rollBack();
-            return response()->json(['message' => $e->getMessage(), 'errors' => $e->errors()], 422);
+            return response()->json(['message' => 'Lỗi nhập liệu!', 'errors' => $e->errors()], 422);
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error("Lỗi khi admin cập nhật đơn hàng (ID: {$order->id}): " . $e->getMessage());
-            return response()->json(['message' => 'Có lỗi không mong muốn xảy ra khi cập nhật đơn hàng.'], 500);
+            Log::error("Lỗi khi cập nhật đơn hàng (ID: {$order->id}): " . $e->getMessage());
+            return response()->json(['message' => 'Có lỗi xảy ra khi cập nhật đơn hàng. Vui lòng thử lại.', 'error' => $e->getMessage()], 500);
         }
     }
-    // ...
-    /**
-     * SỬA ĐỔI: Phương thức xóa đơn hàng.
-     */
-    public function destroy(Order $order): JsonResponse|RedirectResponse
-    {
-        // Bạn có thể thêm logic kiểm tra quyền ở đây (ví dụ: chỉ admin có quyền xóa)
-        // Hoặc chỉ cho phép xóa đơn hàng ở trạng thái nhất định (ví dụ: đã hủy, pending)
-        if ($order->status !== Order::STATUS_PENDING && $order->status !== Order::STATUS_CANCELLED) {
-            return response()->json(['success' => false, 'message' => 'Chỉ có thể xóa đơn hàng đang chờ xử lý hoặc đã hủy.'], 403);
-        }
 
-        DB::beginTransaction();
-        try {
-            // Hoàn trả số lượng sản phẩm và lượt sử dụng khuyến mãi nếu đơn hàng đã duyệt và bị xóa
-            if ($order->status === Order::STATUS_APPROVED) {
-                $order->load('items.product');
-                foreach ($order->items as $item) {
-                    $product = Product::find($item->product_id);
-                    if ($product) {
-                        $product->increment('stock_quantity', $item->quantity);
-                    }
-                }
-                if ($order->promotion_id) {
-                    $promotion = Promotion::find($order->promotion_id);
-                    if ($promotion && $promotion->uses_count > 0) {
-                        $promotion->decrement('uses_count');
-                    }
+    /**
+     * Xử lý chuyển đổi trạng thái đơn hàng (ví dụ: duyệt đơn hàng, hủy đơn hàng).
+     * Cập nhật số lượng sản phẩm trong kho và số lượt sử dụng khuyến mãi.
+     */
+    protected function handleOrderStatusTransition(Order $order, string $oldStatus, string $newStatus): void
+    {
+        // Khi hủy đơn hàng (từ bất kỳ trạng thái nào sang cancelled)
+        if ($newStatus === Order::STATUS_CANCELLED && $oldStatus !== Order::STATUS_CANCELLED) {
+            // Hoàn lại số lượng sản phẩm vào kho
+            $order->load('items.product');
+            foreach ($order->items as $item) {
+                $product = Product::find($item->product_id);
+                if ($product) {
+                    $product->increment('stock_quantity', $item->quantity);
                 }
             }
-
-            $order->items()->delete(); // Xóa các mục đơn hàng trước
-            $order->delete(); // Sau đó xóa đơn hàng
-
-            DB::commit();
-            return response()->json(['success' => true, 'message' => 'Đơn hàng đã được xóa thành công!']);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error("Lỗi khi admin xóa đơn hàng (ID: {$order->id}): " . $e->getMessage());
-            return response()->json(['success' => false, 'message' => 'Có lỗi xảy ra khi xóa đơn hàng.'], 500);
+            // Hoàn lại lượt sử dụng khuyến mãi nếu có
+            if ($order->promotion_id) {
+                $promotion = Promotion::find($order->promotion_id);
+                if ($promotion && $promotion->uses_count > 0) {
+                    $promotion->decrement('uses_count');
+                }
+            }
         }
+        // Thêm logic khác nếu cần, ví dụ: giảm tồn kho khi chuyển từ pending/processing sang approved
+        // if ($newStatus === Order::STATUS_APPROVED && !in_array($oldStatus, [Order::STATUS_APPROVED, Order::STATUS_SHIPPED, Order::STATUS_DELIVERED, Order::STATUS_COMPLETED])) {
+        //     // Logic này thường được xử lý lúc tạo đơn hàng.
+        //     // Nếu bạn muốn xử lý giảm tồn kho tại đây (ví dụ: nếu đơn hàng được tạo thủ công và chưa giảm tồn kho),
+        //     // hãy cẩn thận để tránh giảm trùng lặp.
+        // }
     }
 
-
     /**
-     * Cập nhật trạng thái của một đơn hàng.
+     * Hiển thị chi tiết một đơn hàng.
      */
-    public function updateStatus(Request $request, Order $order): JsonResponse
+    public function show(Order $order): JsonResponse
     {
-        $validated = $request->validate([
-            'status' => ['required', Rule::in([
-                Order::STATUS_PENDING,
-                Order::STATUS_PROCESSING,
-                Order::STATUS_SHIPPED,
-                Order::STATUS_DELIVERED,
-                Order::STATUS_COMPLETED,
-                Order::STATUS_CANCELLED,
-                Order::STATUS_RETURNED,
-                Order::STATUS_FAILED,
-                Order::STATUS_APPROVED,
-            ])],
+        // MODIFIED: Thay 'admin' bằng 'createdByAdmin'
+        $order->load(['customer', 'promotion', 'deliveryService', 'province', 'district', 'ward', 'items.product', 'createdByAdmin']);
+        // Trả về order dưới dạng array để accessors và relationships đã load được chuyển thành JSON
+        return response()->json([
+            'order' => $order->toArray(),
+            'customer_name' => $order->customer_name,
+            'shipping_address_full' => $order->full_shipping_address,
+            'created_by_admin_name' => $order->createdByAdmin ? $order->createdByAdmin->name : 'Khách hàng',
         ]);
+    }
 
-        $oldStatus = $order->status;
-        $newStatus = $validated['status'];
-
-        DB::beginTransaction();
+    /**
+     * Xóa một đơn hàng.
+     */
+    public function destroy(Request $request, Order $order): JsonResponse
+    {
         try {
-            $order->status = $newStatus;
-            $order->save();
+            $request->validate([
+                'admin_password_delete_order' => ['required', 'string'],
+            ], [
+                'admin_password_delete_order.required' => 'Vui lòng nhập mật khẩu của bạn để xác nhận xóa.',
+            ]);
 
-            if ($oldStatus !== Order::STATUS_APPROVED && $newStatus === Order::STATUS_APPROVED) {
-                $order->load('items.product');
-                foreach ($order->items as $item) {
-                    $product = Product::find($item->product_id);
-                    if ($product) {
-                        $product->decrement('stock_quantity', $item->quantity);
-                    }
-                }
+            if (!Hash::check($request->admin_password_delete_order, Auth::guard('admin')->user()->password)) {
+                throw ValidationException::withMessages(['admin_password_delete_order' => 'Mật khẩu không đúng.']);
+            }
 
-                if ($order->promotion_id) {
-                    $promotion = Promotion::find($order->promotion_id);
-                    if ($promotion && $promotion->isEffective() && ($promotion->max_uses === null || $promotion->uses_count < $promotion->max_uses)) {
-                        $promotion->increment('uses_count');
-                    }
-                }
-            } elseif ($oldStatus === Order::STATUS_APPROVED && $newStatus === Order::STATUS_CANCELLED) {
+            DB::beginTransaction();
+            // Hoàn lại số lượng sản phẩm vào kho và promotion uses_count khi xóa đơn hàng
+            // Logic này chỉ thực hiện nếu đơn hàng KHÔNG phải đã bị hủy trước đó
+            if ($order->status !== Order::STATUS_CANCELLED) {
                 $order->load('items.product');
                 foreach ($order->items as $item) {
                     $product = Product::find($item->product_id);
@@ -479,20 +433,18 @@ class OrderController extends Controller
                 }
             }
 
+            $order->delete();
             DB::commit();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Cập nhật trạng thái đơn hàng thành công!',
-                'order' => $order->refresh(),
-            ]);
+            return response()->json(['message' => 'Đơn hàng đã được xóa thành công.'], 200);
+        } catch (ValidationException $e) {
+            DB::rollBack();
+            return response()->json(['message' => 'Lỗi xác thực!', 'errors' => $e->errors()], 422);
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error("Lỗi khi cập nhật trạng thái đơn hàng (ID: {$order->id}): " . $e->getMessage());
-            return response()->json(['success' => false, 'message' => 'Có lỗi xảy ra.'], 500);
+            Log::error("Lỗi khi xóa đơn hàng (ID: {$order->id}): " . $e->getMessage());
+            return response()->json(['message' => 'Có lỗi xảy ra khi xóa đơn hàng.', 'error' => $e->getMessage()], 500);
         }
     }
-
     /**
      * Helper để lấy các trạng thái đơn hàng ban đầu mà admin có thể thiết lập.
      * @return array

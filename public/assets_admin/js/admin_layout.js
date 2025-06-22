@@ -43,6 +43,7 @@
             const messageText = (typeof message === 'object' && message.html)
                 ? `HTML Content (see console for details): ${title}`
                 : (title !== 'Thông báo' ? `${title}: ${message}` : message);
+            // Fallback for when modal element is not found. Avoid alert() in production.
             alert(messageText);
             if (typeof message === 'object' && message.html) {
                 console.error("HTML content for missing modal:", message.html);
@@ -93,6 +94,7 @@
 
         try {
             const appModalInstance = bootstrap.Modal.getInstance(modalElement) || new bootstrap.Modal(modalElement);
+            // Hide other open modals to avoid overlapping backdrops
             document.querySelectorAll('.modal').forEach(modalEl => {
                 if (modalEl !== modalElement) {
                     const modalInstance = bootstrap.Modal.getInstance(modalEl);
@@ -105,7 +107,7 @@
             const messageText = (typeof message === 'object' && message.html)
                 ? `HTML Content (see console for details): ${title}`
                 : (title !== 'Thông báo' ? `${title}: ${message}` : message);
-            alert(messageText);
+            alert(messageText); // Fallback to alert if modal fails
             if (typeof message === 'object' && message.html) {
                 console.error("HTML content for modal error:", message.html);
             }
@@ -114,29 +116,91 @@
 
     /**
      * A.4. Hiển thị lỗi validation trên một form bất kỳ.
+     * Cập nhật để tìm thẻ `div` có `data-field` thay vì `.invalid-feedback`
      */
     window.displayValidationErrors = function (form, errors) {
         if (!form || !errors) {
             console.warn('Form hoặc errors không hợp lệ:', { form, errors });
             return;
         }
-        form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
-        form.querySelectorAll('.invalid-feedback').forEach(el => el.textContent = '');
+        // Clear existing errors first
+        window.clearValidationErrors(form); // Use the global clearValidationErrors
 
         for (const field in errors) {
+            // Tìm input field
             const inputField = form.querySelector(`[name="${field}"]`);
             if (inputField) {
                 inputField.classList.add('is-invalid');
-                const errorDiv = inputField.parentElement.querySelector('.invalid-feedback');
-                if (errorDiv) {
-                    errorDiv.textContent = errors[field][0];
+                let errorDiv = inputField.parentElement.querySelector(`[data-field="${field}"]`);
+                if (!errorDiv) { // Nếu không có data-field, tạo invalid-feedback như fallback
+                    errorDiv = document.createElement('div');
+                    errorDiv.classList.add('invalid-feedback');
+                    inputField.parentNode.insertBefore(errorDiv, inputField.nextSibling);
+                }
+                errorDiv.textContent = errors[field][0];
+            } else {
+                // Xử lý lỗi cho các trường không có input trực tiếp hoặc là mảng (ví dụ: items.*.product_id)
+                // Tìm div với data-field tương ứng
+                let errorContainer = form.querySelector(`[data-field="${field}"]`);
+                if (errorContainer) {
+                    errorContainer.textContent = errors[field][0];
+                } else {
+                    // Nếu không tìm thấy data-field, kiểm tra các trường con trong mảng 'items'
+                    // Đây là logic cụ thể cho items.*
+                    if (field.startsWith('items.') && (field.endsWith('.product_id') || field.endsWith('.quantity') || field.endsWith('.price'))) {
+                        const parts = field.split('.'); // items.0.product_id
+                        if (parts.length === 3) {
+                            const itemIndex = parts[1];
+                            const itemField = parts[2];
+                            // Tìm hàng sản phẩm tương ứng và div lỗi cụ thể
+                            const itemRow = form.querySelector(`.product-item-row[data-item-id="${itemIndex}"]`) ||
+                                            form.querySelectorAll('.product-item-row')[itemIndex]; // Fallback for dynamically added rows without specific data-item-id for old inputs
+                            if (itemRow) {
+                                let specificErrorDiv;
+                                if (itemField === 'product_id') {
+                                    specificErrorDiv = itemRow.querySelector('.product-id-error');
+                                } else if (itemField === 'quantity') {
+                                    specificErrorDiv = itemRow.querySelector('.quantity-error');
+                                }
+                                if (specificErrorDiv) {
+                                    specificErrorDiv.textContent = errors[field][0];
+                                }
+                            }
+                        }
+                    } else {
+                        // Fallback chung nếu không tìm thấy input hoặc data-field cụ thể
+                        console.warn(`Không tìm thấy input hoặc container lỗi cho trường: ${field}. Lỗi: ${errors[field][0]}`);
+                        const generalErrorContainer = form.querySelector('#product_stock_error_create'); // Example for create order items error
+                        if (generalErrorContainer) {
+                            generalErrorContainer.textContent = errors[field][0];
+                        }
+                    }
                 }
             }
         }
     };
 
     /**
-      * A.5. Gắn sự kiện submit AJAX cho một form.
+     * A.5. Xóa tất cả các lỗi validation hiển thị trên một form.
+     * Cập nhật để xóa lỗi từ `data-field` và `.invalid-feedback`
+     */
+    window.clearValidationErrors = function (formElement) {
+        const errorMessages = formElement.querySelectorAll('[data-field], .invalid-feedback, .product-id-error, .quantity-error');
+        errorMessages.forEach(el => el.textContent = '');
+
+        const invalidInputs = formElement.querySelectorAll('.is-invalid');
+        invalidInputs.forEach(el => el.classList.remove('is-invalid'));
+
+        // Clear general error containers if they exist (e.g., for product stock)
+        const generalErrorContainer = formElement.querySelector('#product_stock_error_create');
+        if (generalErrorContainer) {
+            generalErrorContainer.textContent = '';
+        }
+    };
+
+
+    /**
+      * A.6. Gắn sự kiện submit AJAX cho một form.
       * === PHIÊN BẢN SỬA LỖI HOÀN CHỈNH ===
       * Logic này giờ sử dụng phương thức POST cho tất cả các request,
       * và dựa vào trường ẩn `_method` (ví dụ: <input name="_method" value="DELETE">)
@@ -150,14 +214,32 @@
             return;
         }
 
-        form.addEventListener('submit', async function (e) {
+        // Loại bỏ listener cũ để tránh trùng lặp nếu setupAjaxForm được gọi nhiều lần trên cùng một form
+        const oldListener = form.dataset.formSubmitListener;
+        if (oldListener) {
+            form.removeEventListener('submit', eval(oldListener)); // Cẩn thận với eval, nhưng trong ngữ cảnh này là ok
+            delete form.dataset.formSubmitListener;
+        }
+
+        const newListener = async function (e) {
             e.preventDefault();
             const submitButton = form.querySelector('button[type="submit"]');
             const spinner = submitButton ? submitButton.querySelector('.spinner-border') : null;
 
-            if (submitButton) submitButton.disabled = true;
-            if (spinner) spinner.classList.remove('d-none');
-            window.showAppLoader();
+            if (submitButton) {
+                // Thêm spinner nếu chưa có
+                if (!spinner) {
+                    const newSpinner = document.createElement('span');
+                    newSpinner.classList.add('spinner-border', 'spinner-border-sm', 'ms-2', 'd-none');
+                    newSpinner.setAttribute('role', 'status');
+                    newSpinner.setAttribute('aria-hidden', 'true');
+                    submitButton.appendChild(newSpinner);
+                    spinner = newSpinner;
+                }
+                submitButton.disabled = true;
+                spinner.classList.remove('d-none');
+            }
+            window.showAppLoader(); // Use global helper
 
             try {
                 const formData = new FormData(form);
@@ -177,8 +259,8 @@
 
                 if (!response.ok) {
                     if (response.status === 422 && result.errors) {
-                        window.displayValidationErrors(form, result.errors);
-                        window.showAppInfoModal(result.message || 'Vui lòng kiểm tra lại dữ liệu.', 'validation_error', 'Lỗi Nhập liệu');
+                        window.displayValidationErrors(form, result.errors); // Use global helper
+                        window.showAppInfoModal(result.message || 'Vui lòng kiểm tra lại dữ liệu.', 'validation_error', 'Lỗi Nhập liệu'); // Use global helper
                     } else {
                         throw new Error(result.message || 'Có lỗi không xác định.');
                     }
@@ -197,9 +279,11 @@
                 // Chỉ reset form nếu không phải là form tìm kiếm hoặc filter
                 if (!form.classList.contains('form-search') && !form.classList.contains('form-filter')) {
                     form.reset();
+                    // Clear validation errors after successful reset
+                    window.clearValidationErrors(form);
                 }
 
-                window.showAppInfoModal(result.message, 'success', 'Thành công');
+                window.showAppInfoModal(result.message, 'success', 'Thành công'); // Use global helper
 
                 if (successCallback) {
                     successCallback(result);
@@ -217,18 +301,21 @@
 
             } catch (error) {
                 console.error(`Lỗi khi submit form ${formId}:`, error);
-                window.showAppInfoModal(error.message, 'error', 'Lỗi Hệ thống');
+                window.showAppInfoModal(error.message, 'error', 'Lỗi Hệ thống'); // Use global helper
                 if (errorCallback) errorCallback(error);
             } finally {
                 if (submitButton) submitButton.disabled = false;
                 if (spinner) spinner.classList.add('d-none');
-                window.hideAppLoader();
+                window.hideAppLoader(); // Use global helper
             }
-        });
+        };
+
+        form.addEventListener('submit', newListener);
+        form.dataset.formSubmitListener = `(${newListener.toString()})`; // Lưu trữ reference
     };
 
     /**
-     * A.6. Thiết lập xem trước ảnh (Image Preview) cho input file
+     * A.7. Thiết lập xem trước ảnh (Image Preview) cho input file
      */
     window.setupImagePreviews = (inputEl, previewContainerEl) => {
         if (!inputEl || !previewContainerEl) {
@@ -424,6 +511,7 @@
         imagePreviewPairs.forEach(pair => setupPreview(pair.inputId, pair.previewId));
     }
 
+
     /**
      * ===============================================================
      * C. HÀM KHỞI TẠO VÀ ĐIỀU PHỐI CHUNG
@@ -453,9 +541,16 @@
         if (typeof initializeBlogsPage === 'function' && document.getElementById('adminBlogsPage')) {
             initializeBlogsPage();
         }
-        if (typeof initializeOrderManager === 'function' && (document.getElementById('adminOrdersPage') || document.getElementById('createOrderModal'))) {
-            // Truyền biến lỗi validation và form marker nếu có để mở lại modal
-            initializeOrderManager(window.orderValidationErrors || false, window.orderFormMarker || null);
+        // MODIFIED: Pass global utility functions to initializeOrderManager
+        if (typeof initializeOrderManager === 'function' && document.getElementById('adminOrdersPage')) {
+            initializeOrderManager(
+                window.showAppLoader,
+                window.hideAppLoader,
+                window.showAppInfoModal,
+                window.setupAjaxForm,
+                window.displayValidationErrors,
+                window.clearValidationErrors
+            );
         }
 
         if (typeof initializePromotionsPage === 'function' && document.getElementById('adminPromotionsPage')) {

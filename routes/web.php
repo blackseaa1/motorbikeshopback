@@ -240,19 +240,18 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         // Sales Management
         Route::prefix('sales')->name('sales.')->group(function () {
-            Route::controller(OrderController::class)->prefix('orders')->name('orders.')->group(function () {
-                Route::get('/', 'index')->name('index');
-                Route::get('/create', 'create')->name('create');
-                Route::post('/', 'store')->name('store');
-
-                Route::get('/{order}', 'show')->name('show');
-                // SỬA ĐỔI: Thêm route UPDATE
-                Route::put('/{order}', 'update')->name('update'); // Thêm dòng này
-
-                Route::post('/{order}/update-status', 'updateStatus')->name('updateStatus');
-                Route::delete('/{order}', 'destroy')->name('destroy'); // Đảm bảo destroy cũng đã có
-            });
+            // == ROUTES CHO ĐƠN HÀNG (ORDERS) ==
+            // Các route tùy chỉnh cho OrderController (ví dụ: AJAX để lấy dữ liệu)
+            // Cần đặt các route này TRƯỚC Route::resource nếu có khả năng trùng lặp URL
+            Route::get('orders/get-districts', [OrderController::class, 'getDistricts'])->name('orders.getDistricts');
+            Route::get('orders/get-wards', [OrderController::class, 'getWards'])->name('orders.getWards');
+            Route::get('orders/get-product-details', [OrderController::class, 'getProductDetails'])->name('orders.getProductDetails');
+            Route::get('orders/get-customer-addresses', [OrderController::class, 'getCustomerAddresses'])->name('orders.getCustomerAddresses');
+            Route::resource('orders', OrderController::class);
+            // == ROUTES CHO KHUYẾN MÃI (PROMOTIONS) ==
+            // Route resource cho PromotionController, loại trừ 'create' và 'edit'
             Route::resource('promotions', PromotionController::class)->except(['create', 'edit']);
+            // Route riêng để bật/tắt trạng thái khuyến mãi
             Route::post('promotions/{promotion}/toggle-status', [PromotionController::class, 'toggleStatus'])->name('promotions.toggleStatus');
         });
 

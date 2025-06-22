@@ -5,11 +5,14 @@
                 <h5 class="modal-title" id="deleteOrderModalLabel">
                     <i class="bi bi-exclamation-triangle-fill me-2"></i>Xác nhận Xóa Đơn Hàng
                 </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                    aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <p>Bạn có chắc chắn muốn xóa vĩnh viễn đơn hàng **<strong id="deleteOrderName"></strong>** không? Hành động này không thể hoàn tác.</p>
-                <p class="text-danger">Lưu ý: Chỉ nên xóa các đơn hàng sai sót hoặc đã bị hủy. Xóa đơn hàng Đã Duyệt sẽ hoàn trả tồn kho và lượt sử dụng mã khuyến mãi.</p>
+                <p>Bạn có chắc chắn muốn xóa vĩnh viễn đơn hàng **<strong id="deleteOrderName"></strong>** không? Hành
+                    động này không thể hoàn tác.</p>
+                <p class="text-danger">Lưu ý: Chỉ nên xóa các đơn hàng sai sót hoặc đã bị hủy. Xóa đơn hàng Đã Duyệt sẽ
+                    hoàn trả tồn kho và lượt sử dụng mã khuyến mãi.</p>
 
                 <form id="deleteOrderForm" method="POST">
                     @csrf
@@ -19,10 +22,9 @@
                     @if(config('admin.deletion_password')) {{-- Kiểm tra nếu bạn yêu cầu mật khẩu xóa admin --}}
                         <div class="mt-3">
                             <label for="adminPasswordDeleteOrder" class="form-label">Mật khẩu xác nhận</label>
-                            <input type="password" class="form-control" id="adminPasswordDeleteOrder" name="admin_password_delete_order" required>
-                            @error('admin_password_delete_order', 'delete_order_form')
-                                <div class="text-danger mt-1">{{ $message }}</div>
-                            @enderror
+                            <input type="password" class="form-control" id="adminPasswordDeleteOrder"
+                                name="admin_password_delete_order" required>
+                            <div class="text-danger mt-1" data-field="admin_password_delete_order"></div>
                         </div>
                     @endif
                 </form>
