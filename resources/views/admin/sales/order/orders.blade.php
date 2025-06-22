@@ -3,7 +3,8 @@
 @section('title', 'Quản lý Đơn Hàng')
 
 @section('content')
-  <div id="adminOrdersPage">
+  <div id="adminOrdersPage"
+        >
 
         <header class="content-header">
             <h1><i class="bi bi-tags-fill me-2"></i>Đơn Hàng</h1>
@@ -19,13 +20,13 @@
             </div>
             <div class="card-body">
                 {{-- Form Lọc và Tìm kiếm --}}
-                <form action="{{ route('admin.sales.orders.index') }}" method="GET" class="mb-4 form-filter">
+                <form action="{{ route('admin.sales.orders.index') }}" method="GET" class="mb-4">
                     <div class="row g-3">
                         <div class="col-md-4">
                             <input type="text" name="search" class="form-control" placeholder="Tìm kiếm theo ID, Tên khách hàng, Email, SĐT..." value="{{ request('search') }}">
                         </div>
                         <div class="col-md-3">
-                            <select name="status" class="form-select selectpicker">
+                            <select name="status" class="form-select">
                                 <option value="all">Tất cả trạng thái</option>
                                 @foreach($orderStatuses as $key => $value)
                                     <option value="{{ $key }}" {{ request('status') == $key ? 'selected' : '' }}>
@@ -69,7 +70,7 @@
                                     <th scope="col" style="width: 15%">Thao tác</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                          <tbody>
                                 @foreach ($orders as $order)
                                     <tr>
                                         <td>{{ $order->id }}</td>
@@ -117,25 +118,19 @@
     </div>
 
     {{-- Include tất cả các modals cần thiết cho trang --}}
-    @include('admin.sales.order.modals.create_order_modal')
+    @include('admin.sales.order.modals.create_order_modal', [
+  
+    ])
     @include('admin.sales.order.modals.view_order_modal')
-    @include('admin.sales.order.modals.update_order_modal')
+    @include('admin.sales.order.modals.update_order_modal', [
+        'deliveryServices' => $deliveryServices,
+        'orderStatuses' => $orderStatuses
+    ])
     @include('admin.sales.order.modals.delete_order_modal')
 
 @endsection
 @push('scripts')
-    <script>
-        // Truyền dữ liệu từ backend sang frontend cho JavaScript
-        window.pageData = {
-            customers: @json($customers),
-            products: @json($products),
-            deliveryServices: @json($deliveryServices),
-            promotions: @json($promotions),
-            provinces: @json($provinces),
-            initialOrderStatuses: @json($initialOrderStatuses),
-            orderStatuses: @json($orderStatuses) // For update modal
-        };
-    </script>
+
     {{-- PUSH order_manager.js to the scripts stack, it will be called by admin_layout.js --}}
     <script src="{{ asset('assets_admin/js/order_manager.js') }}"></script>
 @endpush
