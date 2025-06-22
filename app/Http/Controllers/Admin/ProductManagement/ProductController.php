@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Database\QueryException;
+use Illuminate\Http\JsonResponse;
 
 class ProductController extends Controller
 {
@@ -271,5 +272,25 @@ class ProductController extends Controller
             Log::error("Lỗi khi xóa vĩnh viễn Sản phẩm (ID: {$id}): " . $e->getMessage());
             return response()->json(['success' => false, 'message' => 'Không thể xóa vĩnh viễn sản phẩm này.'], 500);
         }
+    }
+    public function searchProductsApi(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $searchTerm = $request->input('search', '');
+
+        if (strlen($searchTerm) < 2) {
+            return response()->json([]);
+        }
+
+        $products = Product::where('status', Product::STATUS_ACTIVE)
+            ->where(function ($query) use ($searchTerm) {
+                $query->where('name', 'LIKE', "%{$searchTerm}%")
+                    ->orWhere('sku', 'LIKE', "%{$searchTerm}%");
+            })
+            ->select(['id', 'name', 'sku', 'price', 'stock_quantity'])
+            ->with('firstImage') // Tải ảnh đầu tiên để hiển thị
+            ->limit(10)
+            ->get();
+
+        return response()->json($products);
     }
 }

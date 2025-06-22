@@ -154,7 +154,7 @@
                             const itemField = parts[2];
                             // Tìm hàng sản phẩm tương ứng và div lỗi cụ thể
                             const itemRow = form.querySelector(`.product-item-row[data-item-id="${itemIndex}"]`) ||
-                                            form.querySelectorAll('.product-item-row')[itemIndex]; // Fallback for dynamically added rows without specific data-item-id for old inputs
+                                form.querySelectorAll('.product-item-row')[itemIndex]; // Fallback for dynamically added rows without specific data-item-id for old inputs
                             if (itemRow) {
                                 let specificErrorDiv;
                                 if (itemField === 'product_id') {

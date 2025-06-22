@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin\UserManagement;
 
 use App\Http\Controllers\Controller;
 use App\Models\Customer;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Config;
@@ -176,5 +177,21 @@ class CustomerAccountController extends Controller
             Log::error("Lỗi khi xóa vĩnh viễn Khách hàng (ID: {$customer->id}): " . $e->getMessage());
             return response()->json(['message' => 'Không thể xóa vĩnh viễn khách hàng này.'], 500);
         }
+    }
+    public function getAddressesApi(Customer $customer): JsonResponse
+    {
+        // Tải các địa chỉ cùng với thông tin tỉnh/huyện/xã
+        $addresses = $customer->addresses()->with(['province', 'district', 'ward'])->get()->map(function ($address) {
+            // Tạo một chuỗi địa chỉ đầy đủ để hiển thị
+            $address->full_address_string = implode(', ', array_filter([
+                $address->address_line,
+                optional($address->ward)->name,
+                optional($address->district)->name,
+                optional($address->province)->name,
+            ]));
+            return $address;
+        });
+
+        return response()->json($addresses);
     }
 }

@@ -243,11 +243,12 @@ Route::prefix('admin')->name('admin.')->group(function () {
             // == ROUTES CHO ĐƠN HÀNG (ORDERS) ==
             // Các route tùy chỉnh cho OrderController (ví dụ: AJAX để lấy dữ liệu)
             // Cần đặt các route này TRƯỚC Route::resource nếu có khả năng trùng lặp URL
+            Route::resource('orders', OrderController::class)->except(['create', 'edit']);
+
             Route::get('orders/get-districts', [OrderController::class, 'getDistricts'])->name('orders.getDistricts');
             Route::get('orders/get-wards', [OrderController::class, 'getWards'])->name('orders.getWards');
             Route::get('orders/get-product-details', [OrderController::class, 'getProductDetails'])->name('orders.getProductDetails');
             Route::get('orders/get-customer-addresses', [OrderController::class, 'getCustomerAddresses'])->name('orders.getCustomerAddresses');
-            Route::resource('orders', OrderController::class);
             // == ROUTES CHO KHUYẾN MÃI (PROMOTIONS) ==
             // Route resource cho PromotionController, loại trừ 'create' và 'edit'
             Route::resource('promotions', PromotionController::class)->except(['create', 'edit']);
@@ -287,9 +288,18 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::post('/{customer}/reset-password', 'resetPassword')->name('resetPassword')->withTrashed();
                 Route::post('/{customer}/restore', 'restore')->name('restore')->withTrashed();
                 Route::delete('/{customer}/force-delete', 'forceDelete')->name('forceDelete')->withTrashed();
+                Route::get('/{customer}/addresses-api', 'getAddressesApi')->name('addresses.api');
             });
         });
     });
+    // --- BẮT ĐẦU: THÊM CÁC API NỘI BỘ CHO ADMIN ---
+    Route::prefix('api')->name('api.')->group(function () {
+        // API tìm kiếm sản phẩm để thêm vào đơn hàng
+        Route::get('/products', [ProductController::class, 'searchProductsApi'])->name('products.search.api');
+        // API lấy danh sách địa chỉ của một khách hàng
+        Route::get('/customers/{customer}/addresses', [CustomerAccountController::class, 'getAddressesApi'])->name('customers.addresses.api');
+    });
+    // --- KẾT THÚC: THÊM CÁC API NỘI BỘ CHO ADMIN ---
 });
 
 
