@@ -73,14 +73,14 @@
                                             <label for="new_shipping_name" class="form-label">Họ tên người nhận <span
                                                     class="text-danger">*</span></label>
                                             <input type="text" class="form-control" id="new_shipping_name"
-                                                name="new_shipping_name">
+                                                name="new_shipping_name" required>
                                             <div class="invalid-feedback" id="error-new_shipping_name"></div>
                                         </div>
                                         <div class="col-md-6 mb-3">
                                             <label for="new_shipping_phone" class="form-label">SĐT người nhận <span
                                                     class="text-danger">*</span></label>
                                             <input type="text" class="form-control" id="new_shipping_phone"
-                                                name="new_shipping_phone">
+                                                name="new_shipping_phone" required>
                                             <div class="invalid-feedback" id="error-new_shipping_phone"></div>
                                         </div>
                                     </div>
@@ -120,7 +120,7 @@
                                         <label for="new_address_line" class="form-label">Địa chỉ cụ thể <span
                                                 class="text-danger">*</span></label>
                                         <input type="text" class="form-control" id="new_address_line"
-                                            name="new_address_line">
+                                            name="new_address_line" required>
                                         <div class="invalid-feedback" id="error-new_address_line"></div>
                                     </div>
                                     <button type="button" class="btn btn-sm btn-link ps-0"
@@ -228,7 +228,6 @@
                                     <label for="promotion_id_create" class="form-label">Mã khuyến mãi</label>
                                     <select class="form-select" id="promotion_id_create" name="promotion_id">
                                         <option value="">Không áp dụng</option>
-                                        {{-- SỬA LỖI TẠI ĐÂY: Thêm data-type và data-value --}}
                                         @foreach($promotions as $promo)
                                             <option value="{{ $promo->id }}" data-type="{{ $promo->discount_type }}"
                                                 data-value="{{ $promo->discount_value }}">

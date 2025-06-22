@@ -142,7 +142,9 @@ window.initializeOrderManager = (
         // Khởi tạo selectpicker cho thẻ select mới
         if (typeof $.fn.selectpicker === 'function') {
             $select.selectpicker('render');
+            $select.on('changed.bs.select', handleProductSelectChange); // Gắn lại sự kiện
         }
+
 
         calculateAndUpdateAll();
     }
@@ -189,6 +191,11 @@ window.initializeOrderManager = (
             const productId = $productSelect.val();
             const quantity = parseInt($quantityInput.val()) || 0;
             const price = parseFloat($selectedOption.data('price')) || 0;
+            console.log('--- TÍNH DÒNG SẢN PHẨM ---');
+            console.log('Product:', $selectedOption.text());
+            console.log('Price:', price);
+            console.log('Quantity:', quantity);
+
 
             const rowSubtotal = price * quantity;
             $row.find('.product-subtotal-value').text(formatCurrency(rowSubtotal));
