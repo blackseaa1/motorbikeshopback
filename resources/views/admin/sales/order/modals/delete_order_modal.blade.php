@@ -2,36 +2,32 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title" id="deleteOrderModalLabel">
-                    <i class="bi bi-exclamation-triangle-fill me-2"></i>Xác nhận Xóa Đơn Hàng
+                <h5 class="modal-title" id="deleteOrderModalLabel"><i class="bi bi-trash me-2"></i>Xác nhận Xóa Đơn Hàng
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
                     aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <p>Bạn có chắc chắn muốn xóa vĩnh viễn đơn hàng **<strong id="deleteOrderName"></strong>** không? Hành
-                    động này không thể hoàn tác.</p>
-                <p class="text-danger">Lưu ý: Chỉ nên xóa các đơn hàng sai sót hoặc đã bị hủy. Xóa đơn hàng Đã Duyệt sẽ
-                    hoàn trả tồn kho và lượt sử dụng mã khuyến mãi.</p>
-
                 <form id="deleteOrderForm" method="POST">
                     @csrf
                     @method('DELETE')
-                    <input type="hidden" name="_form_identifier" value="delete_order_form">
-
-                    @if(config('admin.deletion_password')) {{-- Kiểm tra nếu bạn yêu cầu mật khẩu xóa admin --}}
-                        <div class="mt-3">
-                            <label for="adminPasswordDeleteOrder" class="form-label">Mật khẩu xác nhận</label>
-                            <input type="password" class="form-control" id="adminPasswordDeleteOrder"
-                                name="admin_password_delete_order" required>
-                            <div class="text-danger mt-1" data-field="admin_password_delete_order"></div>
+                    <input type="hidden" id="delete_order_id" name="id">
+                    <p>Bạn có chắc chắn muốn xóa vĩnh viễn đơn hàng #<span id="delete-order-id"></span>? Hành động này
+                        không thể hoàn tác.</p>
+                    <p class="text-muted">Lưu ý: Chỉ nên xóa các đơn hàng sai sót hoặc đã bị hủy. Xóa đơn hàng Đã Duyệt
+                        sẽ hoàn trả tồn kho và lượt sử dụng mã khuyến mãi.</p>
+                    @if (config('admin.deletion_password'))
+                        <div class="mb-3">
+                            <label for="delete_password" class="form-label">Mật khẩu xác nhận</label>
+                            <input type="password" class="form-control" id="delete_password" name="password">
+                            <div class="text-danger mt-1" data-field="password"></div>
                         </div>
                     @endif
                 </form>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy bỏ</button>
-                <button type="submit" class="btn btn-danger" form="deleteOrderForm">Tôi chắc chắn, Xóa!</button>
+                <button type="submit" form="deleteOrderForm" class="btn btn-danger">Tôi chắc chắn, Xóa!</button>
             </div>
         </div>
     </div>

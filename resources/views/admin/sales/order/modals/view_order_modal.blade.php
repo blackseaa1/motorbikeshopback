@@ -40,6 +40,7 @@
                                     id="viewDetailOrderPromotionCode"></span>
                             </p>
                             <p class="mb-1"><strong>Ghi chú:</strong> <span id="viewDetailOrderNotes"></span></p>
+                            {{-- SỬA LỖI: Thêm dòng này --}}
                             <p class="mb-1"><strong>Người tạo đơn:</strong> <span
                                     id="viewDetailOrderCreatedByAdmin">N/A</span></p>
                         </div>
@@ -83,6 +84,7 @@
 
                 {{-- BẮT ĐẦU MẪU HÓA ĐƠN ĐỂ IN (ẨN ĐI MẶC ĐỊNH) --}}
                 <div id="invoice-print-template" style="display: none;">
+             
                     <div class="invoice-box">
                         <table>
                             <tr class="top">

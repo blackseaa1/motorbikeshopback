@@ -209,11 +209,12 @@ class Order extends Model
 
     public function getCustomerNameAttribute(): string
     {
-        // SỬA ĐỔI: Sử dụng customer->name thay vì customer->full_name
+        // SỬA ĐỔI: Logic lấy tên khách hàng
         return ($this->customer_id && $this->relationLoaded('customer') && $this->customer)
-            ? ($this->customer->name ?? '') // SỬA ĐỔI DÒNG NÀY
+            ? ($this->customer->name ?? '')
             : ($this->guest_name ?? '');
     }
+
     public function getShippingFeeAttribute(): float
     {
         // SỬA ĐỔI: Thêm kiểm tra đã load relationship chưa
