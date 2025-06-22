@@ -246,11 +246,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::post('/', 'store')->name('store');
 
                 Route::get('/{order}', 'show')->name('show');
-                Route::put('/{order}', 'update')->name('update'); // Đảm bảo đã có PUT
-                Route::post('/{order}/approve', 'approve')->name('approve'); // THÊM DÒNG NÀY
+                // SỬA ĐỔI: Thêm route UPDATE
+                Route::put('/{order}', 'update')->name('update'); // Thêm dòng này
 
-                Route::post('/{order}/update-status', 'updateStatus')->name('updateStatus'); // Có thể dùng cho các trạng thái khác ngoài approve
-                Route::delete('/{order}', 'destroy')->name('destroy');
+                Route::post('/{order}/update-status', 'updateStatus')->name('updateStatus');
+                Route::delete('/{order}', 'destroy')->name('destroy'); // Đảm bảo destroy cũng đã có
             });
             Route::resource('promotions', PromotionController::class)->except(['create', 'edit']);
             Route::post('promotions/{promotion}/toggle-status', [PromotionController::class, 'toggleStatus'])->name('promotions.toggleStatus');

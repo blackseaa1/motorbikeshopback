@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Storage; // Thêm use Storage
 
 class ProductImage extends Model
 {
@@ -12,12 +12,20 @@ class ProductImage extends Model
 
     protected $table = 'product_images';
 
+    /**
+     * SỬA ĐỔI 1: Sửa lại tên cột trong fillable từ image_path thành image_url để khớp migration
+     * và thêm alt_text nếu bạn muốn lưu nó.
+     */
     protected $fillable = [
         'product_id',
-        'image_url',
-        // 'alt_text',
+        'image_url', // Đổi từ image_path để khớp với migration 2025_05_21_210203
+        // 'alt_text', // Bỏ comment nếu bạn có cột này
     ];
 
+    /**
+     * SỬA ĐỔI 2: Thêm mảng $appends.
+     * @var array
+     */
     protected $appends = ['image_full_url'];
 
     /**
@@ -29,16 +37,15 @@ class ProductImage extends Model
     }
 
     /**
-     * ĐÃ SỬA: Accessor để lấy URL đầy đủ của ảnh.
-     * Đảm bảo luôn trả về một chuỗi, kể cả khi ảnh không tồn tại.
+     * SỬA ĐỔI 3: Thêm Accessor để lấy URL đầy đủ của ảnh.
      */
     public function getImageFullUrlAttribute(): string
     {
-        $path = $this->image_url;
+        $path = $this->image_url; // Dùng thuộc tính image_url
         if ($path && Storage::disk('public')->exists($path)) {
             return Storage::url($path);
         }
-        // Trả về một URL ảnh mặc định nếu tệp không tồn tại hoặc đường dẫn là null/rỗng
-        return 'https://placehold.co/400x400/EFEFEF/AAAAAA&text=No+Image';
+        // Trả về ảnh placeholder cho sản phẩm
+        return 'https://placehold.co/400x400/EFEFEF/AAAAAA&text=Image';
     }
 }
