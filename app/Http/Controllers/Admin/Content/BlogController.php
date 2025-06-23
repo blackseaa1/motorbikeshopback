@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Admin\Content;
 
 use App\Http\Controllers\Controller;
-use App\Models\Admin;
+use App\Models\Admin; // Đảm bảo Admin model được import nếu sử dụng
 use App\Models\BlogPost;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -12,6 +12,8 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
+use Illuminate\Http\JsonResponse; // Import this
+use Illuminate\Http\RedirectResponse; // Import this
 
 class BlogController extends Controller
 {
@@ -54,7 +56,7 @@ class BlogController extends Controller
     /**
      * Lưu một bài viết mới vào cơ sở dữ liệu.
      */
-    public function store(Request $request)
+    public function store(Request $request): JsonResponse
     {
         // Phân quyền được xử lý bởi middleware 'can:create'
         $validator = Validator::make($request->all(), [
@@ -78,9 +80,14 @@ class BlogController extends Controller
                 $postData['image_url'] = $request->file('image')->store('blog_thumbnails', 'public');
             }
 
-            BlogPost::create($postData);
+            $blogPost = BlogPost::create($postData); // Lưu đối tượng blog đã tạo
             DB::commit();
-            return response()->json(['success' => true, 'message' => 'Tạo bài viết mới thành công!']);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Tạo bài viết mới thành công!',
+                'blog'    => $blogPost->refresh()->load('author'), // Trả về đối tượng blog đã tạo
+            ]);
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Lỗi khi tạo bài viết: ' . $e->getMessage());
@@ -91,7 +98,7 @@ class BlogController extends Controller
     /**
      * Hiển thị chi tiết một bài viết.
      */
-    public function show(BlogPost $blog)
+    public function show(BlogPost $blog): JsonResponse
     {
         // Phân quyền được xử lý bởi middleware 'can:view,blog'
         $blog->load('author');
@@ -101,7 +108,7 @@ class BlogController extends Controller
     /**
      * Cập nhật một bài viết đã có.
      */
-    public function update(Request $request, BlogPost $blog)
+    public function update(Request $request, BlogPost $blog): JsonResponse
     {
         // Phân quyền được xử lý bởi middleware 'can:update,blog'
         $validator = Validator::make($request->all(), [
@@ -125,7 +132,12 @@ class BlogController extends Controller
             }
             $blog->update($postData);
             DB::commit();
-            return response()->json(['success' => true, 'message' => 'Cập nhật bài viết thành công!']);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Cập nhật bài viết thành công!',
+                'blog'    => $blog->refresh()->load('author'), // Trả về đối tượng blog đã cập nhật
+            ]);
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error("Lỗi khi cập nhật bài viết (ID: {$blog->id}): " . $e->getMessage());
@@ -136,12 +148,17 @@ class BlogController extends Controller
     /**
      * Chuyển bài viết vào thùng rác (xóa mềm).
      */
-    public function destroy(BlogPost $blog)
+    public function destroy(BlogPost $blog): JsonResponse
     {
         // Phân quyền được xử lý bởi middleware 'can:delete,blog'
         try {
+            // Tải lại blog để đảm bảo trạng thái mới nhất cho phản hồi
             $blog->delete();
-            return response()->json(['success' => true, 'message' => "Đã chuyển bài viết '{$blog->title}' vào thùng rác."]);
+            return response()->json([
+                'success' => true,
+                'message' => "Đã chuyển bài viết '{$blog->title}' vào thùng rác.",
+                'blog'    => $blog->refresh()->load('author') // Trả về đối tượng blog sau khi xóa mềm
+            ]);
         } catch (\Exception $e) {
             Log::error("Lỗi khi xóa mềm bài viết (ID: {$blog->id}): " . $e->getMessage());
             return response()->json(['success' => false, 'message' => 'Không thể xóa bài viết này.'], 500);
@@ -151,12 +168,16 @@ class BlogController extends Controller
     /**
      * Khôi phục một bài viết từ thùng rác.
      */
-    public function restore(BlogPost $blog)
+    public function restore(BlogPost $blog): JsonResponse
     {
         // Phân quyền được xử lý bởi middleware 'can:restore,blog'
         try {
             $blog->restore();
-            return response()->json(['success' => true, 'message' => "Đã khôi phục bài viết '{$blog->title}'."]);
+            return response()->json([
+                'success' => true,
+                'message' => "Đã khôi phục bài viết '{$blog->title}'.",
+                'blog'    => $blog->refresh()->load('author') // Trả về đối tượng blog sau khi khôi phục
+            ]);
         } catch (\Exception $e) {
             Log::error("Lỗi khi khôi phục bài viết (ID: {$blog->id}): " . $e->getMessage());
             return response()->json(['success' => false, 'message' => 'Không thể khôi phục bài viết này.'], 500);
@@ -166,7 +187,7 @@ class BlogController extends Controller
     /**
      * Xóa vĩnh viễn một bài viết khỏi cơ sở dữ liệu.
      */
-    public function forceDelete(Request $request, BlogPost $blog)
+    public function forceDelete(Request $request, BlogPost $blog): JsonResponse
     {
         // Phân quyền được xử lý bởi middleware 'can:forceDelete,blog'
         DB::beginTransaction();
@@ -176,6 +197,7 @@ class BlogController extends Controller
             }
             $blog->forceDelete();
             DB::commit();
+            // Không cần trả về 'blog' object vì nó đã bị xóa vĩnh viễn.
             return response()->json(['success' => true, 'message' => 'Đã xóa vĩnh viễn bài viết!']);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -187,7 +209,7 @@ class BlogController extends Controller
     /**
      * Chuyển đổi trạng thái của bài viết (Xuất bản / Ẩn).
      */
-    public function toggleStatus(Request $request, BlogPost $blog)
+    public function toggleStatus(Request $request, BlogPost $blog): JsonResponse
     {
         // Phân quyền được xử lý bởi middleware 'can:toggleStatus,blog'
         try {
@@ -198,10 +220,22 @@ class BlogController extends Controller
             $blog->status = $newStatus;
             $blog->save();
 
+            // Tải lại blog để đảm bảo các accessors (như status_info) được cập nhật
+            $blog->refresh()->load('author');
+
+            // Cập nhật thông tin cho frontend
+            $newIconClass = $blog->isPublished() ? 'bi-pause-circle-fill' : 'bi-play-circle-fill';
+            $newButtonTitle = $blog->isPublished() ? 'Chuyển thành bản nháp' : 'Xuất bản';
+
             return response()->json([
                 'success' => true,
                 'message' => 'Cập nhật trạng thái thành công.',
-                'blog' => $blog->refresh()->load('author'),
+                'blog' => $blog, // Trả về đối tượng blog đầy đủ để JS cập nhật DOM
+                'new_status' => $blog->status, // Thêm để tiện cho JS kiểm tra trực tiếp
+                'status_text' => $blog->status_info['text'], // Thêm để tiện cho JS
+                'badge_class' => $blog->status_info['badge'], // Thêm để tiện cho JS
+                'new_icon_class' => $newIconClass, // Thêm để tiện cho JS
+                'new_button_title' => $newButtonTitle, // Thêm để tiện cho JS
             ]);
         } catch (\Exception $e) {
             Log::error("Lỗi đổi trạng thái bài viết (ID: {$blog->id}): " . $e->getMessage());

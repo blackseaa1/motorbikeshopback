@@ -3,28 +3,105 @@
  * brand_manager.js
  * Xử lý JavaScript cho trang quản lý Thương hiệu.
  * PHIÊN BẢN ĐÃ CẬP NHẬT: Sửa lỗi tên hàm initializeBrandPage và loại bỏ khởi tạo dư thừa.
+ * Đã tích hợp Toast Notification từ promotion_manager.js.
  * ===================================================================
  */
 
 let isInitialized = false; // Flag to prevent multiple initializations
 
-function initializeBrandsPage(hasValidationErrors = false, formMarker = null) {
+document.addEventListener('DOMContentLoaded', function () {
+    // Chỉ khởi tạo nếu chưa được khởi tạo
+    if (isInitialized) {
+        console.log("Brand Manager đã được khởi tạo trước đó. Bỏ qua khởi tạo lại.");
+        return;
+    }
+    isInitialized = true;
     console.log("Khởi tạo JS cho trang Thương hiệu...");
 
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    if (!csrfToken) {
+        console.error('Lỗi nghiêm trọng: Không tìm thấy CSRF Token!');
+        // Dừng thực thi nếu không có CSRF token để tránh lỗi không cần thiết
+        return;
+    }
 
-    // Hàm hiển thị thông báo
-    function showAppNotification(type, title, message) {
-        if (typeof window.showAppInfoModal === 'function') {
-            const messageContent = (typeof message === 'object' && message.html) ? message : String(message);
-            window.showAppInfoModal(messageContent, type, title);
-        } else {
-            console.warn('Hàm window.showAppInfoModal không khả dụng.');
-            const alertMessage = (typeof message === 'object' && message.html) ? title + ": Vui lòng kiểm tra console." : title + ": " + message;
-            if (typeof message === 'object' && message.html) console.error("Nội dung HTML cho alert:", message.html);
-            alert(alertMessage);
+    // Lấy các hàm helper toàn cục (đặc biệt là showToast)
+    const showAppLoader = typeof window.showAppLoader === 'function' ? window.showAppLoader : () => console.log('Show Loader');
+    const hideAppLoader = typeof window.hideAppLoader === 'function' ? window.hideAppLoader : () => console.log('Hide Loader');
+    const showToast = typeof window.showToast === 'function' ? window.showToast : (msg, type) => {
+        // Fallback đơn giản nếu showToast không được định nghĩa toàn cục
+        const toastContainer = document.querySelector('.toast-container');
+        if (!toastContainer) {
+            console.error('Không tìm thấy .toast-container. Vui lòng thêm vào layout chính.');
+            alert(`${type}: ${msg}`); // Fallback sang alert nếu không có container
+            return;
+        }
+
+        const toastEl = document.createElement('div');
+        // Sử dụng các lớp Bootstrap Toast
+        toastEl.className = `toast align-items-center text-white bg-${type === 'success' ? 'success' : 'danger'} border-0`;
+        toastEl.setAttribute('role', 'alert');
+        toastEl.setAttribute('aria-live', 'assertive');
+        toastEl.setAttribute('aria-atomic', 'true');
+        toastEl.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">${msg}</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        `;
+        toastContainer.appendChild(toastEl); // Thêm vào container thay vì body
+
+        const toast = new bootstrap.Toast(toastEl, { delay: 3000 });
+        toast.show();
+        toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
+    };
+
+    // Hàm hiển thị lỗi validation dưới trường input
+    function displayValidationErrors(formElement, errors) {
+        // Clear previous errors first
+        formElement.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+        formElement.querySelectorAll('.invalid-feedback').forEach(el => el.textContent = '');
+
+        for (const fieldName in errors) {
+            if (errors.hasOwnProperty(fieldName)) {
+                // Find input field by name, or adjust for specific IDs
+                let inputField = formElement.querySelector(`[name="${fieldName}"]`);
+
+                // Special handling for logo_url which maps to brandLogoUpdate/Create
+                if (!inputField && fieldName === 'logo_url') {
+                    // Try to find the specific logo input based on context
+                    if (formElement.id === 'createBrandForm') {
+                        inputField = formElement.querySelector('#brandLogoCreate');
+                    } else if (formElement.id === 'updateBrandForm') {
+                        inputField = formElement.querySelector('#brandLogoUpdate');
+                    }
+                }
+
+                if (inputField) {
+                    inputField.classList.add('is-invalid');
+                    // Find the corresponding error message element (assuming an adjacent .invalid-feedback)
+                    const errorDiv = inputField.nextElementSibling;
+                    if (errorDiv && errorDiv.classList.contains('invalid-feedback')) {
+                        errorDiv.textContent = errors[fieldName][0];
+                    } else {
+                        // Fallback if the standard structure is not found (e.g., custom error div)
+                        const specificErrorDiv = formElement.querySelector(`#brand${fieldName.charAt(0).toUpperCase() + fieldName.slice(1)}Error`);
+                        if (specificErrorDiv) {
+                            specificErrorDiv.textContent = errors[fieldName][0];
+                            specificErrorDiv.style.display = 'block';
+                        } else {
+                            console.warn(`Không tìm thấy div .invalid-feedback hoặc error cụ thể cho trường: ${fieldName}`);
+                        }
+                    }
+                } else {
+                    console.warn(`Không tìm thấy trường input cho lỗi: ${fieldName}`);
+                    // If no specific input field, show as a general toast
+                    showToast(`Lỗi: ${fieldName} - ${errors[fieldName][0]}`, 'error');
+                }
+            }
         }
     }
+
 
     // Hàm thiết lập preview logo
     function setupLogoPreview(inputId, previewId) {
@@ -78,10 +155,13 @@ function initializeBrandsPage(hasValidationErrors = false, formMarker = null) {
         }
         if (logoInput) logoInput.value = '';
 
+        // Clear validation errors on modal open
         updateBrandForm.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
         updateBrandForm.querySelectorAll('.invalid-feedback').forEach(el => {
-            if (el.id && el.id.endsWith('Error')) el.textContent = '';
+            if (el.id && el.id.endsWith('Error')) el.textContent = ''; // Clear specific error divs
+            el.textContent = ''; // Clear generic invalid-feedback
         });
+
         if (submitButtonUpdate) {
             submitButtonUpdate.disabled = false;
             submitButtonUpdate.innerHTML = 'Lưu thay đổi';
@@ -100,67 +180,49 @@ function initializeBrandsPage(hasValidationErrors = false, formMarker = null) {
             const submitButtonUpdate = updateBrandForm.querySelector('button[type="submit"]');
             updateBrandForm.addEventListener('submit', async function (event) {
                 event.preventDefault();
-                if (typeof window.showAppLoader === 'function') window.showAppLoader();
+                showAppLoader();
                 if (submitButtonUpdate) {
                     submitButtonUpdate.disabled = true;
                     submitButtonUpdate.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Đang lưu...';
                 }
 
                 const formData = new FormData(this);
+                // Laravel expects _method for PUT/PATCH via POST
+                formData.append('_method', 'PUT'); // The actual method is handled by Laravel's _method field
                 const actionUrl = this.action;
 
-                this.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
-                this.querySelectorAll('.invalid-feedback').forEach(el => {
-                    if (el.id && el.id.endsWith('Error')) el.textContent = '';
-                });
+                // Clear previous validation errors
+                updateBrandForm.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+                updateBrandForm.querySelectorAll('.invalid-feedback').forEach(el => el.textContent = '');
 
                 try {
                     const response = await fetch(actionUrl, {
-                        method: 'POST',
+                        method: 'POST', // Always POST for FormData, Laravel reads _method
                         headers: { 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' },
                         body: formData,
                     });
                     const result = await response.json();
 
-                    if (!response.ok) {
-                        if (response.status === 422 && result.errors) {
-                            Object.keys(result.errors).forEach(key => {
-                                let fieldName = key;
-                                if (key === 'logo_url') fieldName = 'logoUrl';
-                                const errorField = document.getElementById(`brand${fieldName.charAt(0).toUpperCase() + fieldName.slice(1)}UpdateError`);
-                                const inputField = document.getElementById(`brand${fieldName.charAt(0).toUpperCase() + fieldName.slice(1)}Update`);
-
-                                if (inputField) inputField.classList.add('is-invalid');
-                                if (errorField) {
-                                    errorField.textContent = result.errors[key][0];
-                                    errorField.style.display = 'block';
-                                } else {
-                                    showAppNotification('validation_error', 'Lỗi Dữ Liệu', `${key}: ${result.errors[key][0]}`);
-                                }
-                            });
-                        } else {
-                            showAppNotification('error', 'Lỗi Cập Nhật!', result.message || 'Không thể cập nhật thương hiệu.');
-                        }
-                        return;
-                    }
-
-                    if (result.success) {
+                    if (response.ok) { // Status code 2xx
                         const modalInstance = bootstrap.Modal.getInstance(updateBrandModalElement);
                         if (modalInstance) modalInstance.hide();
-                        showAppNotification('success', 'Thành công!', result.message);
+                        showToast(result.message, 'success');
                         if (result.redirect_url) {
                             setTimeout(() => window.location.href = result.redirect_url, 1000);
                         } else {
                             setTimeout(() => window.location.reload(), 1000);
                         }
-                    } else {
-                        showAppNotification('error', 'Lỗi!', result.message || 'Cập nhật không thành công.');
+                    } else if (response.status === 422 && result.errors) {
+                        displayValidationErrors(updateBrandForm, result.errors);
+                        showToast('Vui lòng kiểm tra lại thông tin nhập liệu.', 'error');
+                    } else { // Other errors
+                        showToast(result.message || 'Cập nhật không thành công.', 'error');
                     }
                 } catch (error) {
                     console.error('Lỗi khi cập nhật thương hiệu:', error);
-                    showAppNotification('error', 'Lỗi Hệ Thống!', 'Có lỗi xảy ra trong quá trình xử lý.');
+                    showToast('Có lỗi xảy ra trong quá trình xử lý.', 'error');
                 } finally {
-                    if (typeof window.hideAppLoader === 'function') window.hideAppLoader();
+                    hideAppLoader();
                     if (submitButtonUpdate) {
                         submitButtonUpdate.disabled = false;
                         submitButtonUpdate.innerHTML = 'Lưu thay đổi';
@@ -226,9 +288,12 @@ function initializeBrandsPage(hasValidationErrors = false, formMarker = null) {
             editBrandFromViewButton.addEventListener('click', function () {
                 const viewModalInstance = bootstrap.Modal.getInstance(viewBrandModalElement);
                 if (viewModalInstance) viewModalInstance.hide();
-                populateAndUpdateBrandModal(this);
-                const updateModal = bootstrap.Modal.getInstance(updateBrandModalElement) || new bootstrap.Modal(updateBrandModalElement);
-                updateModal.show();
+                // Delay to allow view modal to fully hide before showing update modal
+                setTimeout(() => {
+                    populateAndUpdateBrandModal(this);
+                    const updateModal = bootstrap.Modal.getInstance(updateBrandModalElement) || new bootstrap.Modal(updateBrandModalElement);
+                    updateModal.show();
+                }, 200); // Small delay
             });
         }
     }
@@ -271,7 +336,7 @@ function initializeBrandsPage(hasValidationErrors = false, formMarker = null) {
                 const formData = new FormData(this);
                 formData.set('_method', 'DELETE');
 
-                if (typeof window.showAppLoader === 'function') window.showAppLoader();
+                showAppLoader();
                 submitButtonDelete.disabled = true;
                 submitButtonDelete.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Đang xóa...';
 
@@ -283,40 +348,34 @@ function initializeBrandsPage(hasValidationErrors = false, formMarker = null) {
 
                 try {
                     const response = await fetch(url, {
-                        method: 'POST',
+                        method: 'POST', // Always POST for FormData with _method
                         headers: { 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' },
                         body: formData
                     });
                     const result = await response.json();
 
-                    if (!response.ok) {
-                        if (response.status === 422 && result.errors && result.errors.deletion_password && passwordInput && passwordErrorDiv) {
-                            passwordInput.classList.add('is-invalid');
-                            passwordErrorDiv.textContent = result.errors.deletion_password[0];
-                            passwordErrorDiv.style.display = 'block';
-                        } else {
-                            showAppNotification('error', 'Lỗi Xóa!', result.message || `Lỗi HTTP: ${response.status}`);
-                        }
-                        return;
-                    }
-
-                    if (result.success) {
+                    if (response.ok) { // Status code 2xx
                         const modalInstance = bootstrap.Modal.getInstance(deleteBrandModalElement);
                         if (modalInstance) modalInstance.hide();
-                        showAppNotification('success', 'Thành công!', result.message);
+                        showToast(result.message, 'success');
                         if (result.redirect_url) {
                             setTimeout(() => window.location.href = result.redirect_url, 1000);
                         } else {
                             setTimeout(() => window.location.reload(), 1000);
                         }
+                    } else if (response.status === 422 && result.errors && result.errors.deletion_password && passwordInput && passwordErrorDiv) {
+                        passwordInput.classList.add('is-invalid');
+                        passwordErrorDiv.textContent = result.errors.deletion_password[0];
+                        passwordErrorDiv.style.display = 'block';
+                        showToast('Vui lòng nhập đúng mật khẩu xác nhận.', 'error');
                     } else {
-                        showAppNotification('error', 'Lỗi!', result.message || 'Không thể xóa thương hiệu.');
+                        showToast(result.message || `Lỗi HTTP: ${response.status}`, 'error');
                     }
                 } catch (error) {
                     console.error('Lỗi khi xóa thương hiệu:', error);
-                    showAppNotification('error', 'Lỗi Hệ Thống!', 'Có lỗi xảy ra trong quá trình xử lý.');
+                    showToast('Có lỗi xảy ra trong quá trình xử lý xóa.', 'error');
                 } finally {
-                    if (typeof window.hideAppLoader === 'function') window.hideAppLoader();
+                    hideAppLoader();
                     submitButtonDelete.disabled = false;
                     submitButtonDelete.innerHTML = 'Xóa Vĩnh Viễn';
                 }
@@ -324,18 +383,19 @@ function initializeBrandsPage(hasValidationErrors = false, formMarker = null) {
         }
     }
 
-    // Xử lý nút toggle-status với sửa lỗi double-trigger
-    document.querySelectorAll('#adminBrandsPage .toggle-status-btn').forEach(button => {
-        button.removeEventListener('click', handleToggleStatus); // Xóa listener cũ
-        button.addEventListener('click', handleToggleStatus); // Gắn listener mới
-    });
+    // Xử lý nút toggle-status
+    // Dùng event delegation thay vì querySelectorAll + forEach để xử lý các nút được thêm/xóa khỏi DOM
+    // sau khi trang tải ban đầu (nếu có)
+    document.body.addEventListener('click', async function (event) {
+        const button = event.target.closest('.toggle-status-btn');
+        if (!button) return;
 
-    async function handleToggleStatus() {
-        const brandId = this.dataset.id;
-        const url = this.dataset.url;
-        const currentButton = this;
+        event.preventDefault(); // Prevent default action
 
-        if (typeof window.showAppLoader === 'function') window.showAppLoader();
+        const brandId = button.dataset.id;
+        const url = button.dataset.url;
+
+        showAppLoader();
         try {
             const response = await fetch(url, {
                 method: 'POST',
@@ -347,7 +407,7 @@ function initializeBrandsPage(hasValidationErrors = false, formMarker = null) {
             }
             const result = await response.json();
             if (result.success) {
-                showAppNotification('success', 'Thành công!', result.message || 'Cập nhật trạng thái thành công.');
+                showToast(result.message || 'Cập nhật trạng thái thành công.', 'success');
 
                 const row = document.getElementById(`brand-row-${brandId}`);
                 if (row) {
@@ -355,8 +415,8 @@ function initializeBrandsPage(hasValidationErrors = false, formMarker = null) {
                     if (statusCell) {
                         statusCell.innerHTML = `<span class="badge ${result.new_status === 'active' ? 'bg-success' : 'bg-secondary'}">${result.status_text}</span>`;
                     }
-                    currentButton.innerHTML = `<i class="bi ${result.new_icon_class}"></i>`;
-                    currentButton.title = result.new_button_title;
+                    button.innerHTML = `<i class="bi ${result.new_icon_class}"></i>`;
+                    button.title = result.new_button_title;
 
                     if (result.new_status === 'inactive') {
                         row.classList.add('row-inactive');
@@ -364,13 +424,14 @@ function initializeBrandsPage(hasValidationErrors = false, formMarker = null) {
                         row.classList.remove('row-inactive');
                     }
 
-                    currentButton.classList.remove('btn-danger', 'btn-outline-secondary');
+                    button.classList.remove('btn-danger', 'btn-outline-secondary');
                     if (result.new_status === 'active') {
-                        currentButton.classList.add('btn-outline-secondary');
+                        button.classList.add('btn-outline-secondary'); // Example: active uses outline-secondary
                     } else {
-                        currentButton.classList.add('btn-danger');
+                        button.classList.add('btn-danger'); // Example: inactive uses danger
                     }
 
+                    // Update dataset for view/edit buttons in the same row
                     const viewButton = row.querySelector('.btn-view-brand');
                     const editButton = row.querySelector('.btn-edit-brand');
                     if (viewButton) {
@@ -385,32 +446,115 @@ function initializeBrandsPage(hasValidationErrors = false, formMarker = null) {
             }
         } catch (error) {
             console.error('Lỗi khi thay đổi trạng thái thương hiệu:', error);
-            showAppNotification('error', 'Lỗi Cập Nhật!', error.message);
+            showToast(error.message, 'error');
         } finally {
-            if (typeof window.hideAppLoader === 'function') window.hideAppLoader();
+            hideAppLoader();
         }
-    }
+    });
+
 
     // Xử lý form tạo thương hiệu
     const createBrandForm = document.getElementById('createBrandForm');
+    const createBrandModalElement = document.getElementById('createBrandModal');
+    const createBrandModalInstance = createBrandModalElement ? new bootstrap.Modal(createBrandModalElement) : null;
+
     if (createBrandForm) {
-        const submitButtonCreate = createBrandForm.querySelector('button[type="submit"]');
-        createBrandForm.addEventListener('submit', function () {
+        createBrandForm.addEventListener('submit', async function (event) {
+            event.preventDefault(); // Ngăn chặn submit mặc định
+            showAppLoader();
+            const submitButtonCreate = createBrandForm.querySelector('button[type="submit"]');
             if (submitButtonCreate) {
                 submitButtonCreate.disabled = true;
                 submitButtonCreate.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Đang lưu...';
             }
+
+            const formData = new FormData(this);
+
+            // Clear previous validation errors
+            createBrandForm.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+            createBrandForm.querySelectorAll('.invalid-feedback').forEach(el => el.textContent = '');
+
+            try {
+                const response = await fetch(this.action, {
+                    method: 'POST',
+                    headers: { 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' },
+                    body: formData
+                });
+                const result = await response.json();
+
+                if (response.ok) { // Status code 2xx
+                    if (createBrandModalInstance) createBrandModalInstance.hide();
+                    showToast(result.message, 'success');
+                    if (result.redirect_url) {
+                        setTimeout(() => window.location.href = result.redirect_url, 1000);
+                    } else {
+                        setTimeout(() => window.location.reload(), 1000);
+                    }
+                } else if (response.status === 422 && result.errors) {
+                    displayValidationErrors(createBrandForm, result.errors);
+                    showToast('Vui lòng kiểm tra lại thông tin nhập liệu.', 'error');
+                } else {
+                    showToast(result.message || 'Tạo thương hiệu không thành công.', 'error');
+                }
+            } catch (error) {
+                console.error('Lỗi khi tạo thương hiệu:', error);
+                showToast('Có lỗi xảy ra trong quá trình xử lý tạo mới.', 'error');
+            } finally {
+                hideAppLoader();
+                if (submitButtonCreate) {
+                    submitButtonCreate.disabled = false;
+                    submitButtonCreate.innerHTML = 'Tạo Thương Hiệu';
+                }
+            }
         });
     }
 
-    // Xử lý mở lại modal tạo thương hiệu nếu có lỗi validation
-    if (hasValidationErrors && formMarker === 'create_brand') {
-        const createModalElement = document.getElementById('createBrandModal');
-        if (createModalElement) {
-            const createModalInstance = new bootstrap.Modal(createModalElement);
-            if (createModalInstance) {
-                createModalInstance.show();
+    // Xử lý đóng modal tạo để reset form
+    if (createBrandModalElement) {
+        createBrandModalElement.addEventListener('hidden.bs.modal', () => {
+            const form = createBrandModalElement.querySelector('form');
+            if (form) {
+                form.reset();
+                form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+                form.querySelectorAll('.invalid-feedback').forEach(el => el.textContent = '');
+                const logoPreviewCreate = document.getElementById('brandLogoPreviewCreate');
+                if (logoPreviewCreate) {
+                    logoPreviewCreate.src = logoPreviewCreate.dataset.defaultSrc || 'https://placehold.co/150x150/EFEFEF/AAAAAA&text=Preview';
+                }
             }
+        });
+    }
+    // Xử lý đóng modal cập nhật để reset form
+    if (updateBrandModalElement) {
+        updateBrandModalElement.addEventListener('hidden.bs.modal', () => {
+            const form = updateBrandModalElement.querySelector('form');
+            if (form) {
+                form.reset();
+                form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+                form.querySelectorAll('.invalid-feedback').forEach(el => el.textContent = '');
+                const logoPreviewUpdate = document.getElementById('brandLogoPreviewUpdate');
+                if (logoPreviewUpdate) {
+                    logoPreviewUpdate.src = logoPreviewUpdate.dataset.defaultSrc || 'https://placehold.co/150x150/EFEFEF/AAAAAA&text=LOGO';
+                }
+            }
+        });
+    }
+
+    // Xử lý mở lại modal tạo thương hiệu nếu có lỗi validation sau khi reload trang
+    // Điều này thường xảy ra khi Laravel flash lỗi vào session và reload trang.
+    // Nếu bạn muốn xử lý hoàn toàn bằng AJAX mà không reload trang khi có lỗi,
+    // thì phần này có thể không cần thiết hoặc cần logic khác.
+    // Dựa trên brand_manager.js cũ, nó có `hasValidationErrors` và `formMarker`
+    // => giả định đôi khi trang reload với lỗi.
+    const urlParams = new URLSearchParams(window.location.search);
+    const hasValidationErrors = urlParams.get('hasValidationErrors') === 'true';
+    const formMarker = urlParams.get('formMarker');
+
+    if (hasValidationErrors && formMarker === 'create_brand') {
+        if (createBrandModalInstance) {
+            createBrandModalInstance.show();
         }
     }
-}
+
+    console.log("Module Quản lý Thương hiệu đã được khởi tạo thành công.");
+});

@@ -6,6 +6,7 @@
  * - Tách hàm populateUpdateModal để tái sử dụng.
  * - Sửa lỗi chuyển đổi giữa modal Chi tiết và Cập nhật.
  * - Sử dụng Bootstrap Modal cho xác nhận Reset Mật khẩu.
+ * - Cập nhật để sử dụng thông báo toast thay vì modal thông tin.
  * ===================================================================
  */
 
@@ -14,10 +15,39 @@ function initializeStaffsPage() {
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
     const pageContainer = document.getElementById('adminStaffsPage');
 
-    // Các hàm helper chung
-    const showAppLoader = window.showAppLoader || function () { console.log('Loading...'); };
-    const hideAppLoader = window.hideAppLoader || function () { console.log('Loaded.'); };
-    const showAppInfoModal = window.showAppInfoModal || function (msg, type, title) { alert(`[${title}-${type}]: ${msg}`); };
+    // Lấy các hàm helper toàn cục (giả định tồn tại từ admin_layout.js hoặc tương tự)
+    // Bao gồm fallbacks tương tự blog_manager.js và customer_manager.js
+    const showAppLoader = typeof window.showAppLoader === 'function' ? window.showAppLoader : () => console.log('Show Loader');
+    const hideAppLoader = typeof window.hideAppLoader === 'function' ? window.hideAppLoader : () => console.log('Hide Loader');
+    const showToast = typeof window.showToast === 'function' ? window.showToast : (msg, type) => {
+        // Fallback đơn giản nếu showToast không được định nghĩa toàn cục
+        const toastContainer = document.querySelector('.toast-container');
+        if (!toastContainer) {
+            console.error('Không tìm thấy .toast-container. Vui lòng thêm vào layout chính.');
+            alert(`${type}: ${msg}`); // Fallback sang alert nếu không có container
+            return;
+        }
+
+        const toastEl = document.createElement('div');
+        toastEl.className = `toast align-items-center text-white bg-${type === 'success' ? 'success' : 'danger'} border-0`;
+        toastEl.setAttribute('role', 'alert');
+        toastEl.setAttribute('aria-live', 'assertive');
+        toastEl.setAttribute('aria-atomic', 'true');
+        toastEl.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">${msg}</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        `;
+        toastContainer.appendChild(toastEl);
+
+        const toast = new bootstrap.Toast(toastEl, { delay: 3000 });
+        toast.show();
+        toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
+    };
+    // Thay đổi showAppInfoModal để sử dụng showToast
+    const showAppInfoModal = typeof window.showToast === 'function' ? (msg, type, title) => showToast(msg, type) : (msg, type, title) => alert(`[${title || ''}-${type}]: ${msg}`);
+
 
     /**
      * Hiển thị các lỗi validation từ server trên form.
@@ -91,9 +121,9 @@ function initializeStaffsPage() {
                 if (!response.ok) {
                     if (response.status === 422 && result.errors) {
                         displayValidationErrors(formElement, result.errors);
-                        showAppInfoModal('Vui lòng kiểm tra lại dữ liệu nhập.', 'validation_error', `Lỗi ${sectionTitle}`);
+                        showToast('Vui lòng kiểm tra lại dữ liệu nhập.', 'error'); // Thay thế showAppInfoModal
                     } else {
-                        showAppInfoModal(result.message || 'Có lỗi xảy ra.', 'error', 'Lỗi Hệ thống');
+                        showToast(result.message || 'Có lỗi xảy ra.', 'error'); // Thay thế showAppInfoModal
                     }
                     return;
                 }
@@ -103,7 +133,7 @@ function initializeStaffsPage() {
                     if (bsModal) bsModal.hide();
                 }
 
-                showAppInfoModal(result.message, 'success', 'Thành công');
+                showToast(result.message, 'success'); // Thay thế showAppInfoModal
 
                 if (successCallback) {
                     successCallback(result);
@@ -113,7 +143,7 @@ function initializeStaffsPage() {
 
             } catch (error) {
                 console.error(`Lỗi AJAX form ${formId}:`, error);
-                showAppInfoModal('Không thể kết nối đến máy chủ.', 'error', 'Lỗi Mạng');
+                showToast('Không thể kết nối đến máy chủ.', 'error'); // Thay thế showAppInfoModal
             } finally {
                 if (submitButton) {
                     submitButton.disabled = false;
@@ -255,9 +285,9 @@ function initializeStaffsPage() {
                     });
                     const result = await response.json();
                     if (!response.ok) throw new Error(result.message);
-                    showAppInfoModal(result.message, 'success', 'Thành công');
+                    showToast(result.message, 'success'); // Thay thế showAppInfoModal
                 } catch (error) {
-                    showAppInfoModal(error.message, 'error', 'Lỗi');
+                    showToast(error.message, 'error'); // Thay thế showAppInfoModal
                 } finally {
                     hideAppLoader();
                     confirmModal.hide();
@@ -294,7 +324,7 @@ function initializeStaffsPage() {
                 const result = await response.json();
                 if (!response.ok) throw new Error(result.message);
 
-                showAppInfoModal(result.message, 'success', 'Thành công');
+                showToast(result.message, 'success'); // Thay thế showAppInfoModal
                 const staffId = button.dataset.id;
                 const row = document.getElementById(`staff-row-${staffId}`);
 
@@ -310,7 +340,7 @@ function initializeStaffsPage() {
                 }
 
             } catch (error) {
-                showAppInfoModal(error.message, 'error', 'Lỗi');
+                showToast(error.message, 'error'); // Thay thế showAppInfoModal
             } finally {
                 hideAppLoader();
             }

@@ -54,21 +54,42 @@ class PromotionController extends Controller
      */
     public function store(Request $request): JsonResponse|RedirectResponse
     {
-        // Bước 1: Chuẩn hóa dữ liệu (Logic từ prepareForValidation trong FormRequest cũ)
-        // Tự động chuyển đổi mã code thành chữ hoa trước khi validate.
+        // Bước 1: Chuẩn hóa dữ liệu
         $request->merge(['code' => strtoupper($request->input('code'))]);
 
-        // Bước 2: Kiểm tra dữ liệu (Logic từ rules() trong FormRequest cũ)
-        // Tự động trả về lỗi 422 JSON nếu request là AJAX và validation thất bại.
-        $validatedData = $request->validate([
+        // Bước 2: Kiểm tra dữ liệu
+        $rules = [
             'code'              => 'required|string|max:50|unique:promotions,code|uppercase',
             'description'       => 'nullable|string|max:255',
-            'discount_percentage' => 'required|numeric|min:0.01|max:100.00',
+            'discount_type'     => ['required', Rule::in([Promotion::DISCOUNT_TYPE_PERCENTAGE, Promotion::DISCOUNT_TYPE_FIXED])],
             'start_date'        => 'required|date_format:Y-m-d\TH:i',
             'end_date'          => 'required|date_format:Y-m-d\TH:i|after:start_date',
             'max_uses'          => 'nullable|integer|min:1',
+            'min_order_amount'  => 'nullable|numeric|min:0', // Thêm validation cho trường mới
             'status'            => ['required', Rule::in([Promotion::STATUS_MANUAL_ACTIVE, Promotion::STATUS_MANUAL_INACTIVE])],
-        ]);
+        ];
+
+        // Logic validation có điều kiện dựa trên discount_type
+        if ($request->input('discount_type') === Promotion::DISCOUNT_TYPE_PERCENTAGE) {
+            $rules['discount_percentage'] = 'required|numeric|min:0.01|max:100.00';
+            $rules['fixed_discount_amount'] = 'nullable'; // Không yêu cầu nếu là percentage
+            $rules['max_discount_amount'] = 'nullable|numeric|min:0.01';
+        } elseif ($request->input('discount_type') === Promotion::DISCOUNT_TYPE_FIXED) {
+            $rules['fixed_discount_amount'] = 'required|numeric|min:1';
+            $rules['discount_percentage'] = 'nullable'; // Không yêu cầu nếu là fixed
+            $rules['max_discount_amount'] = 'nullable'; // Không áp dụng cho fixed discount
+        }
+
+        $validatedData = $request->validate($rules);
+
+        // Đặt giá trị null cho các trường không liên quan nếu cần
+        if ($validatedData['discount_type'] === Promotion::DISCOUNT_TYPE_FIXED) {
+            $validatedData['discount_percentage'] = null;
+            $validatedData['max_discount_amount'] = null;
+        } elseif ($validatedData['discount_type'] === Promotion::DISCOUNT_TYPE_PERCENTAGE) {
+            $validatedData['fixed_discount_amount'] = null;
+        }
+
 
         // Bước 3: Tạo mới đối tượng và lưu vào DB.
         $promotion = Promotion::create($validatedData);
@@ -99,16 +120,37 @@ class PromotionController extends Controller
         $request->merge(['code' => strtoupper($request->input('code'))]);
 
         // Bước 2: Kiểm tra dữ liệu.
-        // Dùng validateWithBag để không xung đột lỗi với các form khác trên cùng trang khi không dùng AJAX.
-        $validatedData = $request->validateWithBag('update_promotion_form', [
+        $rules = [
             'code'              => ['required', 'string', 'max:50', 'uppercase', Rule::unique('promotions')->ignore($promotion->id)],
             'description'       => 'nullable|string|max:255',
-            'discount_percentage' => 'required|numeric|min:0.01|max:100.00',
+            'discount_type'     => ['required', Rule::in([Promotion::DISCOUNT_TYPE_PERCENTAGE, Promotion::DISCOUNT_TYPE_FIXED])],
             'start_date'        => 'required|date_format:Y-m-d\TH:i',
             'end_date'          => 'required|date_format:Y-m-d\TH:i|after:start_date',
             'max_uses'          => 'nullable|integer|min:1',
+            'min_order_amount'  => 'nullable|numeric|min:0', // Thêm validation cho trường mới
             'status'            => ['required', Rule::in([Promotion::STATUS_MANUAL_ACTIVE, Promotion::STATUS_MANUAL_INACTIVE])],
-        ]);
+        ];
+
+        // Logic validation có điều kiện dựa trên discount_type
+        if ($request->input('discount_type') === Promotion::DISCOUNT_TYPE_PERCENTAGE) {
+            $rules['discount_percentage'] = 'required|numeric|min:0.01|max:100.00';
+            $rules['fixed_discount_amount'] = 'nullable'; // Không yêu cầu nếu là percentage
+            $rules['max_discount_amount'] = 'nullable|numeric|min:0.01';
+        } elseif ($request->input('discount_type') === Promotion::DISCOUNT_TYPE_FIXED) {
+            $rules['fixed_discount_amount'] = 'required|numeric|min:1';
+            $rules['discount_percentage'] = 'nullable'; // Không yêu cầu nếu là fixed
+            $rules['max_discount_amount'] = 'nullable'; // Không áp dụng cho fixed discount
+        }
+
+        $validatedData = $request->validateWithBag('update_promotion_form', $rules);
+
+        // Đặt giá trị null cho các trường không liên quan nếu cần
+        if ($validatedData['discount_type'] === Promotion::DISCOUNT_TYPE_FIXED) {
+            $validatedData['discount_percentage'] = null;
+            $validatedData['max_discount_amount'] = null;
+        } elseif ($validatedData['discount_type'] === Promotion::DISCOUNT_TYPE_PERCENTAGE) {
+            $validatedData['fixed_discount_amount'] = null;
+        }
 
         // Bước 3: Cập nhật đối tượng.
         $promotion->update($validatedData);

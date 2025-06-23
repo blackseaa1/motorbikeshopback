@@ -1,3 +1,4 @@
+{{-- resources/views/admin/sales/promotion/modals/modal_view_promotion.blade.php --}}
 <div class="modal fade" id="viewPromotionModal" tabindex="-1" aria-labelledby="viewPromotionModalLabel"
     aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
@@ -19,8 +20,16 @@
                             <td id="viewDetailPromoDescription"></td>
                         </tr>
                         <tr>
-                            <th>Phần trăm giảm giá</th>
+                            <th>Loại giảm giá</th> {{-- Thêm hàng mới --}}
+                            <td id="viewDetailPromoDiscountType"></td>
+                        </tr>
+                        <tr>
+                            <th>Giá trị giảm giá</th> {{-- Thay đổi tiêu đề --}}
                             <td id="viewDetailPromoDiscount" class="text-danger fw-bold"></td>
+                        </tr>
+                        <tr>
+                            <th>Số tiền giảm tối đa</th> {{-- Thêm hàng mới --}}
+                            <td id="viewDetailPromoMaxDiscountAmount"></td>
                         </tr>
                         <tr>
                             <th>Ngày giờ bắt đầu</th>
@@ -39,6 +48,10 @@
                             <td id="viewDetailPromoUsesCount"></td>
                         </tr>
                         <tr>
+                            <th>Giá trị đơn hàng tối thiểu</th> {{-- Thêm hàng mới --}}
+                            <td id="viewDetailPromoMinOrderAmount"></td>
+                        </tr>
+                        <tr>
                             <th>Trạng thái Cài đặt</th>
                             <td id="viewDetailPromoStatusConfigText"></td>
                         </tr>
@@ -50,7 +63,6 @@
                 </table>
             </div>
             <div class="modal-footer">
-                {{-- data-bs-dismiss để đóng modal view trước khi mở modal update --}}
                 <button type="button" class="btn btn-primary me-auto" id="editFromViewBtn">
                     <i class="bi bi-pencil-square me-1"></i>Chỉnh sửa
                 </button>

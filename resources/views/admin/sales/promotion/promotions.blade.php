@@ -47,7 +47,7 @@
                                             <th scope="col" style="width:5%">STT</th>
                                             <th scope="col">Mã Code</th>
                                             <th scope="col">Mô tả</th>
-                                            <th scope="col" class="text-center">Giảm giá</th>
+                                            <th scope="col" class="text-center">Giảm giá</th> {{-- Cập nhật tiêu đề --}}
                                             <th scope="col">Thời gian hiệu lực</th>
                                             <th scope="col" class="text-center">Lượt sử dụng</th>
                                             <th scope="col" class="text-center">Trạng thái Cài đặt</th>
@@ -63,7 +63,8 @@
                                                 <th scope="row">{{ $loop->index + $promotions->firstItem() }}</th>
                                                 <td class="fw-bold text-primary">{{ $promotion->code }}</td>
                                                 <td>{{ Str::limit($promotion->description, 50) }}</td>
-                                                <td class="text-danger fw-bold text-center">{{ $promotion->formatted_discount }}
+                                                <td class="text-danger fw-bold text-center">
+                                                    {{ $promotion->display_discount_value }} {{-- SỬA ĐỔI: Sử dụng accessor mới --}}
                                                 </td>
                                                 <td>
                                                     <small>

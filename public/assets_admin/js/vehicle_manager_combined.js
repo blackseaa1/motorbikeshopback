@@ -3,13 +3,45 @@
  * vehicle_manager_combined.js
  *
  * Xử lý JavaScript cho trang quản lý chung Hãng xe và Dòng xe.
- * - Sử dụng các hàm global: window.showAppLoader, window.hideAppLoader, window.showAppInfoModal
+ * - Sử dụng các hàm global: window.showAppLoader, window.hideAppLoader, window.showAppInfoModal, window.showToast
  * - Quản lý modals và AJAX cho cả Vehicle Brands và Vehicle Models.
  * ===================================================================
  */
 function initializeVehicleManagementPage() {
     console.log("Khởi tạo JS cho trang Quản lý Hãng xe & Dòng xe...");
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+    // Lấy các hàm helper toàn cục từ admin_layout.js (giả định tồn tại)
+    const showAppLoader = typeof window.showAppLoader === 'function' ? window.showAppLoader : () => console.log('Show Loader');
+    const hideAppLoader = typeof window.hideAppLoader === 'function' ? window.hideAppLoader : () => console.log('Hide Loader');
+    const showAppInfoModal = typeof window.showAppInfoModal === 'function' ? window.showAppInfoModal : (msg, type, title) => alert(`${title || type}: ${msg}`);
+    const showToast = typeof window.showToast === 'function' ? window.showToast : (msg, type) => {
+        // Fallback đơn giản nếu showToast không được định nghĩa toàn cục (giống trong promotion_manager.js)
+        const toastContainer = document.querySelector('.toast-container');
+        if (!toastContainer) {
+            console.error('Không tìm thấy .toast-container. Vui lòng thêm vào layout chính.');
+            alert(`${type}: ${msg}`); // Fallback sang alert nếu không có container
+            return;
+        }
+
+        const toastEl = document.createElement('div');
+        toastEl.className = `toast align-items-center text-white bg-${type === 'success' ? 'success' : 'danger'} border-0`;
+        toastEl.setAttribute('role', 'alert');
+        toastEl.setAttribute('aria-live', 'assertive');
+        toastEl.setAttribute('aria-atomic', 'true');
+        toastEl.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">${msg}</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        `;
+        toastContainer.appendChild(toastEl);
+
+        const toast = new bootstrap.Toast(toastEl, { delay: 3000 });
+        toast.show();
+        toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
+    };
+
 
     // --- Định nghĩa Scope cho từng Tab ---
     const brandTabScope = '#tab-vehicle-brands-content ';
@@ -88,7 +120,7 @@ function initializeVehicleManagementPage() {
 
             formElement.addEventListener('submit', async function (e) {
                 e.preventDefault();
-                if (typeof window.showAppLoader === 'function') window.showAppLoader();
+                showAppLoader();
                 if (submitButton) {
                     submitButton.disabled = true;
                     submitButton.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Đang xử lý...';
@@ -136,11 +168,11 @@ function initializeVehicleManagementPage() {
                                     errorDiv.textContent = result.errors[key][0];
                                     errorDiv.style.display = 'block';
                                 } else { // Lỗi chung không gắn với trường cụ thể hoặc không tìm thấy div lỗi
-                                    window.showAppInfoModal(result.errors[key][0], 'validation_error', 'Lỗi Dữ Liệu');
+                                    showAppInfoModal(result.errors[key][0], 'validation_error', 'Lỗi Dữ Liệu'); // Giữ nguyên modal cho validation
                                 }
                             });
                         } else {
-                            window.showAppInfoModal(result.message || `Lỗi HTTP ${response.status}`, 'error', 'Thất bại!');
+                            showAppInfoModal(result.message || `Lỗi HTTP ${response.status}`, 'error', 'Thất bại!'); // Giữ nguyên modal cho lỗi HTTP
                         }
                         return;
                     }
@@ -149,17 +181,17 @@ function initializeVehicleManagementPage() {
                         if (successCallback && typeof successCallback === 'function') {
                             successCallback(result);
                         } else {
-                            window.showAppInfoModal(result.message || 'Thao tác thành công!', 'success', 'Thành công!');
+                            showToast(result.message || 'Thao tác thành công!', 'success'); // Sử dụng toast cho thành công
                             setTimeout(() => window.location.reload(), 1000); // Default reload
                         }
                     } else {
-                        window.showAppInfoModal(result.message || 'Thao tác không thành công.', 'error', 'Lỗi!');
+                        showToast(result.message || 'Thao tác không thành công.', 'error'); // Sử dụng toast cho lỗi không thành công
                     }
                 } catch (error) {
                     console.error(`Lỗi AJAX form ${sectionTitle}:`, error);
-                    window.showAppInfoModal('Có lỗi xảy ra trong quá trình xử lý. Vui lòng thử lại.', 'error', 'Lỗi Hệ Thống!');
+                    showAppInfoModal('Có lỗi xảy ra trong quá trình xử lý. Vui lòng thử lại.', 'error', 'Lỗi Hệ Thống!'); // Giữ nguyên modal cho lỗi hệ thống
                 } finally {
-                    if (typeof window.hideAppLoader === 'function') window.hideAppLoader();
+                    hideAppLoader();
                     if (submitButton) {
                         submitButton.disabled = false;
                         submitButton.innerHTML = formElement.id.includes('create') ? `Lưu ${sectionTitle}` : 'Lưu thay đổi';
@@ -175,7 +207,7 @@ function initializeVehicleManagementPage() {
             handleAjaxFormSubmit(createForm, (result) => {
                 const modalInstance = bootstrap.Modal.getInstance(createModalElement);
                 if (modalInstance) modalInstance.hide();
-                window.showAppInfoModal(result.message || `Tạo ${sectionTitle} thành công!`, 'success', 'Thành công!');
+                showToast(result.message || `Tạo ${sectionTitle} thành công!`, 'success'); // Sử dụng toast
                 setTimeout(() => {
                     const currentUrl = new URL(window.location);
                     currentUrl.searchParams.set('tab', 'brands'); // Chuyển về tab brands
@@ -207,7 +239,7 @@ function initializeVehicleManagementPage() {
             handleAjaxFormSubmit(updateForm, (result) => {
                 const modalInstance = bootstrap.Modal.getInstance(updateModalElement);
                 if (modalInstance) modalInstance.hide();
-                window.showAppInfoModal(result.message || `Cập nhật ${sectionTitle} thành công!`, 'success', 'Thành công!');
+                showToast(result.message || `Cập nhật ${sectionTitle} thành công!`, 'success'); // Sử dụng toast
 
                 // Cập nhật UI trực tiếp cho dòng hãng xe
                 const updatedRow = document.getElementById(`vehicle-brand-row-${result.vehicleBrand.id}`);
@@ -339,7 +371,7 @@ function initializeVehicleManagementPage() {
             handleAjaxFormSubmit(deleteForm, (result) => {
                 const modalInstance = bootstrap.Modal.getInstance(deleteModalElement);
                 if (modalInstance) modalInstance.hide();
-                window.showAppInfoModal(result.message || `Xóa ${sectionTitle} thành công!`, 'success', 'Thành công!');
+                showToast(result.message || `Xóa ${sectionTitle} thành công!`, 'success'); // Sử dụng toast
                 setTimeout(() => window.location.reload(), 1000);
             });
         }
@@ -350,7 +382,7 @@ function initializeVehicleManagementPage() {
                 const id = this.dataset.id;
                 const url = this.dataset.url;
                 const currentButton = this;
-                if (typeof window.showAppLoader === 'function') window.showAppLoader();
+                showAppLoader();
                 try {
                     const response = await fetch(url, {
                         method: 'POST',
@@ -360,7 +392,7 @@ function initializeVehicleManagementPage() {
                     const result = await response.json();
 
                     if (result.success) {
-                        window.showAppInfoModal(result.message || `Cập nhật trạng thái ${sectionTitle} thành công!`, 'success', 'Thành công!');
+                        showToast(result.message || `Cập nhật trạng thái ${sectionTitle} thành công!`, 'success'); // Sử dụng toast
 
                         const row = document.getElementById(`vehicle-brand-row-${id}`);
                         const statusCell = document.getElementById(`vehicle-brand-status-${id}`);
@@ -380,12 +412,12 @@ function initializeVehicleManagementPage() {
                             window.location.href = currentUrl.toString();
                         }, 1000); // Reload sau 1 giây
                     } else {
-                        window.showAppInfoModal(result.message || `Lỗi cập nhật trạng thái ${sectionTitle}.`, 'error', 'Lỗi!');
+                        showToast(result.message || `Lỗi cập nhật trạng thái ${sectionTitle}.`, 'error'); // Sử dụng toast
                     }
                 } catch (error) {
-                    window.showAppInfoModal(error.message || `Không thể cập nhật trạng thái ${sectionTitle}.`, 'error', 'Lỗi!');
+                    showToast(error.message || `Không thể cập nhật trạng thái ${sectionTitle}.`, 'error'); // Sử dụng toast
                 } finally {
-                    if (typeof window.hideAppLoader === 'function') window.hideAppLoader();
+                    hideAppLoader();
                 }
             });
         });
@@ -440,7 +472,7 @@ function initializeVehicleManagementPage() {
 
             formElement.addEventListener('submit', async function (e) {
                 e.preventDefault();
-                if (typeof window.showAppLoader === 'function') window.showAppLoader();
+                showAppLoader();
                 if (submitButton) {
                     submitButton.disabled = true;
                     submitButton.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Đang xử lý...';
@@ -485,11 +517,11 @@ function initializeVehicleManagementPage() {
                                     errorDiv.textContent = result.errors[key][0];
                                     errorDiv.style.display = 'block';
                                 } else {
-                                    window.showAppInfoModal(result.errors[key][0], 'validation_error', 'Lỗi Dữ Liệu');
+                                    showAppInfoModal(result.errors[key][0], 'validation_error', 'Lỗi Dữ Liệu'); // Giữ nguyên modal cho validation
                                 }
                             });
                         } else {
-                            window.showAppInfoModal(result.message || `Lỗi HTTP ${response.status}`, 'error', 'Thất bại!');
+                            showAppInfoModal(result.message || `Lỗi HTTP ${response.status}`, 'error', 'Thất bại!'); // Giữ nguyên modal cho lỗi HTTP
                         }
                         return;
                     }
@@ -497,17 +529,17 @@ function initializeVehicleManagementPage() {
                         if (successCallback && typeof successCallback === 'function') {
                             successCallback(result);
                         } else {
-                            window.showAppInfoModal(result.message || 'Thao tác thành công!', 'success', 'Thành công!');
+                            showToast(result.message || 'Thao tác thành công!', 'success'); // Sử dụng toast cho thành công
                             setTimeout(() => window.location.reload(), 1000);
                         }
                     } else {
-                        window.showAppInfoModal(result.message || 'Thao tác không thành công.', 'error', 'Lỗi!');
+                        showToast(result.message || 'Thao tác không thành công.', 'error'); // Sử dụng toast cho lỗi không thành công
                     }
                 } catch (error) {
                     console.error(`Lỗi AJAX form ${sectionTitle}:`, error);
-                    window.showAppInfoModal('Có lỗi xảy ra trong quá trình xử lý.', 'error', 'Lỗi Hệ Thống!');
+                    showAppInfoModal('Có lỗi xảy ra trong quá trình xử lý.', 'error', 'Lỗi Hệ Thống!'); // Giữ nguyên modal cho lỗi hệ thống
                 } finally {
-                    if (typeof window.hideAppLoader === 'function') window.hideAppLoader();
+                    hideAppLoader();
                     if (submitButton) {
                         submitButton.disabled = false;
                         submitButton.innerHTML = formElement.id.includes('create') ? `Lưu ${sectionTitle}` : 'Lưu thay đổi';
@@ -522,7 +554,7 @@ function initializeVehicleManagementPage() {
             handleAjaxFormSubmit(createForm, (result) => {
                 const modalInstance = bootstrap.Modal.getInstance(createModalElement);
                 if (modalInstance) modalInstance.hide();
-                window.showAppInfoModal(result.message || `Tạo ${sectionTitle} thành công!`, 'success', 'Thành công!');
+                showToast(result.message || `Tạo ${sectionTitle} thành công!`, 'success'); // Sử dụng toast
                 setTimeout(() => {
                     const currentUrl = new URL(window.location);
                     currentUrl.searchParams.set('tab', 'models'); // Chuyển về tab models
@@ -552,7 +584,7 @@ function initializeVehicleManagementPage() {
             handleAjaxFormSubmit(updateForm, (result) => {
                 const modalInstance = bootstrap.Modal.getInstance(updateModalElement);
                 if (modalInstance) modalInstance.hide();
-                window.showAppInfoModal(result.message || `Cập nhật ${sectionTitle} thành công!`, 'success', 'Thành công!');
+                showToast(result.message || `Cập nhật ${sectionTitle} thành công!`, 'success'); // Sử dụng toast
 
                 // Cập nhật UI trực tiếp cho dòng xe
                 const updatedRow = document.getElementById(`vehicle-model-row-${result.vehicleModel.id}`);
@@ -682,7 +714,7 @@ function initializeVehicleManagementPage() {
             handleAjaxFormSubmit(deleteForm, (result) => {
                 const modalInstance = bootstrap.Modal.getInstance(deleteModalElement);
                 if (modalInstance) modalInstance.hide();
-                window.showAppInfoModal(result.message || `Xóa ${sectionTitle} thành công!`, 'success', 'Thành công!');
+                showToast(result.message || `Xóa ${sectionTitle} thành công!`, 'success'); // Sử dụng toast
                 setTimeout(() => window.location.reload(), 1000);
             });
         }
@@ -693,7 +725,7 @@ function initializeVehicleManagementPage() {
                 const id = this.dataset.id;
                 const url = this.dataset.url;
                 const currentButton = this;
-                if (typeof window.showAppLoader === 'function') window.showAppLoader();
+                showAppLoader();
                 try {
                     const response = await fetch(url, {
                         method: 'POST',
@@ -703,7 +735,7 @@ function initializeVehicleManagementPage() {
                     const result = await response.json();
 
                     if (result.success) {
-                        window.showAppInfoModal(result.message || `Cập nhật trạng thái ${sectionTitle} thành công!`, 'success', 'Thành công!');
+                        showToast(result.message || `Cập nhật trạng thái ${sectionTitle} thành công!`, 'success'); // Sử dụng toast
                         const row = document.getElementById(`vehicle-model-row-${id}`);
                         const statusCell = document.getElementById(`vehicle-model-status-${id}`);
                         if (statusCell) statusCell.innerHTML = `<span class="badge ${result.new_status === 'active' ? 'bg-success' : 'bg-secondary'}">${result.status_text}</span>`;
@@ -715,12 +747,12 @@ function initializeVehicleManagementPage() {
                             row.querySelectorAll('[data-status]').forEach(el => el.dataset.status = result.new_status);
                         }
                     } else {
-                        window.showAppInfoModal(result.message || `Lỗi cập nhật trạng thái ${sectionTitle}.`, 'error', 'Lỗi!');
+                        showToast(result.message || `Lỗi cập nhật trạng thái ${sectionTitle}.`, 'error'); // Sử dụng toast
                     }
                 } catch (error) {
-                    window.showAppInfoModal(error.message || `Không thể cập nhật trạng thái ${sectionTitle}.`, 'error', 'Lỗi!');
+                    showToast(error.message || `Không thể cập nhật trạng thái ${sectionTitle}.`, 'error'); // Sử dụng toast
                 } finally {
-                    if (typeof window.hideAppLoader === 'function') window.hideAppLoader();
+                    hideAppLoader();
                 }
             });
         });

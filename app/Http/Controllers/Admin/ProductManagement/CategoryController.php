@@ -31,7 +31,18 @@ class CategoryController extends Controller
             'status' => ['required', Rule::in([Category::STATUS_ACTIVE, Category::STATUS_INACTIVE])],
         ]);
 
-        Category::create($request->all());
+        $category = Category::create($request->all()); // Lưu danh mục được tạo vào biến $category
+
+        // --- BẮT ĐẦU PHẦN THAY ĐỔI ---
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Tạo danh mục thành công!',
+                'category' => $category, // Trả về đối tượng category vừa tạo nếu cần (có thể dùng để cập nhật UI mà không cần reload)
+                'redirect_url' => route('admin.productManagement.categories.index') // Gửi URL để JS có thể chuyển hướng
+            ]);
+        }
+        // --- KẾT THÚC PHẦN THAY ĐỔI ---
 
         return redirect()->route('admin.productManagement.categories.index')
             ->with('success', 'Tạo danh mục thành công!');
@@ -54,7 +65,7 @@ class CategoryController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Cập nhật danh mục thành công!',
-                'category' => $category->refresh(),
+                'category' => $category->refresh(), // Refresh để đảm bảo lấy dữ liệu mới nhất (nếu có thay đổi trong model)
                 'redirect_url' => route('admin.productManagement.categories.index')
             ]);
         }
@@ -65,14 +76,16 @@ class CategoryController extends Controller
 
     /**
      * Xóa một danh mục khỏi cơ sở dữ liệu.
+     * PHIÊN BẢN ĐÃ SỬA LỖI: Đồng bộ hóa hoàn toàn với BrandController.
      */
     public function destroy(Request $request, Category $category)
     {
-        if (Config::get('admin.deletion_password')) {
+        $adminDeletionPassword = Config::get('admin.deletion_password');
+        if ($adminDeletionPassword) {
             $request->validate([
                 'deletion_password' => 'required|string',
             ]);
-            if ($request->input('deletion_password') !== Config::get('admin.deletion_password')) {
+            if ($request->input('deletion_password') !== $adminDeletionPassword) {
                 if ($request->expectsJson()) {
                     return response()->json([
                         'success' => false,
@@ -94,22 +107,19 @@ class CategoryController extends Controller
                     'redirect_url' => route('admin.productManagement.categories.index')
                 ]);
             }
-
             return redirect()->route('admin.productManagement.categories.index')
                 ->with('success', 'Xóa danh mục thành công!');
         } catch (QueryException $e) {
-            $errorMessage = 'Đã xảy ra lỗi, không thể xóa danh mục.';
+            $errorMessage = 'Đã xảy ra lỗi. Không thể xóa danh mục.';
             if ($e->getCode() === '23000') {
                 $errorMessage = 'Không thể xóa danh mục này vì vẫn còn sản phẩm liên quan.';
             }
-
             if ($request->expectsJson()) {
                 return response()->json([
                     'success' => false,
                     'message' => $errorMessage
                 ], 500);
             }
-
             return redirect()->route('admin.productManagement.categories.index')
                 ->with('error', $errorMessage);
         }
@@ -121,20 +131,17 @@ class CategoryController extends Controller
      */
     public function toggleStatus(Request $request, Category $category)
     {
-        // Sử dụng logic đảo ngược trạng thái trực tiếp, đơn giản và hiệu quả.
         $category->status = ($category->isActive()) ? Category::STATUS_INACTIVE : Category::STATUS_ACTIVE;
         $category->save();
 
         if ($request->expectsJson()) {
-            // Tạo một mảng JSON chứa đầy đủ thông tin để JavaScript cập nhật giao diện.
             return response()->json([
                 'success' => true,
                 'message' => 'Cập nhật trạng thái danh mục thành công!',
                 'new_status' => $category->status,
-                // Tự định nghĩa text và class ở đây để đảm bảo tính nhất quán.
                 'status_text' => $category->isActive() ? 'Hoạt động' : 'Đã ẩn',
                 'status_badge_class' => $category->isActive() ? 'bg-success' : 'bg-secondary',
-                'new_icon_class' => 'bi-power', // Giữ nguyên icon
+                'new_icon_class' => 'bi-power',
                 'new_button_title' => $category->isActive() ? 'Ẩn danh mục này' : 'Hiển thị danh mục này'
             ]);
         }

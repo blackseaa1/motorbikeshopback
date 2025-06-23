@@ -20,7 +20,6 @@ return new class extends Migration
             $table->dateTime('end_date')->nullable();
             $table->unsignedInteger('max_uses')->nullable();
             $table->unsignedInteger('uses_count')->default(0);
-            $table->integer('usage_count')->default(0);
             $table->string('status', 50)->default('scheduled');
             $table->timestamps();
         });

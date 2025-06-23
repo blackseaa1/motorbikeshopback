@@ -13,7 +13,6 @@
                 {{-- Form sẽ được set action động bằng JS --}}
                 <form id="updateProductForm" method="POST" novalidate>
                     @csrf
-                    {{-- Loại bỏ @method('PUT') vì route sử dụng POST --}}
 
                     <div class="row">
                         <div class="col-md-6">
@@ -55,14 +54,14 @@
                             <div class="mb-3">
                                 <label for="productPriceUpdate" class="form-label">Giá bán (VNĐ) <span
                                         class="text-danger">*</span></label>
-                                <input type="number" name="price" class="form-control" id="productPriceUpdate" min="0"
+                                <input type="text" name="price" class="form-control" id="productPriceUpdate" min="0"
                                     step="0.01" required>
                                 <div class="invalid-feedback"></div>
                             </div>
                             <div class="mb-3">
                                 <label for="productStockUpdate" class="form-label">Số lượng tồn kho <span
                                         class="text-danger">*</span></label>
-                                <input type="number" name="stock_quantity" class="form-control" id="productStockUpdate"
+                                <input type="text" name="stock_quantity" class="form-control" id="productStockUpdate"
                                     min="0" required>
                                 <div class="invalid-feedback"></div>
                             </div>

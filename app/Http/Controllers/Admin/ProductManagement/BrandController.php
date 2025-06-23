@@ -14,9 +14,7 @@ class BrandController extends Controller
 {
     public function index()
     {
-        // SỬA ĐỔI: Chuyển từ get() sang paginate() để phân trang
-        // Giúp trang tải nhanh hơn khi có nhiều dữ liệu.
-        $brands = Brand::latest()->paginate(10); // Lấy 10 thương hiệu mỗi trang
+        $brands = Brand::latest()->paginate(10);
 
         return view('admin.productManagement.brand.brands', compact('brands'));
     }
@@ -35,12 +33,23 @@ class BrandController extends Controller
             $logoPath = $request->file('logo_url')->store('brand_logos', 'public');
         }
 
-        Brand::create([
+        $brand = Brand::create([ // Lưu Brand được tạo vào biến $brand
             'name' => $request->name,
             'description' => $request->description,
             'logo_url' => $logoPath,
             'status' => $request->status,
         ]);
+
+        // --- BẮT ĐẦU PHẦN THAY ĐỔI ---
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Tạo thương hiệu thành công!',
+                'brand' => $brand, // Trả về đối tượng brand vừa tạo nếu cần
+                'redirect_url' => route('admin.productManagement.brands.index') // Gửi URL để JS có thể chuyển hướng
+            ]);
+        }
+        // --- KẾT THÚC PHẦN THAY ĐỔI ---
 
         return redirect()->route('admin.productManagement.brands.index')
             ->with('success', 'Tạo thương hiệu thành công!');
@@ -145,7 +154,6 @@ class BrandController extends Controller
                 'message' => 'Cập nhật trạng thái thương hiệu thành công.',
                 'new_status' => $brand->status,
                 'status_text' => $brand->isActive() ? 'Hoạt động' : 'Đã ẩn',
-                // --- ĐÃ THAY ĐỔI ---
                 'new_icon_class' => 'bi-power',
                 'new_button_title' => $brand->isActive() ? 'Ẩn thương hiệu này' : 'Hiển thị thương hiệu này'
             ]);

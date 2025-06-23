@@ -22,19 +22,30 @@ class Promotion extends Model
     const STATUS_EFFECTIVE_EXPIRED = 'expired';
     const STATUS_EFFECTIVE_INACTIVE = 'inactive';
 
+    // Loại giảm giá
+    const DISCOUNT_TYPE_PERCENTAGE = 'percentage';
+    const DISCOUNT_TYPE_FIXED = 'fixed';
+
     protected $fillable = [
         'code',
         'description',
         'discount_percentage',
+        'discount_type', // Thêm trường mới
+        'fixed_discount_amount', // Thêm trường mới
+        'max_discount_amount', // Thêm trường mới
         'start_date',
         'end_date',
         'max_uses',
         'uses_count',
+        'min_order_amount', // Thêm trường mới
         'status',
     ];
 
     protected $casts = [
         'discount_percentage' => 'decimal:2',
+        'fixed_discount_amount' => 'decimal:2', // Thêm cast cho trường mới
+        'max_discount_amount' => 'decimal:2', // Thêm cast cho trường mới
+        'min_order_amount' => 'decimal:2', // Thêm cast cho trường mới
         'start_date' => 'datetime',
         'end_date' => 'datetime',
         'max_uses' => 'integer',
@@ -48,19 +59,21 @@ class Promotion extends Model
         'manual_status_text',
         'manual_status_badge_class',
         'formatted_discount',
+        'display_discount_value', // Thêm thuộc tính mới để hiển thị
     ];
 
     //======================================================================
-    // HELPER METHODS (CÁC HÀM KIỂM TRA) - PHẦN SỬA LỖI
+    // HELPER METHODS (CÁC HÀM KIỂM TRA)
     //======================================================================
 
     /**
      * Phương thức chính để kiểm tra xem mã có hợp lệ để áp dụng không.
-     * Đây là phương thức đang bị thiếu trong file của bạn.
+     * Cần truyền giá trị subtotal của đơn hàng vào để kiểm tra.
+     * @param float $subtotal
      */
-    public function isEffective(): bool
+    public function isEffective(float $subtotal = 0): bool
     {
-        return $this->isManuallyActive() && $this->isCurrentlyActive() && $this->hasUsesLeft();
+        return $this->isManuallyActive() && $this->isCurrentlyActive() && $this->hasUsesLeft() && $this->meetsMinOrderAmount($subtotal);
     }
 
     /**
@@ -93,6 +106,18 @@ class Promotion extends Model
         return $this->uses_count < $this->max_uses;
     }
 
+    /**
+     * Kiểm tra xem đơn hàng có đạt giá trị tối thiểu để áp dụng khuyến mãi không.
+     * @param float $subtotal
+     */
+    public function meetsMinOrderAmount(float $subtotal): bool
+    {
+        if ($this->min_order_amount === null) {
+            return true; // Không yêu cầu giá trị đơn hàng tối thiểu
+        }
+        return $subtotal >= $this->min_order_amount;
+    }
+
     //======================================================================
     // ACCESSORS (CÁC THUỘC TÍNH TỰ ĐỘNG)
     //======================================================================
@@ -106,9 +131,8 @@ class Promotion extends Model
             $now = Carbon::now();
             return ($this->start_date && $now->lt($this->start_date)) ? self::STATUS_EFFECTIVE_SCHEDULED : self::STATUS_EFFECTIVE_EXPIRED;
         }
-        if (!$this->hasUsesLeft()) {
-            return self::STATUS_EFFECTIVE_EXPIRED;
-        }
+        // Để đơn giản, bỏ qua kiểm tra hasUsesLeft() ở đây để accessor này chỉ phản ánh trạng thái thời gian và trạng thái thủ công
+        // Việc kiểm tra hasUsesLeft và min_order_amount sẽ được thực hiện đầy đủ trong hàm isEffective()
         return self::STATUS_EFFECTIVE_ACTIVE;
     }
 
@@ -117,7 +141,7 @@ class Promotion extends Model
         return match ($this->effective_status_key) {
             self::STATUS_EFFECTIVE_ACTIVE => 'Đang hiệu lực',
             self::STATUS_EFFECTIVE_SCHEDULED => 'Chưa bắt đầu',
-            self::STATUS_EFFECTIVE_EXPIRED => 'Hết hạn/Hết lượt',
+            self::STATUS_EFFECTIVE_EXPIRED => 'Hết hạn/Hết lượt', // Cần thêm logic để phân biệt hết hạn và hết lượt
             self::STATUS_EFFECTIVE_INACTIVE => 'Đã tắt',
             default => 'Không xác định',
         };
@@ -146,7 +170,36 @@ class Promotion extends Model
 
     public function getFormattedDiscountAttribute(): string
     {
-        return rtrim(rtrim(number_format($this->discount_percentage, 2), '0'), '.') . '%';
+        // Hiển thị giá trị giảm giá theo loại
+        if ($this->discount_type === self::DISCOUNT_TYPE_PERCENTAGE) {
+            $formatted = rtrim(rtrim(number_format($this->discount_percentage, 2), '0'), '.') . '%';
+            if ($this->max_discount_amount !== null) {
+                $formatted .= ' (Tối đa ' . number_format($this->max_discount_amount) . 'đ)';
+            }
+            return $formatted;
+        } elseif ($this->discount_type === self::DISCOUNT_TYPE_FIXED) {
+            return number_format($this->fixed_discount_amount) . 'đ';
+        }
+        return 'N/A';
+    }
+
+    // Thêm accessor mới để hiển thị giá trị giảm giá một cách linh hoạt
+    public function getDisplayDiscountValueAttribute(): string
+    {
+        $value = '';
+        if ($this->discount_type === self::DISCOUNT_TYPE_PERCENTAGE) {
+            $value = $this->discount_percentage . '%';
+            if ($this->max_discount_amount !== null) {
+                $value .= ' (Tối đa: ' . number_format($this->max_discount_amount) . 'đ)';
+            }
+        } elseif ($this->discount_type === self::DISCOUNT_TYPE_FIXED) {
+            $value = number_format($this->fixed_discount_amount) . 'đ';
+        }
+
+        if ($this->min_order_amount !== null) {
+            $value .= ' (Đơn hàng tối thiểu: ' . number_format($this->min_order_amount) . 'đ)';
+        }
+        return $value;
     }
 
     //======================================================================
@@ -157,11 +210,29 @@ class Promotion extends Model
     {
         return $this->hasMany(Order::class);
     }
+
+    /**
+     * Tính toán số tiền giảm giá thực tế dựa trên loại giảm giá và tổng phụ đơn hàng.
+     * @param float $subtotal
+     * @return float
+     */
     public function calculateDiscount(float $subtotal): float
     {
-        if ($this->discount_percentage > 0) {
-            return ($subtotal * $this->discount_percentage) / 100;
+        // Đảm bảo mã hợp lệ trước khi tính toán
+        if (!$this->isEffective($subtotal)) {
+            return 0;
         }
-        return 0;
+
+        $discount = 0;
+        if ($this->discount_type === self::DISCOUNT_TYPE_PERCENTAGE) {
+            $discount = ($subtotal * $this->discount_percentage) / 100;
+            // Áp dụng giới hạn tối đa nếu có
+            if ($this->max_discount_amount !== null && $discount > $this->max_discount_amount) {
+                $discount = $this->max_discount_amount;
+            }
+        } elseif ($this->discount_type === self::DISCOUNT_TYPE_FIXED) {
+            $discount = $this->fixed_discount_amount;
+        }
+        return round($discount, 2); // Làm tròn số tiền giảm giá
     }
 }

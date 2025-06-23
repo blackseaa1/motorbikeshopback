@@ -3,6 +3,7 @@
  * product_management.js
  * Xử lý JavaScript cho trang quản lý Sản phẩm (Thêm, Sửa, Xóa, Xem).
  * Phiên bản: Hoàn chỉnh, đã sửa lỗi route 405 và đảm bảo phương thức POST cho update.
+ * Đã tích hợp thông báo Toast và định dạng tiền tệ (tương tự promotion_manager.js).
  * ===================================================================
  */
 
@@ -24,6 +25,44 @@ function initializeProductsPage() {
         return;
     }
 
+    // Lấy CSRF Token
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    if (!csrfToken) {
+        console.error('Lỗi nghiêm trọng: Không tìm thấy CSRF Token!');
+        return;
+    }
+
+    // Lấy các hàm helper toàn cục từ admin_layout.js (nếu có, giả định tồn tại)
+    const showAppLoader = typeof window.showAppLoader === 'function' ? window.showAppLoader : () => console.log('Show Loader');
+    const hideAppLoader = typeof window.hideAppLoader === 'function' ? window.hideAppLoader : () => console.log('Hide Loader');
+    const showAppInfoModal = typeof window.showAppInfoModal === 'function' ? window.showAppInfoModal : (msg, type) => alert(`${type}: ${msg}`);
+    const showToast = typeof window.showToast === 'function' ? window.showToast : (msg, type) => {
+        const toastContainer = document.querySelector('.toast-container');
+        if (!toastContainer) {
+            console.error('Không tìm thấy .toast-container. Vui lòng thêm vào layout chính.');
+            alert(`${type}: ${msg}`);
+            return;
+        }
+
+        const toastEl = document.createElement('div');
+        toastEl.className = `toast align-items-center text-white bg-${type === 'success' ? 'success' : 'danger'} border-0`;
+        toastEl.setAttribute('role', 'alert');
+        toastEl.setAttribute('aria-live', 'assertive');
+        toastEl.setAttribute('aria-atomic', 'true');
+        toastEl.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">${msg}</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        `;
+        toastContainer.appendChild(toastEl);
+
+        const toast = new bootstrap.Toast(toastEl, { delay: 3000 });
+        toast.show();
+        toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
+    };
+
+
     // --- CÁC HÀM KHỞI TẠO & HỖ TRỢ ---
 
     /**
@@ -33,7 +72,6 @@ function initializeProductsPage() {
         try {
             const $pickers = $('.selectpicker');
             if ($pickers.length === 0) return;
-            // Hủy các instance cũ trước khi khởi tạo lại để tránh lỗi
             if ($pickers.data('selectpicker')) $pickers.selectpicker('destroy');
             $pickers.selectpicker({
                 liveSearch: true,
@@ -57,7 +95,6 @@ function initializeProductsPage() {
     const setupImagePreviews = (inputEl, previewContainerEl) => {
         if (!inputEl || !previewContainerEl) return;
         inputEl.addEventListener('change', function (event) {
-            // Xóa các ảnh preview mới được thêm vào trước đó
             previewContainerEl.querySelectorAll('.new-preview').forEach(el => el.remove());
             const files = event.target.files;
             if (!files) return;
@@ -76,6 +113,119 @@ function initializeProductsPage() {
     };
 
     /**
+     * Xóa các lỗi validation đang hiển thị trên form.
+     * @param {HTMLElement} formElement - Form cần xóa lỗi.
+     */
+    function clearValidationErrors(formElement) {
+        if (!formElement) return;
+        formElement.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+        formElement.querySelectorAll('.invalid-feedback').forEach(el => el.textContent = '');
+    }
+
+    /**
+     * Hiển thị lỗi validation từ phản hồi server dưới các trường input tương ứng.
+     * @param {HTMLElement} formElement - Form đang có lỗi.
+     * @param {object} errors - Đối tượng chứa các lỗi từ server (key: field_name, value: [error_message]).
+     */
+    function displayValidationErrors(formElement, errors) {
+        clearValidationErrors(formElement);
+        let firstErrorField = null;
+
+        for (const fieldName in errors) {
+            if (errors.hasOwnProperty(fieldName)) {
+                let inputField = formElement.querySelector(`[name="${fieldName}"]`);
+
+                // Xử lý các trường hợp đặc biệt nếu name không khớp trực tiếp với ID
+                if (!inputField) {
+                    if (fieldName === 'category_id') {
+                        inputField = formElement.querySelector('#productCategoryCreate') || formElement.querySelector('#productCategoryUpdate');
+                    } else if (fieldName === 'brand_id') {
+                        inputField = formElement.querySelector('#productBrandCreate') || formElement.querySelector('#productBrandUpdate');
+                    } else if (fieldName === 'vehicle_models') {
+                        inputField = formElement.querySelector('#productVehicleModelsCreate') || formElement.querySelector('#productVehicleModelsUpdate');
+                    }
+                    // Thêm các trường khác nếu cần
+                }
+
+
+                if (inputField) {
+                    inputField.classList.add('is-invalid');
+                    // Tìm phần tử invalid-feedback phù hợp. Có thể cần điều chỉnh selector nếu cấu trúc HTML phức tạp hơn.
+                    let errorDiv = inputField.nextElementSibling;
+                    if (!errorDiv || !errorDiv.classList.contains('invalid-feedback')) {
+                        // Nếu không tìm thấy ngay sau đó, thử tìm trong parent div (ví dụ: cho selectpicker)
+                        const formGroup = inputField.closest('.form-group') || inputField.closest('.mb-3');
+                        if (formGroup) {
+                            errorDiv = formGroup.querySelector('.invalid-feedback');
+                        }
+                    }
+
+                    if (errorDiv && errorDiv.classList.contains('invalid-feedback')) {
+                        errorDiv.textContent = errors[fieldName][0];
+                    } else {
+                        console.warn(`Không tìm thấy div .invalid-feedback cho trường: ${fieldName}`);
+                    }
+
+                    if (!firstErrorField) {
+                        firstErrorField = inputField;
+                    }
+                } else {
+                    console.warn(`Không tìm thấy trường input cho lỗi: ${fieldName}`);
+                }
+            }
+        }
+        if (firstErrorField) {
+            firstErrorField.focus();
+        }
+    }
+
+    /**
+ * Định dạng số tiền theo chuẩn VNĐ khi người dùng nhập.
+ * Hỗ trợ phần thập phân, tự động thêm dấu phân cách hàng nghìn.
+ *
+ * @param {HTMLInputElement} inputElement - Trường input cần định dạng.
+ */
+    function formatCurrencyInput(inputElement) {
+        inputElement.addEventListener('input', function (e) {
+            let raw = e.target.value;
+
+            // Giữ vị trí con trỏ
+            let caretPosition = e.target.selectionStart;
+
+            // Xoá mọi ký tự ngoại trừ số và dấu phẩy (phần thập phân)
+            raw = raw.replace(/[^0-9,]/g, '');
+
+            // Tách phần nguyên và phần thập phân (nếu có)
+            let parts = raw.split(',');
+            let integerPart = parts[0];
+            let decimalPart = parts[1] ? ',' + parts[1] : '';
+
+            // Xoá dấu chấm cũ rồi thêm lại theo hàng nghìn
+            integerPart = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+
+            e.target.value = integerPart + decimalPart;
+
+            // Cập nhật lại vị trí con trỏ tương đối
+            e.target.setSelectionRange(e.target.value.length, e.target.value.length);
+        });
+
+        // Tuỳ chọn: chọn toàn bộ text khi focus để người dùng dễ gõ lại
+        inputElement.addEventListener('focus', function (e) {
+            e.target.select();
+        });
+    }
+
+    /**
+     * Chuyển đổi chuỗi số tiền định dạng VNĐ về số nguyên hoặc số thập phân.
+     * @param {string} formattedValue - VD: "1.250.000,75"
+     * @returns {string} - VD: "1250000.75"
+     */
+    function parseFormattedCurrency(formattedValue) {
+        if (typeof formattedValue !== 'string') return formattedValue;
+        return formattedValue.replace(/\./g, '').replace(',', '.'); // chuẩn hóa về số thực
+    }
+
+    /**
      * Reset form và các trạng thái khi modal đóng
      */
     const setupModalResets = () => {
@@ -83,9 +233,10 @@ function initializeProductsPage() {
         createProductModalEl.addEventListener('hidden.bs.modal', () => {
             const form = document.getElementById('createProductForm');
             form.reset();
-            form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+            clearValidationErrors(form);
             document.getElementById('productImagesPreviewCreate').innerHTML = '';
             $('#createProductForm .selectpicker').selectpicker('val', '');
+            $('#createProductForm .selectpicker').selectpicker('refresh');
         });
         const createImagesInput = document.getElementById('productImagesCreate');
         const createImagesPreview = document.getElementById('productImagesPreviewCreate');
@@ -95,10 +246,11 @@ function initializeProductsPage() {
         updateProductModalEl.addEventListener('hidden.bs.modal', () => {
             const form = document.getElementById('updateProductForm');
             form.reset();
-            form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+            clearValidationErrors(form);
             document.getElementById('productImagesPreviewUpdate').innerHTML = '';
-            document.getElementById('productImagesUpdate').value = '';
+            document.getElementById('productImagesUpdate').value = ''; // Clear file input
             $('#updateProductForm .selectpicker').selectpicker('val', '');
+            $('#updateProductForm .selectpicker').selectpicker('refresh');
         });
         const updateImagesInput = document.getElementById('productImagesUpdate');
         const updateImagesPreview = document.getElementById('productImagesPreviewUpdate');
@@ -112,7 +264,7 @@ function initializeProductsPage() {
      * @param {number} productId - ID sản phẩm
      */
     const handleShowViewModal = async (productId) => {
-        window.showAppLoader();
+        showAppLoader();
         try {
             const response = await fetch(`/admin/product-management/products/${productId}`);
             if (!response.ok) throw new Error(`Lỗi mạng: ${response.statusText}`);
@@ -158,9 +310,9 @@ function initializeProductsPage() {
             modal.show();
         } catch (error) {
             console.error('Lỗi khi lấy dữ liệu xem chi tiết:', error);
-            window.showAppInfoModal(error.message || 'Không thể lấy dữ liệu sản phẩm.', 'error', 'Lỗi Hệ thống');
+            showAppInfoModal(error.message || 'Không thể lấy dữ liệu sản phẩm.', 'error', 'Lỗi Hệ thống');
         } finally {
-            window.hideAppLoader();
+            hideAppLoader();
         }
     };
 
@@ -169,7 +321,7 @@ function initializeProductsPage() {
      * @param {number} productId - ID sản phẩm
      */
     const handleShowUpdateModal = async (productId) => {
-        window.showAppLoader();
+        showAppLoader();
         try {
             const response = await fetch(`/admin/product-management/products/${productId}`);
             if (!response.ok) throw new Error(`Lỗi mạng: ${response.statusText}`);
@@ -177,12 +329,12 @@ function initializeProductsPage() {
 
             const form = document.getElementById('updateProductForm');
             form.action = `/admin/product-management/products/${productId}`;
-            // Explicitly set form method to POST to match route
-            form.setAttribute('method', 'POST');
+            form.setAttribute('method', 'POST'); // Đảm bảo phương thức là POST cho form submit AJAX với _method PUT
 
             form.querySelector('#productNameUpdate').value = product.name || '';
             form.querySelector('#productDescriptionUpdate').value = product.description || '';
-            form.querySelector('#productPriceUpdate').value = parseFloat(product.price) || 0;
+            // Gán giá trị price gốc cho input, format sẽ được áp dụng bởi formatCurrencyInput
+            form.querySelector('#productPriceUpdate').value = product.price || 0;
             form.querySelector('#productStockUpdate').value = product.stock_quantity || 0;
             form.querySelector('#productMaterialUpdate').value = product.material || '';
             form.querySelector('#productColorUpdate').value = product.color || '';
@@ -202,13 +354,21 @@ function initializeProductsPage() {
                 });
             }
 
+            // Gọi lại formatCurrencyInput sau khi gán giá trị
+            const priceUpdateInput = form.querySelector('#productPriceUpdate');
+            if (priceUpdateInput) {
+                // Kích hoạt lại sự kiện input để giá trị được định dạng
+                priceUpdateInput.value = new Intl.NumberFormat('vi-VN').format(parseFloat(priceUpdateInput.value));
+            }
+
+
             const modal = new bootstrap.Modal(updateProductModalEl);
             modal.show();
         } catch (error) {
             console.error('Lỗi khi lấy dữ liệu cập nhật:', error);
-            window.showAppInfoModal(error.message || 'Không thể lấy dữ liệu sản phẩm.', 'error', 'Lỗi Hệ thống');
+            showAppInfoModal(error.message || 'Không thể lấy dữ liệu sản phẩm.', 'error', 'Lỗi Hệ thống');
         } finally {
-            window.hideAppLoader();
+            hideAppLoader();
         }
     };
 
@@ -233,9 +393,7 @@ function initializeProductsPage() {
     const handleShowForceDeleteModal = (deleteUrl, productName) => {
         const form = document.getElementById('forceDeleteProductForm');
         form.action = deleteUrl;
-        // SỬA ĐỔI: Thêm dòng này để đảm bảo form gửi đi bằng phương thức POST
-        form.setAttribute('method', 'POST');
-        // SỬA LỖI NHỎ: Đổi 'customerNameToForceDelete' thành 'productNameToForceDelete' cho đúng ngữ cảnh
+        form.setAttribute('method', 'POST'); // Đảm bảo phương thức là POST
         const nameElement = document.getElementById('productNameToForceDelete');
         if (nameElement) {
             nameElement.textContent = productName || 'Sản phẩm này';
@@ -264,31 +422,38 @@ function initializeProductsPage() {
      * @param {HTMLElement} button - Nút toggle status
      */
     async function handleToggleStatus(button) {
-        window.showAppLoader();
+        showAppLoader();
         try {
             const response = await fetch(button.dataset.url, {
                 method: 'POST',
-                headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'), 'Accept': 'application/json' }
+                headers: { 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' }
             });
             const result = await response.json();
-            if (!result.success) throw new Error(result.message);
+            if (!response.ok) throw new Error(result.message || "Lỗi không xác định");
 
-            window.showAppInfoModal(result.message, 'success');
+            showToast(result.message, 'success');
             const product = result.product;
             const row = document.getElementById(`product-row-${product.id}`);
 
-            row.classList.toggle('row-inactive', product.status !== 'active');
-            row.querySelector('.status-cell').innerHTML = `<span class="badge ${product.status_badge_class}">${product.status_text}</span>`;
+            if (row) {
+                row.classList.toggle('row-inactive', product.status !== 'active');
+                row.querySelector('.status-cell').innerHTML = `<span class="badge ${product.status_badge_class}">${product.status_text}</span>`;
 
-            const isActive = product.status === 'active';
-            button.classList.toggle('btn-secondary', isActive);
-            button.classList.toggle('btn-success', !isActive);
-            button.title = isActive ? 'Dừng bán' : 'Mở bán';
-            button.querySelector('i').className = `bi ${isActive ? 'bi-pause-circle-fill' : 'bi-play-circle-fill'}`;
+                const isActive = product.status === 'active';
+                button.classList.toggle('btn-secondary', isActive);
+                button.classList.toggle('btn-success', !isActive);
+                button.title = isActive ? 'Dừng bán' : 'Mở bán';
+                button.querySelector('i').className = `bi ${isActive ? 'bi-pause-circle-fill' : 'bi-play-circle-fill'}`;
+            } else {
+                // Fallback nếu không tìm thấy row (ví dụ: reload trang nếu không thể cập nhật DOM)
+                setTimeout(() => window.location.reload(), 1000);
+            }
+
         } catch (error) {
-            window.showAppInfoModal(error.message, 'error', 'Lỗi Hệ thống');
+            console.error('Lỗi khi bật/tắt trạng thái:', error);
+            showToast(error.message, 'error');
         } finally {
-            window.hideAppLoader();
+            hideAppLoader();
         }
     }
 
@@ -304,7 +469,7 @@ function initializeProductsPage() {
 
             const id = button.dataset.id;
             const name = button.dataset.name;
-            const url = button.dataset.url;
+            const url = button.dataset.url; // Giữ lại nếu có
             const deleteUrl = button.dataset.deleteUrl;
 
             if (button.classList.contains('btn-view')) await handleShowViewModal(id);
@@ -327,7 +492,7 @@ function initializeProductsPage() {
             if (productId) {
                 const viewModal = bootstrap.Modal.getInstance(viewProductModalEl);
                 if (viewModal) viewModal.hide();
-                handleShowUpdateModal(productId);
+                setTimeout(() => handleShowUpdateModal(productId), 200); // Đợi modal cũ đóng hẳn
             }
         });
 
@@ -347,33 +512,106 @@ function initializeProductsPage() {
     };
 
     /**
-     * Thiết lập AJAX cho các form
+     * Thiết lập xử lý AJAX cho một form cụ thể.
+     * @param {string} formId - ID của form.
+     * @param {string} modalId - ID của modal chứa form.
+     * @param {function} successCallback - Hàm callback khi form gửi thành công.
+     * @param {string} method - Phương thức HTTP ('POST', 'PUT', 'DELETE').
      */
-    const setupAjaxForms = () => {
-        if (typeof window.setupAjaxForm !== 'function') {
-            console.error('Hàm setupAjaxForm không tồn tại!');
+    function setupAjaxForm(formId, modalId, successCallback, method = 'POST') {
+        const form = document.getElementById(formId);
+        const modalEl = document.getElementById(modalId);
+        const modalInstance = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+
+        if (!form || !modalEl) {
+            console.error(`Không thể thiết lập AJAX form: Form ID "${formId}" hoặc Modal ID "${modalId}" không tồn tại.`);
             return;
         }
-        const reloadPage = () => setTimeout(() => {
-            if (typeof Turbo !== 'undefined') {
-                Turbo.visit(window.location.href, { action: 'replace' });
-            } else {
-                window.location.reload();
-            }
-        }, 1200);
 
-        window.setupAjaxForm('createProductForm', 'createProductModal', reloadPage);
-        window.setupAjaxForm('updateProductForm', 'updateProductModal', reloadPage);
-        window.setupAjaxForm('deleteProductForm', 'confirmDeleteModal', reloadPage);
-        window.setupAjaxForm('forceDeleteProductForm', 'confirmForceDeleteModal', reloadPage);
-        window.setupAjaxForm('restoreProductForm', 'confirmRestoreModal', reloadPage);
-    };
+        form.addEventListener('submit', async function (event) {
+            event.preventDefault();
+            showAppLoader();
+            clearValidationErrors(form);
+
+            const formData = new FormData(form);
+
+            // Thêm _method cho PUT/DELETE (Laravel sẽ xử lý)
+            if (method === 'PUT' || method === 'DELETE') {
+                formData.append('_method', method);
+            }
+
+            // Xử lý đặc biệt cho trường price: parse từ định dạng VNĐ về số gốc
+            const priceInput = form.querySelector('[name="price"]');
+            if (priceInput && formData.has('price')) {
+                formData.set('price', parseFormattedCurrency(priceInput.value));
+            }
+
+            try {
+                const response = await fetch(form.action, {
+                    method: 'POST', // Luôn là POST với FormData, Laravel sẽ đọc _method
+                    headers: {
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json'
+                    },
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (response.ok) { // Status code 2xx
+                    showToast(result.message, 'success');
+                    modalInstance.hide();
+                    successCallback(result.product);
+                } else if (response.status === 422) { // Validation errors
+                    displayValidationErrors(form, result.errors);
+                    showToast('Vui lòng kiểm tra lại thông tin nhập liệu.', 'error');
+                } else { // Other errors
+                    showToast(result.message || 'Đã xảy ra lỗi không xác định. Vui lòng thử lại.', 'error');
+                    console.error('AJAX Error:', result);
+                }
+            } catch (error) {
+                console.error('Fetch Error:', error);
+                showToast('Không thể kết nối đến server. Vui lòng thử lại.', 'error');
+            } finally {
+                hideAppLoader();
+            }
+        });
+    }
 
     // --- CHẠY CÁC HÀM KHỞI TẠO ---
     initializeSelectPickers();
     setupModalResets();
     setupEventListeners();
-    setupAjaxForms();
+
+    // Hàm callback khi tạo/cập nhật thành công
+    const reloadPageAfterSuccess = () => setTimeout(() => {
+        if (typeof Turbo !== 'undefined') {
+            Turbo.visit(window.location.href, { action: 'replace' });
+        } else {
+            window.location.reload();
+        }
+    }, 1200);
+
+    // Thiết lập AJAX cho các form
+    setupAjaxForm('createProductForm', 'createProductModal', reloadPageAfterSuccess, 'POST');
+    setupAjaxForm('updateProductForm', 'updateProductModal', reloadPageAfterSuccess, 'POST'); // Sử dụng PUT cho update
+    setupAjaxForm('deleteProductForm', 'confirmDeleteModal', reloadPageAfterSuccess, 'DELETE');
+    setupAjaxForm('forceDeleteProductForm', 'confirmForceDeleteModal', reloadPageAfterSuccess, 'DELETE'); // Dùng DELETE
+    setupAjaxForm('restoreProductForm', 'confirmRestoreModal', reloadPageAfterSuccess, 'POST');
+
+    // Áp dụng định dạng tiền tệ cho input price
+    const productPriceCreateInput = document.getElementById('productPriceCreate');
+    const productPriceUpdateInput = document.getElementById('productPriceUpdate');
+
+    if (productPriceCreateInput) {
+        productPriceCreateInput.setAttribute('data-currency-input', 'true');
+        formatCurrencyInput(productPriceCreateInput);
+    }
+    if (productPriceUpdateInput) {
+        productPriceUpdateInput.setAttribute('data-currency-input', 'true');
+        formatCurrencyInput(productPriceUpdateInput);
+    }
+
 
     console.log("JS cho trang Sản phẩm đã được khởi tạo thành công với đầy đủ tính năng.");
 }

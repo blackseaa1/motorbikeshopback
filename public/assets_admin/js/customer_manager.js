@@ -20,9 +20,42 @@ function initializeCustomersPage() {
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
     if (!csrfToken) {
         console.error("CSRF Token không tìm thấy!");
-        window.showAppInfoModal("CSRF Token không hợp lệ. Vui lòng tải lại trang.", 'error', 'Lỗi Hệ thống');
+        // Sử dụng showToast thay cho showAppInfoModal nếu không có token
+        showToast("CSRF Token không hợp lệ. Vui lòng tải lại trang.", 'error');
         return;
     }
+
+    // Lấy các hàm helper toàn cục (giả định tồn tại từ admin_layout.js hoặc tương tự)
+    // Bao gồm fallbacks tương tự blog_manager.js
+    const showAppLoader = typeof window.showAppLoader === 'function' ? window.showAppLoader : () => console.log('Show Loader');
+    const hideAppLoader = typeof window.hideAppLoader === 'function' ? window.hideAppLoader : () => console.log('Hide Loader');
+    const showAppInfoModal = typeof window.showAppInfoModal === 'function' ? window.showAppInfoModal : (msg, type) => alert(`${type}: ${msg}`);
+    const showToast = typeof window.showToast === 'function' ? window.showToast : (msg, type) => {
+        // Fallback đơn giản nếu showToast không được định nghĩa toàn cục
+        const toastContainer = document.querySelector('.toast-container');
+        if (!toastContainer) {
+            console.error('Không tìm thấy .toast-container. Vui lòng thêm vào layout chính.');
+            alert(`${type}: ${msg}`); // Fallback sang alert nếu không có container
+            return;
+        }
+
+        const toastEl = document.createElement('div');
+        toastEl.className = `toast align-items-center text-white bg-${type === 'success' ? 'success' : 'danger'} border-0`;
+        toastEl.setAttribute('role', 'alert');
+        toastEl.setAttribute('aria-live', 'assertive');
+        toastEl.setAttribute('aria-atomic', 'true');
+        toastEl.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">${msg}</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        `;
+        toastContainer.appendChild(toastEl);
+
+        const toast = new bootstrap.Toast(toastEl, { delay: 3000 });
+        toast.show();
+        toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
+    };
 
     // --- HÀM HỖ TRỢ ---
 
@@ -108,10 +141,83 @@ function initializeCustomersPage() {
      * Thiết lập các form AJAX.
      */
     function setupAjaxForms() {
-        if (typeof window.setupAjaxForm !== 'function') {
-            console.error('Hàm setupAjaxForm không tồn tại!');
-            return;
-        }
+        // Hàm setupAjaxForm này sẽ được chỉnh sửa để sử dụng showToast bên trong.
+        // Cần đảm bảo setupAjaxForm gốc (nếu có từ admin_layout.js) cũng được cập nhật,
+        // hoặc định nghĩa lại nó ở đây nếu nó không được chia sẻ đúng cách.
+        // Để giữ tính nhất quán, tôi sẽ giả định `window.setupAjaxForm` đã tồn tại
+        // và bạn sẽ cập nhật nó để sử dụng `showToast` thay vì `showAppInfoModal`.
+
+        // Nếu bạn muốn hàm setupAjaxForm ở đây sử dụng showToast, bạn có thể định nghĩa lại nó:
+        const setupAjaxForm = (formId, modalId, successCallback, method = 'POST') => {
+            const form = document.getElementById(formId);
+            const modalEl = document.getElementById(modalId);
+            const modalInstance = modalEl ? (bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl)) : null;
+
+            if (!form) {
+                console.error(`Không thể thiết lập AJAX form: Form ID "${formId}" không tồn tại.`);
+                return;
+            }
+
+            form.addEventListener('submit', async function (event) {
+                event.preventDefault();
+                showAppLoader();
+
+                form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+                form.querySelectorAll('.invalid-feedback').forEach(el => el.textContent = '');
+
+                const formData = new FormData(form);
+
+                if (method === 'PUT' || method === 'DELETE') {
+                    formData.append('_method', method);
+                }
+
+                try {
+                    const response = await fetch(form.action, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': csrfToken,
+                            'Accept': 'application/json'
+                        },
+                        body: formData
+                    });
+
+                    const result = await response.json();
+
+                    if (response.ok) {
+                        showToast(result.message, 'success');
+                        if (modalInstance) {
+                            modalInstance.hide();
+                        }
+                        successCallback(result); // Pass the whole result object
+                    } else if (response.status === 422) {
+                        // Display validation errors
+                        for (const fieldName in result.errors) {
+                            if (result.errors.hasOwnProperty(fieldName)) {
+                                let inputField = form.querySelector(`[name="${fieldName}"]`);
+                                if (inputField) {
+                                    inputField.classList.add('is-invalid');
+                                    const errorDiv = inputField.nextElementSibling;
+                                    if (errorDiv && errorDiv.classList.contains('invalid-feedback')) {
+                                        errorDiv.textContent = result.errors[fieldName][0];
+                                    }
+                                }
+                            }
+                        }
+                        showToast('Vui lòng kiểm tra lại thông tin nhập liệu.', 'error');
+                    } else {
+                        showToast(result.message || 'Đã xảy ra lỗi không xác định. Vui lòng thử lại.', 'error');
+                        console.error('AJAX Error:', result);
+                    }
+                } catch (error) {
+                    console.error('Fetch Error:', error);
+                    showToast('Không thể kết nối đến server. Vui lòng thử lại.', 'error');
+                } finally {
+                    hideAppLoader();
+                }
+            });
+        };
+
+
         const reloadPage = () => setTimeout(() => {
             if (typeof Turbo !== 'undefined') {
                 Turbo.visit(window.location.href, { action: 'replace' });
@@ -120,10 +226,10 @@ function initializeCustomersPage() {
             }
         }, 1200);
 
-        window.setupAjaxForm('createCustomerForm', 'createCustomerModal', reloadPage);
-        window.setupAjaxForm('updateCustomerForm', 'updateCustomerModal', reloadPage);
-        window.setupAjaxForm('deleteCustomerForm', 'confirmDeleteModal', reloadPage);
-        window.setupAjaxForm('forceDeleteCustomerForm', 'confirmForceDeleteModal', reloadPage);
+        setupAjaxForm('createCustomerForm', 'createCustomerModal', reloadPage);
+        setupAjaxForm('updateCustomerForm', 'updateCustomerModal', reloadPage, 'PUT'); // Thêm method PUT
+        setupAjaxForm('deleteCustomerForm', 'confirmDeleteModal', reloadPage, 'DELETE');
+        setupAjaxForm('forceDeleteCustomerForm', 'confirmForceDeleteModal', reloadPage, 'DELETE');
     }
 
     // --- XỬ LÝ SỰ KIỆN ---
@@ -163,6 +269,7 @@ function initializeCustomersPage() {
                 const form = document.getElementById('deleteCustomerForm');
                 form.action = button.dataset.deleteUrl;
                 document.getElementById('customerNameToDelete').textContent = button.dataset.name || 'Khách hàng này';
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('confirmDeleteModal')).show(); // Show modal
             }
 
             // Mở Modal Xóa Vĩnh Viễn
@@ -171,6 +278,7 @@ function initializeCustomersPage() {
                 const form = document.getElementById('forceDeleteCustomerForm');
                 form.action = button.dataset.deleteUrl;
                 document.getElementById('customerNameToForceDelete').textContent = button.dataset.name || 'Khách hàng này';
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('confirmForceDeleteModal')).show(); // Show modal
             }
 
             // Xử lý Khóa / Mở khóa
@@ -178,9 +286,10 @@ function initializeCustomersPage() {
                 e.preventDefault();
                 if (!button.dataset.url) {
                     console.error('Không có data-url trên nút toggle-status. Hành động bị hủy.');
+                    showToast('Lỗi: Không tìm thấy URL để thay đổi trạng thái.', 'error');
                     return;
                 }
-                window.showAppLoader();
+                showAppLoader(); // Sử dụng showAppLoader
                 try {
                     const response = await fetch(button.dataset.url, {
                         method: 'POST',
@@ -188,13 +297,13 @@ function initializeCustomersPage() {
                     });
                     const result = await response.json();
                     if (!response.ok) throw new Error(result.message || "Có lỗi xảy ra.");
-                    window.showAppInfoModal(result.message, 'success', 'Thành công');
+                    showToast(result.message, 'success'); // Sử dụng showToast
                     setTimeout(() => location.reload(), 1200);
                 } catch (error) {
                     console.error('Lỗi khi toggle trạng thái:', error);
-                    window.showAppInfoModal(error.message || 'Có lỗi xảy ra.', 'error', 'Lỗi');
+                    showToast(error.message || 'Có lỗi xảy ra.', 'error'); // Sử dụng showToast
                 } finally {
-                    window.hideAppLoader();
+                    hideAppLoader(); // Sử dụng hideAppLoader
                 }
             }
 
@@ -205,6 +314,12 @@ function initializeCustomersPage() {
                 const itemName = button.dataset.name || 'Khách hàng này';
                 const url = button.dataset.url;
                 const confirmModalEl = document.getElementById('confirmActionModal');
+                // Check if confirmActionModal is not null before proceeding
+                if (!confirmModalEl) {
+                    console.error("Không tìm thấy #confirmActionModal. Không thể hiển thị xác nhận.");
+                    showToast("Lỗi hệ thống: Không thể hiển thị hộp thoại xác nhận.", 'error');
+                    return;
+                }
                 const confirmModal = bootstrap.Modal.getOrCreateInstance(confirmModalEl);
                 const confirmBtn = confirmModalEl.querySelector('#confirmActionButton');
 
@@ -216,7 +331,7 @@ function initializeCustomersPage() {
                 confirmBtn.textContent = isRestore ? 'Đồng ý' : 'Xác nhận';
 
                 confirmBtn.onclick = async () => {
-                    window.showAppLoader();
+                    showAppLoader(); // Sử dụng showAppLoader
                     try {
                         const response = await fetch(url, {
                             method: 'POST',
@@ -225,13 +340,13 @@ function initializeCustomersPage() {
                         const result = await response.json();
                         if (!response.ok) throw new Error(result.message || 'Có lỗi xảy ra.');
                         confirmModal.hide();
-                        window.showAppInfoModal(result.message, 'success', 'Thành công');
+                        showToast(result.message, 'success'); // Sử dụng showToast
                         setTimeout(() => location.reload(), 1200);
                     } catch (error) {
                         console.error(`Lỗi khi ${isRestore ? 'khôi phục' : 'reset mật khẩu'}:`, error);
-                        window.showAppInfoModal(error.message || 'Có lỗi xảy ra.', 'error', 'Lỗi');
+                        showToast(error.message || 'Có lỗi xảy ra.', 'error'); // Sử dụng showToast
                     } finally {
-                        window.hideAppLoader();
+                        hideAppLoader(); // Sử dụng hideAppLoader
                     }
                 };
                 confirmModal.show();

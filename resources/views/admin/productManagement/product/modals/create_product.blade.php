@@ -51,14 +51,14 @@
                             <div class="mb-3">
                                 <label for="productPriceCreate" class="form-label">Giá bán (VNĐ) <span
                                         class="text-danger">*</span></label>
-                                <input type="number" name="price" class="form-control" id="productPriceCreate" min="0"
+                                <input type="text" name="price" class="form-control" id="productPriceCreate" min="0"
                                     step="0.01" placeholder="Nhập giá bán" required>
                                 <div class="invalid-feedback"></div>
                             </div>
                             <div class="mb-3">
                                 <label for="productStockCreate" class="form-label">Số lượng tồn kho <span
                                         class="text-danger">*</span></label>
-                                <input type="number" name="stock_quantity" class="form-control" id="productStockCreate"
+                                <input type="text" name="stock_quantity" class="form-control" id="productStockCreate"
                                     min="0" placeholder="Nhập số lượng" required>
                                 <div class="invalid-feedback"></div>
                             </div>
