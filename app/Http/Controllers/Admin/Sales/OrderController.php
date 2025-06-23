@@ -381,11 +381,14 @@ class OrderController extends Controller
             $order->shipping_address_line = $validatedData['guest_address_line'];
         }
     }
-    private function calculateOrderTotals(array $items, int $deliveryServiceId, ?int $promotionId): array
+
+    private function calculateOrderTotals(array $items, ?int $deliveryServiceId, ?int $promotionId): array // Đã thêm '?' cho int
     {
         $subtotal = 0;
         $productIds = array_column($items, 'product_id');
-        $products = Product::find($productIds)->keyBy('id');
+        // Chỉ tìm sản phẩm nếu có productIds
+        $products = !empty($productIds) ? Product::find($productIds)->keyBy('id') : collect();
+
 
         foreach ($items as $item) {
             $product = $products->get($item['product_id']);
@@ -394,8 +397,12 @@ class OrderController extends Controller
             }
         }
 
-        $deliveryService = DeliveryService::findOrFail($deliveryServiceId);
-        $shippingFee = $deliveryService->shipping_fee;
+        $shippingFee = 0;
+        if ($deliveryServiceId) { // CHỈ TÌM DỊCH VỤ VẬN CHUYỂN NẾU ID ĐƯỢC CUNG CẤP
+            $deliveryService = DeliveryService::findOrFail($deliveryServiceId);
+            $shippingFee = $deliveryService->shipping_fee;
+        }
+
 
         $discountAmount = 0;
         $validPromotionId = null;
@@ -417,7 +424,6 @@ class OrderController extends Controller
             'promotion_id' => $validPromotionId,
         ];
     }
-
     private function syncOrderItems(Order $order, array $items): void
     {
         $productIds = array_column($items, 'product_id');
