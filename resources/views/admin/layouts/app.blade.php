@@ -70,6 +70,7 @@
     {{--
     <script src="{{ asset('vendor/bootstrap/js/chart.js') }}"></script> --}}
     <script src="{{ asset('assets_admin/js/admin_layout.js') }}"></script>
+
     {{-- 3. Nạp các file JS của từng trang riêng lẻ (ví dụ: product_management.js). --}}
     @stack('scripts')
     <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1080;">

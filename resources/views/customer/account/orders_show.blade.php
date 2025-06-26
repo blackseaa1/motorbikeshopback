@@ -31,8 +31,12 @@
                         <span class="badge {{ $order->status_badge_class }}">{{ $order->status_text }}</span>
                     </p>
                     <p class="mb-1"><strong>Ngày đặt:</strong> {{ $order->created_at->format('d/m/Y H:i') }}</p>
-                    <p class="mb-1"><strong>Phương thức TT:</strong>
-                        {{ $order->payment_method == 'cod' ? 'Thanh toán khi nhận hàng (COD)' : 'VNPAY' }}</p>
+                    {{-- SỬA ĐỔI: Hiển thị tên phương thức thanh toán qua quan hệ --}}
+                    <p class="mb-1">
+                        <strong>Phương thức thanh toán:</strong>
+                        {{-- Kiểm tra nếu có paymentMethod thì hiển thị tên, nếu không thì hiển thị 'N/A' --}}
+                        {{ $order->paymentMethod->name ?? 'N/A' }}
+                    </p>
                     <p class="mb-0"><strong>Dịch vụ VC:</strong> {{ $order->deliveryService->name ?? 'Không xác định' }}</p>
                     <p class="mb-0"><strong>Ghi chú:</strong> {{ $order->notes ?? 'Không có ghi chú' }}</p>
                 </div>

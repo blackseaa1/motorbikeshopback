@@ -58,8 +58,7 @@
                                 <div>
                                     <h6 class="my-0">Phương thức thanh toán</h6>
                                 </div>
-                                <span
-                                    class="text-muted">{{ $order->payment_method == 'cod' ? 'Thanh toán khi nhận hàng (COD)' : 'VNPAY' }}</span>
+                                <span class="text-muted">{{ $order->paymentMethod->name ?? 'N/A' }}</span>
                             </li>
                             <li class="list-group-item d-flex justify-content-between lh-sm">
                                 <div>

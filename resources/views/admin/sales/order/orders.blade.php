@@ -97,7 +97,7 @@
                                         <td class="text-end"><strong class="text-danger">{{ number_format($order->total_price) }}
                                                 ₫</strong></td>
                                         <td class="text-center"><span
-                                                class="badge bg-secondary">{{ strtoupper($order->payment_method) }}</span></td>
+                                                class="badge bg-secondary">{{ $order->paymentMethod->name ?? 'N/A' }}</span></td>
                                         <td class="text-center">
                                             {{-- Sử dụng accessor trên Model để lấy class và text cho badge --}}
                                             <span class="badge {{ $order->status_badge_class }}">
@@ -134,7 +134,7 @@
             </div>
         </div>
     </div>
-    
+
     {{-- BAO GỒM CÁC MODAL --}}
     @include('admin.sales.order.modals.create_order_modal', [
         'customers' => $customers,
@@ -146,7 +146,7 @@
     ])
     @include('admin.sales.order.modals.view_order_modal')
     @include('admin.sales.order.modals.update_order_modal', ['orderStatuses' => $orderStatuses, 'deliveryServices' => $deliveryServices])
-    @include('admin.sales.order.modals.delete_order_modal')
+        @include('admin.sales.order.modals.delete_order_modal')
 
 @endsection
 

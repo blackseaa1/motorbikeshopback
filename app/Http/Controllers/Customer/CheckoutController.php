@@ -16,6 +16,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use App\Models\Product;
+use App\Models\PaymentMethod;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Log;
 
@@ -40,14 +41,22 @@ class CheckoutController extends Controller
         $cartDetails = $this->cartManager->getCartDetails();
         $deliveryServices = DeliveryService::where('status', 'active')->get();
 
+        // SỬA ĐỔI: Lấy danh sách các phương thức thanh toán đang hoạt động
+        $paymentMethods = PaymentMethod::where('status', PaymentMethod::STATUS_ACTIVE)->get();
+
         $customerAddresses = Auth::guard('customer')->check()
             ? Auth::guard('customer')->user()->addresses()->with(['province', 'district', 'ward'])->get()
             : collect();
 
-        // Lấy danh sách tỉnh/thành cho khách vãng lai
         $provinces = Province::orderBy('name')->get();
 
-        return view('customer.checkout.index', compact('cartDetails', 'deliveryServices', 'customerAddresses', 'provinces'));
+        return view('customer.checkout.index', compact(
+            'cartDetails',
+            'deliveryServices',
+            'customerAddresses',
+            'provinces',
+            'paymentMethods' // <-- SỬA ĐỔI: Truyền biến mới ra view
+        ));
     }
 
     /**
@@ -62,8 +71,16 @@ class CheckoutController extends Controller
         /** @var \App\Models\Customer|null $customer */
         $customer = Auth::guard('customer')->user();
 
+        // SỬA ĐỔI: Cập nhật lại các quy tắc xác thực (validation)
         $validationRules = [
-            'payment_method' => ['required', Rule::in(['cod', 'vnpay'])],
+            // 'payment_method' => ['required', Rule::in(['cod', 'vnpay'])], // <<<--- XÓA DÒNG NÀY
+            'payment_method_id' => [ // <<<--- THÊM KHỐI NÀY
+                'required',
+                Rule::exists('payment_methods', 'id')->where(function ($query) {
+                    // Chỉ chấp nhận các phương thức đang ở trạng thái 'active'
+                    $query->where('status', \App\Models\PaymentMethod::STATUS_ACTIVE);
+                }),
+            ],
             'delivery_service_id' => ['required', 'exists:delivery_services,id'],
             'notes' => ['nullable', 'string', 'max:1000'],
         ];
@@ -83,29 +100,26 @@ class CheckoutController extends Controller
         }
 
         $validatedData = $request->validate($validationRules);
-
         $cartDetails = $this->cartManager->getCartDetails();
 
         DB::beginTransaction();
         try {
             $shippingAddressInfo = $this->getShippingAddressInfo($validatedData, $customer);
-
-            // Fetch shipping fee
             $deliveryService = DeliveryService::find($validatedData['delivery_service_id']);
+
             if (!$deliveryService) {
                 return back()->with('error', 'Dịch vụ vận chuyển không hợp lệ.')->withInput();
             }
 
-            // Get subtotal, shipping_fee, and discount_amount from CartManager or recalculate
             $subtotal = $cartDetails['subtotal'];
-            $shippingFee = $deliveryService->shipping_fee; // Get shipping fee from the selected service
-            $discountAmount = $cartDetails['discount_amount']; // Get discount from CartManager after applying promo
-
-            // Calculate total price including subtotal, shipping, and discount
+            $shippingFee = $deliveryService->shipping_fee;
+            $discountAmount = $cartDetails['discount_amount'];
             $totalPrice = $subtotal + $shippingFee - $discountAmount;
 
+            // SỬA ĐỔI: Cập nhật lại khối tạo đơn hàng
             $order = Order::create([
                 'customer_id' => $customer?->id,
+                'payment_method_id' => $validatedData['payment_method_id'], // <<<--- THÊM DÒNG NÀY
                 'guest_name' => $customer ? null : $shippingAddressInfo['name'],
                 'guest_email' => $customer ? null : $shippingAddressInfo['email'],
                 'guest_phone' => $customer ? null : $shippingAddressInfo['phone'],
@@ -114,15 +128,15 @@ class CheckoutController extends Controller
                 'district_id' => $shippingAddressInfo['district_id'],
                 'ward_id' => $shippingAddressInfo['ward_id'],
                 'status' => Order::STATUS_PENDING,
-                'total_price' => $totalPrice, // Update to calculated total_price
-                'subtotal' => $subtotal, // ADD THIS LINE
-                'shipping_fee' => $shippingFee, // ADD THIS LINE
-                'discount_amount' => $discountAmount, // ADD THIS LINE
+                'total_price' => $totalPrice,
+                'subtotal' => $subtotal,
+                'shipping_fee' => $shippingFee,
+                'discount_amount' => $discountAmount,
                 'promotion_id' => $cartDetails['promotion_info']->id ?? null,
                 'delivery_service_id' => $validatedData['delivery_service_id'],
-                'payment_method' => $validatedData['payment_method'],
+                // 'payment_method' => $validatedData['payment_method'], // <<<--- XÓA DÒNG NÀY
                 'notes' => $validatedData['notes'] ?? null,
-                'created_by_admin_id' => null, // Set to null for customer orders
+                'created_by_admin_id' => null,
             ]);
 
             foreach ($cartDetails['items'] as $item) {
@@ -132,7 +146,6 @@ class CheckoutController extends Controller
                     'price' => $item->product->price,
                 ]);
 
-                // Deduct stock quantity
                 $product = Product::find($item->product_id);
                 if ($product) {
                     $product->decrement('stock_quantity', $item->quantity);

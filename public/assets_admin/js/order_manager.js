@@ -423,7 +423,7 @@ window.initializeOrderManager = (
             ? `${order.shipping_address_line}, ${order.ward.name}, ${order.district.name}, ${order.province.name}`
             : 'Địa chỉ không đầy đủ';
         $('#viewDetailOrderFullAddress').text(fullAddress);
-        $('#viewDetailOrderPaymentMethod').text(order.payment_method ? order.payment_method.toUpperCase() : 'N/A');
+        $('#viewDetailOrderPaymentMethod').text(order.payment_method ? order.payment_method.name : 'N/A');
         $('#viewDetailOrderDeliveryService').text(order.delivery_service ? order.delivery_service.name : 'N/A');
         $('#viewDetailOrderPromotionCode').text(order.promotion ? `${order.promotion.code}` : 'Không có');
         $('#viewDetailOrderNotes').text(order.notes || 'Không có ghi chú');

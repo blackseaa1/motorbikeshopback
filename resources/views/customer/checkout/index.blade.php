@@ -90,22 +90,53 @@
                     @endauth
 
                     <hr class="my-4">
-                    <h4 class="mb-3">Phương thức thanh toán</h4>
-                    <div class="form-check">
-                        <input id="cod" name="payment_method" type="radio" class="form-check-input" value="cod" checked
-                            required>
-                        <label class="form-check-label" for="cod">Thanh toán khi nhận hàng (COD)</label>
-                    </div>
-                    <div class="form-check">
-                        <input id="bank_transfer" name="payment_method" type="radio" class="form-check-input"
-                            value="bank_transfer" required>
-                        <label class="form-check-label" for="bank_transfer">Chuyển khoản ngân hàng</label>
-                    </div>
-                    <hr class="my-4">
-                    <div class="mb-3">
-                        <label for="notes" class="form-label">Ghi chú (tùy chọn)</label>
-                        <textarea class="form-control" name="notes" id="notes" rows="3">{{ old('notes') }}</textarea>
-                    </div>
+              {{-- ========================================================= --}}
+{{-- BẮT ĐẦU KHỐI MÃ MỚI CHO PHƯƠNG THỨC THANH TOÁN --}}
+{{-- ========================================================= --}}
+
+<h4 class="mb-3 mt-4">Phương thức thanh toán</h4>
+<div class="payment-methods">
+    {{-- Lặp qua các phương thức thanh toán được truyền từ Controller --}}
+    @forelse($paymentMethods as $method)
+        <div class="form-check border rounded p-3 mb-2">
+            <input class="form-check-input"
+                   type="radio"
+                   name="payment_method_id"  {{-- Sửa tên input thành payment_method_id --}}
+                   id="payment_method_{{ $method->id }}"
+                   value="{{ $method->id }}"
+                   {{-- Luôn chọn mặc định phương thức đầu tiên, hoặc giữ lựa chọn cũ nếu có lỗi validation --}}
+                   {{ old('payment_method_id', $loop->first ? $method->id : '') == $method->id ? 'checked' : '' }}
+                   required>
+
+            <label class="form-check-label w-100" for="payment_method_{{ $method->id }}">
+                {{-- Hiển thị logo nếu có --}}
+                @if($method->logo_path)
+                    <img src="{{ asset('storage/' . $method->logo_path) }}" alt="{{ $method->name }}" class="me-2" style="height: 24px;">
+                @endif
+                <strong>{{ $method->name }}</strong>
+
+                {{-- Hiển thị mô tả nếu có --}}
+                @if($method->description)
+                    <small class="d-block text-muted">{{ $method->description }}</small>
+                @endif
+            </label>
+        </div>
+    @empty
+        {{-- Hiển thị thông báo nếu admin chưa thêm hoặc chưa kích hoạt phương thức nào --}}
+        <div class="alert alert-warning">
+            Hiện chưa có phương thức thanh toán nào được hỗ trợ. Vui lòng quay lại sau.
+        </div>
+    @endforelse
+
+    {{-- Hiển thị lỗi validation cho phương thức thanh toán nếu có --}}
+    @error('payment_method_id')
+        <div class="text-danger mt-1 small">{{ $message }}</div>
+    @enderror
+</div>
+
+{{-- ========================================================= --}}
+{{-- KẾT THÚC KHỐI MÃ MỚI --}}
+{{-- ========================================================= --}}
                 </div>
 
                 {{-- Cột bên phải: Tóm tắt đơn hàng --}}

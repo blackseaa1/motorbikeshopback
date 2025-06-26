@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Number; // SỬA ĐỔI: Thêm import Number
 use App\Models\Admin; // SỬA ĐỔI: Thêm import Admin model
+use App\Models\PaymentMethod;
 
 class Order extends Model
 {
@@ -40,6 +41,7 @@ class Order extends Model
 
     protected $fillable = [
         'customer_id',
+        'payment_method_id',
         'guest_name',
         'guest_email',
         'guest_phone',
@@ -51,7 +53,7 @@ class Order extends Model
         'total_price',
         'promotion_id',
         'delivery_service_id',
-        'payment_method',
+        // 'payment_method',
         'notes',
         'created_by_admin_id',
         'subtotal',       // THÊM DÒNG NÀY
@@ -234,5 +236,10 @@ class Order extends Model
             self::STATUS_PENDING,
             self::STATUS_PROCESSING,
         ]);
+    }
+    public function paymentMethod()
+    {
+        // Quan hệ: Một Order thuộc về một PaymentMethod
+        return $this->belongsTo(PaymentMethod::class);
     }
 }

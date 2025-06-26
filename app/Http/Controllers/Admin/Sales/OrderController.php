@@ -13,6 +13,7 @@ use App\Models\Promotion;
 use App\Models\Province;
 use App\Models\District;
 use App\Models\Ward;
+use App\Models\PaymentMethod;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -52,6 +53,7 @@ class OrderController extends Controller
         $customers = Customer::where('status', Customer::STATUS_ACTIVE)->orderBy('name')->get(['id', 'name', 'email']);
         $provinces = Province::orderBy('name')->get(['id', 'name']);
         $deliveryServices = DeliveryService::where('status', DeliveryService::STATUS_ACTIVE)->get(['id', 'name', 'shipping_fee']);
+        $paymentMethods = PaymentMethod::where('status', 'active')->get(); // <-- THÊM DÒNG NÀY
         $promotions = Promotion::where('status', Promotion::STATUS_MANUAL_ACTIVE)
             ->where(fn($q) => $q->whereNull('end_date')->orWhere('end_date', '>', now()))
             ->get();
@@ -70,7 +72,7 @@ class OrderController extends Controller
             'deliveryServices',
             'promotions',
             'orderStatuses',
-            // 'allProductsForJs'
+            'paymentMethods'
         ));
     }
 

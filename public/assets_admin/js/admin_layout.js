@@ -437,27 +437,7 @@
     /**
      * B.2. Lấy và hiển thị số lượng thông báo chưa đọc.
      */
-    let notificationInterval;
-    async function fetchNotificationCount() {
-        try {
-            const response = await fetch('/api/notifications/unread-count');
-            if (!response.ok) return;
-            const data = await response.json();
-            const badge = document.getElementById('notification-badge-count');
-            if (badge) {
-                badge.textContent = data.count;
-                badge.classList.toggle('d-none', data.count <= 0);
-            }
-        } catch (error) {
-            console.error('Lỗi khi lấy số lượng thông báo:', error);
-        }
-    }
-    function initializeNotifications() {
-        if (!document.getElementById('notification-badge-count')) return;
-        fetchNotificationCount();
-        if (notificationInterval) clearInterval(notificationInterval);
-        notificationInterval = setInterval(fetchNotificationCount, 30000);
-    }
+
 
     /**
      * B.3. Khởi tạo chức năng Xem trước ảnh (Image Preview).
@@ -523,7 +503,6 @@
      */
     function initializeAdminLayoutComponents() {
         initializeSidebar();
-        initializeNotifications();
     }
 
     /**

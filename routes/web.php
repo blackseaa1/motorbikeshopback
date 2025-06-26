@@ -317,12 +317,4 @@ Route::prefix('api')->name('api.')->group(function () {
         // API để lấy danh sách sản phẩm (có lọc, phân trang) cho front-end
         Route::get('/products', [CustomerShopController::class, 'getProductsApi'])->name('products.index');
     });
-
-    // --- ADMIN API ---
-    // API lấy số thông báo chưa đọc
-    Route::get('/notifications/unread-count', function () {
-        // return response()->json([
-        // 'count' => Auth::guard('admin')->check() ? Auth::guard('admin')->user()->unreadNotifications()->count() : 0
-        // ]);
-    })->middleware('auth:admin')->name('notifications.unreadCount');
 });
