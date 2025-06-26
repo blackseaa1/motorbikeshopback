@@ -164,7 +164,7 @@ function initializeDeliveryServicesPage() {
 
             // Populate form fields
             updateForm.querySelector('#dsNameUpdate').value = button.dataset.name || '';
-            updateForm.querySelector('#dsShippingFeeUpdate').value = button.dataset.shippingFee || '';
+            // updateForm.querySelector('#dsShippingFeeUpdate').value = button.dataset.shippingFee || ''; // Loại bỏ dòng này
             updateForm.querySelector('#dsStatusUpdate').value = button.dataset.status || 'active';
 
             // Handle logo preview and existing logo URL
@@ -191,7 +191,7 @@ function initializeDeliveryServicesPage() {
             const updatedRow = document.getElementById(`ds-row-${result.deliveryService.id}`);
             if (updatedRow) {
                 updatedRow.cells[2].textContent = result.deliveryService.name; // Tên
-                updatedRow.cells[3].textContent = parseFloat(result.deliveryService.shipping_fee).toLocaleString('vi-VN'); // Phí
+                updatedRow.cells[3].textContent = 'Miễn phí'; // Cập nhật phí thành "Miễn phí"
                 const statusCell = updatedRow.cells[4].querySelector('span');
                 statusCell.textContent = result.deliveryService.status === 'active' ? 'Hoạt động' : 'Đã ẩn';
                 statusCell.className = `badge ${result.deliveryService.status === 'active' ? 'bg-success' : 'bg-secondary'}`;
@@ -207,14 +207,14 @@ function initializeDeliveryServicesPage() {
 
                 if (viewBtn) {
                     viewBtn.dataset.name = result.deliveryService.name;
-                    viewBtn.dataset.shippingFee = result.deliveryService.shipping_fee;
+                    // viewBtn.dataset.shippingFee = result.deliveryService.shipping_fee; // Loại bỏ dòng này
                     viewBtn.dataset.status = result.deliveryService.status;
                     viewBtn.dataset.logoUrl = result.deliveryService.logo_full_url || 'https://placehold.co/100x50/EFEFEF/AAAAAA&text=N/A';
                     viewBtn.dataset.updatedAt = new Date(result.deliveryService.updated_at).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' });
                 }
                 if (editBtn) {
                     editBtn.dataset.name = result.deliveryService.name;
-                    editBtn.dataset.shippingFee = result.deliveryService.shipping_fee;
+                    // editBtn.dataset.shippingFee = result.deliveryService.shipping_fee; // Loại bỏ dòng này
                     editBtn.dataset.status = result.deliveryService.status;
                     editBtn.dataset.logoUrl = result.deliveryService.logo_full_url || 'https://placehold.co/100x50/EFEFEF/AAAAAA&text=N/A';
                 }
@@ -255,8 +255,8 @@ function initializeDeliveryServicesPage() {
             viewModalElement.querySelector('#dsIdView').textContent = button.dataset.id || '-';
             viewModalElement.querySelector('#dsNameView').textContent = button.dataset.name || '-';
             viewModalElement.querySelector('#dsLogoView').src = (button.dataset.logoUrl && button.dataset.logoUrl !== 'https://placehold.co/100x50/EFEFEF/AAAAAA&text=N/A') ? button.dataset.logoUrl : 'https://placehold.co/150x75/EFEFEF/AAAAAA&text=LOGO';
-            const fee = parseFloat(button.dataset.shippingFee);
-            viewModalElement.querySelector('#dsShippingFeeView').textContent = isNaN(fee) ? '-' : fee.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' });
+            // const fee = parseFloat(button.dataset.shippingFee); // Loại bỏ dòng này
+            viewModalElement.querySelector('#dsShippingFeeView').textContent = 'Miễn phí'; // Hiển thị "Miễn phí"
 
             const statusTextElement = viewModalElement.querySelector('#dsStatusViewText');
             if (button.dataset.status === 'active') {
@@ -289,7 +289,7 @@ function initializeDeliveryServicesPage() {
                     if (updateForm) {
                         updateForm.action = triggerData.updateUrl;
                         updateForm.querySelector('#dsNameUpdate').value = triggerData.name || '';
-                        updateForm.querySelector('#dsShippingFeeUpdate').value = triggerData.shippingFee || '';
+                        // updateForm.querySelector('#dsShippingFeeUpdate').value = triggerData.shippingFee || ''; // Loại bỏ dòng này
                         updateForm.querySelector('#dsStatusUpdate').value = triggerData.status || 'active';
                         const logoPreview = updateForm.querySelector('#dsLogoPreviewUpdate');
                         const existingLogoInput = updateForm.querySelector('#dsExistingLogoUrl');
@@ -397,9 +397,11 @@ function initializeDeliveryServicesPage() {
                     const editButton = row.querySelector('.btn-edit-ds');
                     if (viewButton) {
                         viewButton.dataset.status = result.new_status;
+                        // viewButton.dataset.shippingFee = result.deliveryService.shipping_fee; // Loại bỏ dòng này
                     }
                     if (editButton) {
                         editButton.dataset.status = result.new_status;
+                        // editButton.dataset.shippingFee = result.deliveryService.shipping_fee; // Loại bỏ dòng này
                     }
                 }
             } else {

@@ -1,6 +1,7 @@
 @extends('admin.layouts.app')
 
 @section('title', 'Dashboard') @section('content')
+  <div class="dashboard-page-identifier" hidden></div>
     <header class="content-header">
         <h1><i class="bi bi-speedometer2 me-2"></i>Dashboard</h1>
     </header>
@@ -142,7 +143,7 @@
         </div>
     </section>
 
-    <section class="recent-products-section mt-2" aria-labelledby="recentProductsHeading">
+    <section class="recent-products-section mt-2 d-none" aria-labelledby="recentProductsHeading">
         <div class="d-flex justify-content-between align-items-center mb-3 mt-4">
             <h2 class="section-title" id="recentProductsHeading">Sản Phẩm Mới Thêm</h2>
             <a href="#" class="btn btn-sm btn-primary"><i class="bi bi-plus-lg"></i> Thêm Sản Phẩm Mới</a>
@@ -231,4 +232,4 @@
 @push('scripts')
     {{-- Chỉ tải script biểu đồ ở trang này --}}
     <script src="{{ asset('assets_admin/js/dashboard_chart.js') }}"></script>
-@endpush
+    

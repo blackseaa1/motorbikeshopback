@@ -58,7 +58,7 @@
                                                      style="max-width: 80px; max-height: 40px; object-fit: contain;">
                                             </td>
                                             <td class="fw-bold">{{ $service->name }}</td>
-                                            <td class="text-end">{{ $service->shipping_fee ? $service->formatted_shipping_fee : '-' }}</td>
+                                            <td class="text-end">Miễn phí</td> {{-- Đã thay đổi thành "Miễn phí" --}}
                                             <td class="text-center status-cell" id="ds-status-{{ $service->id }}">
                                                 <span class="badge {{ $service->status_badge_class }}">{{ $service->status_text }}</span>
                                             </td>
@@ -73,7 +73,7 @@
                                                     data-created-at="{{ $service->created_at->format('d/m/Y H:i:s') }}"
                                                     data-updated-at="{{ $service->updated_at->format('d/m/Y H:i:s') }}"
                                                     data-service-json="{{ json_encode($service->toArray(), JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS) }}"
-                                                    data-update-url="{{ route('admin.system.deliveryServices.update', $service->id) }}" {{-- THÊM DÒNG NÀY --}}
+                                                    data-update-url="{{ route('admin.system.deliveryServices.update', $service->id) }}"
                                                     title="Xem chi tiết">
                                                     <i class="bi bi-eye-fill"></i>
                                                 </button>

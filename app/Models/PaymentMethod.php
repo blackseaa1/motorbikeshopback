@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Storage;
 
 class PaymentMethod extends Model
 {
@@ -23,8 +24,73 @@ class PaymentMethod extends Model
         'code',
         'description',
         'logo_path',
-        'status', // Đã cập nhật từ is_active sang status
+        'status',
     ];
+
+    /**
+     * The accessors to append to the model's array form.
+     *
+     * @var array
+     */
+    protected $appends = ['logo_full_url', 'status_text', 'status_badge_class'];
+
+
+    /**
+     * Lấy danh sách các trạng thái hợp lệ.
+     *
+     * @return array
+     */
+    public static function getAvailableStatus(): array
+    {
+        return [
+            self::STATUS_ACTIVE,
+            self::STATUS_INACTIVE,
+        ];
+    }
+
+    /**
+     * Accessor để lấy URL đầy đủ của logo.
+     *
+     * @return string
+     */
+    public function getLogoFullUrlAttribute(): string
+    {
+        if ($this->logo_path && Storage::disk('public')->exists(str_replace('/storage/', '', $this->logo_path))) {
+            return asset($this->logo_path);
+        }
+        return 'https://placehold.co/100x50/EFEFEF/AAAAAA&text=N/A';
+    }
+
+    /**
+     * Kiểm tra xem phương thức có đang hoạt động không.
+     *
+     * @return bool
+     */
+    public function isActive(): bool
+    {
+        return $this->status === self::STATUS_ACTIVE;
+    }
+
+    /**
+     * Accessor để lấy diễn giải của trạng thái.
+     *
+     * @return string
+     */
+    public function getStatusTextAttribute(): string
+    {
+        return $this->status === self::STATUS_ACTIVE ? 'Hoạt động' : 'Đã ẩn';
+    }
+
+    /**
+     * Accessor để lấy lớp CSS cho badge trạng thái.
+     *
+     * @return string
+     */
+    public function getStatusBadgeClassAttribute(): string
+    {
+        return $this->status === self::STATUS_ACTIVE ? 'bg-success' : 'bg-secondary';
+    }
+
 
     /**
      * Quan hệ: Một phương thức thanh toán có thể được sử dụng trong nhiều đơn hàng.

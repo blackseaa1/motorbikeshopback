@@ -65,6 +65,8 @@
 
     {{-- ================= SỬA ĐỔI 2: KHU VỰC NẠP SCRIPT ================= --}}
     <script src="{{ asset('vendor/bootstrap/js/jquery-3.6.0.min.js') }}"></script>
+    <script src="{{ asset('vendor/bootstrap/js/chart.min.js') }}"></script>
+
     <script src="{{ asset('vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
     <script src="{{ asset('vendor/bootstrap/js/bootstrap-select.min.js') }}"></script>
     {{--

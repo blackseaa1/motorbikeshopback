@@ -15,12 +15,7 @@
                         <input type="text" class="form-control" id="dsNameCreate" name="name" required>
                         <div class="invalid-feedback" id="dsNameCreateError"></div>
                     </div>
-                    <div class="mb-3">
-                        <label for="dsShippingFeeCreate" class="form-label">Phí giao hàng (VNĐ) *</label>
-                        <input type="number" class="form-control" id="dsShippingFeeCreate" name="shipping_fee" min="0"
-                            step="0.01" required>
-                        <div class="invalid-feedback" id="dsShippingFeeCreateError"></div>
-                    </div>
+                    {{-- Trường Phí giao hàng đã được loại bỏ --}}
                     <div class="mb-3">
                         <label for="dsLogoCreate" class="form-label">Logo</label>
                         <input type="file" class="form-control" id="dsLogoCreate" name="logo_url" accept="image/*">

@@ -35,98 +35,104 @@
                         </button>
                     </div>
                     <div class="card-body">
-                        @if ($promotions->isEmpty())
-                            <div class="alert alert-info mb-0" role="alert">
-                                <i class="bi bi-info-circle me-2"></i>Hiện chưa có mã khuyến mãi nào.
-                            </div>
-                        @else
-                            <div class="table-responsive">
-                                <table class="table table-hover align-middle">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th scope="col" style="width:5%">STT</th>
-                                            <th scope="col">Mã Code</th>
-                                            <th scope="col">Mô tả</th>
-                                            <th scope="col" class="text-center">Giảm giá</th> {{-- Cập nhật tiêu đề --}}
-                                            <th scope="col">Thời gian hiệu lực</th>
-                                            <th scope="col" class="text-center">Lượt sử dụng</th>
-                                            <th scope="col" class="text-center">Trạng thái Cài đặt</th>
-                                            <th scope="col" class="text-center">Trạng thái Hiện tại</th>
-                                            <th scope="col" class="text-center" style="width: 15%;">Hành động</th>
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th scope="col" style="width:5%">STT</th>
+                                        <th scope="col">Mã Code</th>
+                                        <th scope="col">Mô tả</th>
+                                        <th scope="col" class="text-center">Giảm giá</th>
+                                        <th scope="col">Thời gian hiệu lực</th>
+                                        <th scope="col" class="text-center">Lượt sử dụng</th>
+                                        <th scope="col" class="text-center">Trạng thái Cài đặt</th>
+                                        <th scope="col" class="text-center">Trạng thái Hiện tại</th>
+                                        <th scope="col" class="text-center" style="width: 15%;">Hành động</th>
+                                    </tr>
+                                </thead>
+                                {{-- TBody luôn được render để JS có thể tìm thấy ID --}}
+                                <tbody id="promotions-table-body">
+                                    @forelse ($promotions as $promotion)
+                                        <tr id="promotion-row-{{ $promotion->id }}"
+                                            class="{{ !$promotion->isManuallyActive() ? 'row-inactive' : '' }}">
+                                            <th scope="row">{{ $loop->index + $promotions->firstItem() }}</th>
+                                            <td class="fw-bold text-primary">{{ $promotion->code }}</td>
+                                            <td>{{ Str::limit($promotion->description, 50) }}</td>
+                                            <td class="text-danger fw-bold text-center">
+                                                {{ $promotion->display_discount_value }}
+                                            </td>
+                                            <td>
+                                                <small>
+                                                    Từ: {{ $promotion->start_date->format('d/m/Y H:i') }}<br>
+                                                    Đến: {{ $promotion->end_date->format('d/m/Y H:i') }}
+                                                </small>
+                                            </td>
+                                            <td class="text-center">{{ $promotion->uses_count }} /
+                                                {{ $promotion->max_uses ?? '∞' }}</td>
+                                            <td class="text-center" id="promotion-status-config-{{ $promotion->id }}">
+                                                <span
+                                                    class="badge {{ $promotion->manual_status_badge_class }}">{{ $promotion->manual_status_text }}</span>
+                                            </td>
+                                            <td class="text-center" id="promotion-status-display-{{ $promotion->id }}">
+                                                <span
+                                                    class="badge {{ $promotion->effective_status_badge_class }}">{{ $promotion->effective_status_text }}</span>
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="d-flex justify-content-center">
+                                                    {{-- Nút Bật/Tắt --}}
+                                                    <button class="btn btn-sm btn-outline-secondary me-2 toggle-status-btn"
+                                                        data-id="{{ $promotion->id }}"
+                                                        data-url="{{ route('admin.sales.promotions.toggleStatus', $promotion->id) }}"
+                                                        title="{{ $promotion->isManuallyActive() ? 'Tắt mã này' : 'Bật mã này' }}">
+                                                        <i class="bi bi-power fs-5"></i>
+                                                    </button>
+
+                                                    {{-- Nút Xem --}}
+                                                    <button class="btn btn-sm btn-outline-info me-2 view-promotion-btn"
+                                                        data-bs-toggle="modal" data-bs-target="#viewPromotionModal"
+                                                        data-id="{{ $promotion->id }}"
+                                                        data-url="{{ route('admin.sales.promotions.show', $promotion->id) }}"
+                                                        title="Xem chi tiết">
+                                                        <i class="bi bi-eye-fill"></i>
+                                                    </button>
+
+                                                    {{-- Nút Sửa --}}
+                                                    <button class="btn btn-sm btn-outline-primary me-2 edit-promotion-btn"
+                                                        data-bs-toggle="modal" data-bs-target="#updatePromotionModal"
+                                                        data-id="{{ $promotion->id }}"
+                                                        data-update-url="{{ route('admin.sales.promotions.update', $promotion->id) }}"
+                                                        data-url="{{ route('admin.sales.promotions.show', $promotion->id) }}"
+                                                        title="Chỉnh sửa">
+                                                        <i class="bi bi-pencil-square"></i>
+                                                    </button>
+
+                                                    {{-- Nút Xóa --}}
+                                                    <button class="btn btn-sm btn-outline-danger delete-promotion-btn"
+                                                        data-bs-toggle="modal" data-bs-target="#deletePromotionModal"
+                                                        data-id="{{ $promotion->id }}" data-code="{{ $promotion->code }}"
+                                                        data-delete-url="{{ route('admin.sales.promotions.destroy', $promotion->id) }}"
+                                                        title="Xóa">
+                                                        <i class="bi bi-trash-fill"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
                                         </tr>
-                                    </thead>
-                                    {{-- Thêm ID cho tbody để JS dễ dàng chèn dòng mới sau khi tạo thành công --}}
-                                    <tbody id="promotions-table-body">
-                                        @foreach ($promotions as $promotion)
-                                            <tr id="promotion-row-{{ $promotion->id }}"
-                                                class="{{ !$promotion->isManuallyActive() ? 'row-inactive' : '' }}">
-                                                <th scope="row">{{ $loop->index + $promotions->firstItem() }}</th>
-                                                <td class="fw-bold text-primary">{{ $promotion->code }}</td>
-                                                <td>{{ Str::limit($promotion->description, 50) }}</td>
-                                                <td class="text-danger fw-bold text-center">
-                                                    {{ $promotion->display_discount_value }} {{-- SỬA ĐỔI: Sử dụng accessor mới --}}
-                                                </td>
-                                                <td>
-                                                    <small>
-                                                        Từ: {{ $promotion->start_date->format('d/m/Y H:i') }}<br>
-                                                        Đến: {{ $promotion->end_date->format('d/m/Y H:i') }}
-                                                    </small>
-                                                </td>
-                                                <td class="text-center">{{ $promotion->uses_count }} /
-                                                    {{ $promotion->max_uses ?? '∞' }}
-                                                </td>
-                                                <td class="text-center" id="promotion-status-config-{{ $promotion->id }}">
-                                                    <span
-                                                        class="badge {{ $promotion->manual_status_badge_class }}">{{ $promotion->manual_status_text }}</span>
-                                                </td>
-                                                <td class="text-center" id="promotion-status-display-{{ $promotion->id }}">
-                                                    <span
-                                                        class="badge {{ $promotion->effective_status_badge_class }}">{{ $promotion->effective_status_text }}</span>
-                                                </td>
-                                                <td class="text-center">
-                                                    <div class="d-flex justify-content-center">
-                                                        {{-- Nút Bật/Tắt --}}
-                                                        <button class="btn btn-sm btn-outline-secondary me-2 toggle-status-btn"
-                                                            data-id="{{ $promotion->id }}"
-                                                            data-url="{{ route('admin.sales.promotions.toggleStatus', $promotion->id) }}"
-                                                            title="{{ $promotion->isManuallyActive() ? 'Tắt mã này' : 'Bật mã này' }}">
-                                                            <i class="bi bi-power fs-5"></i>
-                                                        </button>
+                                    @empty
+                                        {{-- Hiển thị thông báo khi không có dữ liệu --}}
+                                        <tr>
+                                            <td colspan="9" class="text-center">
+                                                <div class="alert alert-info mb-0" role="alert">
+                                                    <i class="bi bi-info-circle me-2"></i>Hiện chưa có mã khuyến mãi nào.
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
 
-                                                        {{-- SỬA ĐỔI: Bỏ data-promotion-json, thêm data-url để JS fetch data --}}
-                                                        <button class="btn btn-sm btn-outline-info me-2 view-promotion-btn"
-                                                            data-bs-toggle="modal" data-bs-target="#viewPromotionModal"
-                                                            data-id="{{ $promotion->id }}"
-                                                            data-url="{{ route('admin.sales.promotions.show', $promotion->id) }}"
-                                                            title="Xem chi tiết">
-                                                            <i class="bi bi-eye-fill"></i>
-                                                        </button>
-
-                                                        {{-- SỬA ĐỔI: Bỏ data-promotion-json, thêm data-url để JS fetch data --}}
-                                                        <button class="btn btn-sm btn-outline-primary me-2 edit-promotion-btn"
-                                                            data-bs-toggle="modal" data-bs-target="#updatePromotionModal"
-                                                            data-id="{{ $promotion->id }}"
-                                                            data-update-url="{{ route('admin.sales.promotions.update', $promotion->id) }}"
-                                                            data-url="{{ route('admin.sales.promotions.show', $promotion->id) }}"
-                                                            title="Chỉnh sửa">
-                                                            <i class="bi bi-pencil-square"></i>
-                                                        </button>
-
-                                                        {{-- SỬA ĐỔI: Bỏ data-uses-count vì không cần thiết cho JS --}}
-                                                        <button class="btn btn-sm btn-outline-danger delete-promotion-btn"
-                                                            data-bs-toggle="modal" data-bs-target="#deletePromotionModal"
-                                                            data-id="{{ $promotion->id }}" data-code="{{ $promotion->code }}"
-                                                            data-delete-url="{{ route('admin.sales.promotions.destroy', $promotion->id) }}"
-                                                            title="Xóa">
-                                                            <i class="bi bi-trash-fill"></i>
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        @endforeach
-                                    </tbody>
-                                </table>
-                            </div>
+                        {{-- Chỉ hiển thị phân trang khi cần thiết --}}
+                        @if ($promotions->hasPages())
                             <div class="mt-3 d-flex justify-content-center">
                                 {{ $promotions->links('pagination::bootstrap-5') }}
                             </div>

@@ -22,10 +22,12 @@ class DeliveryServiceController extends Controller
     {
         $validatedData = $request->validate([
             'name' => 'required|string|max:150|unique:delivery_services,name',
-            'shipping_fee' => 'required|numeric|min:0',
+            // 'shipping_fee' đã được loại bỏ khỏi phần xác thực vì nó sẽ luôn là 0
             'logo_url' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg,webp|max:2048',
             'status' => ['required', Rule::in([DeliveryService::STATUS_ACTIVE, DeliveryService::STATUS_INACTIVE])],
         ]);
+
+        $validatedData['shipping_fee'] = 0; // Buộc phí vận chuyển là 0 cho giao hàng miễn phí
 
         if ($request->hasFile('logo_url')) {
             $validatedData['logo_url'] = $request->file('logo_url')->store('delivery_service_logos', 'public');
@@ -49,21 +51,23 @@ class DeliveryServiceController extends Controller
     {
         $validatedData = $request->validate([
             'name' => 'required|string|max:150|unique:delivery_services,name,' . $deliveryService->id,
-            'shipping_fee' => 'required|numeric|min:0',
+            // 'shipping_fee' đã được loại bỏ khỏi phần xác thực vì nó sẽ luôn là 0
             'logo_url' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg,webp|max:2048',
             'existing_logo_url' => 'nullable|string',
             'status' => ['required', Rule::in([DeliveryService::STATUS_ACTIVE, DeliveryService::STATUS_INACTIVE])],
         ]);
 
-        // Handle logo update
+        $validatedData['shipping_fee'] = 0; // Buộc phí vận chuyển là 0 cho giao hàng miễn phí
+
+        // Xử lý cập nhật logo
         if ($request->hasFile('logo_url')) {
-            // Delete old logo if it exists
+            // Xóa logo cũ nếu tồn tại
             if ($deliveryService->logo_url) {
                 Storage::disk('public')->delete($deliveryService->logo_url);
             }
             $validatedData['logo_url'] = $request->file('logo_url')->store('delivery_service_logos', 'public');
         } else {
-            // Preserve existing logo if no new file is uploaded
+            // Giữ lại logo hiện có nếu không có file mới được tải lên
             $validatedData['logo_url'] = $deliveryService->logo_url;
         }
 

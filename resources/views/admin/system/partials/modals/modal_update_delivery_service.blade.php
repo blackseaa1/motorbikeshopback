@@ -15,12 +15,7 @@
                         <input type="text" class="form-control" id="dsNameUpdate" name="name" required>
                         <div id="dsNameUpdateError" class="invalid-feedback"></div>
                     </div>
-                    <div class="mb-3">
-                        <label for="dsShippingFeeUpdate" class="form-label">Phí giao hàng (VNĐ) *</label>
-                        <input type="number" step="0.01" min="0" class="form-control" id="dsShippingFeeUpdate"
-                            name="shipping_fee" required>
-                        <div id="dsShippingFeeUpdateError" class="invalid-feedback"></div>
-                    </div>
+                    {{-- Trường Phí giao hàng đã được loại bỏ --}}
                     <div class="mb-3">
                         <label for="dsLogoUpdate" class="form-label">Tải lên logo mới (nếu muốn thay đổi)</label>
                         <input type="file" class="form-control" id="dsLogoUpdate" name="logo_url" accept="image/*">

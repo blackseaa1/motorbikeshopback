@@ -28,6 +28,7 @@ use App\Http\Controllers\Admin\Profile\AdminProfileController;
 use App\Http\Controllers\Admin\ReportsController;
 use App\Http\Controllers\Admin\Sales\OrderController;
 use App\Http\Controllers\Admin\Sales\PromotionController;
+use App\Http\Controllers\Admin\System\PaymentMethodController;
 use App\Http\Controllers\Admin\System\DeliveryServiceController;
 use App\Http\Controllers\Admin\System\DistrictController;
 use App\Http\Controllers\Admin\System\GeographyController;
@@ -258,6 +259,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         // --- Module: Cấu hình Hệ thống (System Configuration) ---
         Route::prefix('system')->name('system.')->group(function () {
+            Route::post('payment-methods/{paymentMethod}/toggle-status', [PaymentMethodController::class, 'toggleStatus'])->name('paymentMethods.toggleStatus');
+            Route::resource('payment-methods', PaymentMethodController::class)->names('paymentMethods')->except(['show']);
             Route::resource('delivery-services', DeliveryServiceController::class)->except(['create', 'edit', 'show'])->names('deliveryServices');
             Route::post('delivery-services/{delivery_service}/toggle-status', [DeliveryServiceController::class, 'toggleStatus'])->name('deliveryServices.toggleStatus');
 

@@ -24,7 +24,7 @@
                             </tr>
                             <tr>
                                 <th>Phí Giao hàng:</th>
-                                <td id="dsShippingFeeView">-</td>
+                                <td id="dsShippingFeeView">Miễn phí</td> {{-- Đã thay đổi thành "Miễn phí" --}}
                             </tr>
                             <tr>
                                 <th>Trạng thái:</th>

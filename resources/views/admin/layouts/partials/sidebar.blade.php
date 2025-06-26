@@ -7,8 +7,9 @@
 <nav class="sidebar" id="sidebar">
     <div class="sidebar-header">
         <div class="logo">
-            <a href="dashboard" style="color:#fff;font-size:20px"><img src="{{ asset('assets_admin/images/thanhdo_shop_logo.png') }}"
-                    alt="Thành Đô Shop Logo" style="width:26%; height: auto;"> Thành Đô Shop</a>
+            <a href="dashboard" style="color:#fff;font-size:20px"><img
+                    src="{{ asset('assets_admin/images/thanhdo_shop_logo.png') }}" alt="Thành Đô Shop Logo"
+                    style="width:26%; height: auto;"> Thành Đô Shop</a>
         </div>
         <button class="btn btn-sm sidebar-close-button d-lg-none" type="button" id="sidebarCloseButton"
             aria-label="Close sidebar">
@@ -67,9 +68,6 @@
                         <li class="nav-item"><a
                                 class="nav-link {{ request()->routeIs('admin.productManagement.vehicle.*') ? 'active-submenu' : '' }}"
                                 href="{{ route('admin.productManagement.vehicle.index') }}">Hãng xe & Dòng xe</a></li>
-                        <li class="nav-item"><a
-                                class="nav-link {{ request()->routeIs('admin.productManagement.inventory.*') ? 'active-submenu' : '' }}"
-                                href="{{ route('admin.productManagement.inventory.index') }}">Tồn kho</a></li>
                     </ul>
                 </li>
             @endif
@@ -143,6 +141,12 @@
                             <i class="bi bi-gear-fill"></i> Cấu hình Hệ thống <i class="bi bi-caret-down-fill ms-auto"></i>
                         </a>
                         <ul class="collapse list-unstyled ps-4 {{ $isSystemMenuActive ? 'show' : '' }}" id="configSubmenu">
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('admin.system.paymentMethods.*') ? 'active' : '' }}"
+                                    href="{{ route('admin.system.paymentMethods.index') }}">
+                                    PT Thanh toán
+                                </a>
+                            </li>
                             <li class="nav-item"><a
                                     class="nav-link {{ request()->routeIs('admin.system.deliveryServices.*') ? 'active-submenu' : '' }}"
                                     href="{{ route('admin.system.deliveryServices.index') }}">Đơn vị Giao hàng</a></li>

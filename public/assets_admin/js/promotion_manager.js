@@ -110,7 +110,7 @@ document.addEventListener('DOMContentLoaded', function () {
     /**
      * Định dạng ngày giờ sang chuẩn cho input `datetime-local`.
      * @param {string} dateString - Chuỗi ngày giờ.
-     * @returns {string} - Chuỗi định dạng YYYY-MM-ddTHH:mm.
+     * @returns {string} - Chuỗi định dạng yyyy-MM-ddTHH:mm.
      */
     function formatForInput(dateString) {
         if (!dateString) return '';
@@ -250,42 +250,71 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     /**
-  * Định dạng số tiền theo chuẩn VNĐ khi người dùng nhập.
-  * Hỗ trợ phần thập phân bằng dấu phẩy, tự động thêm dấu phân cách hàng nghìn.
-  *
-  * @param {HTMLInputElement} inputElement - Trường input cần định dạng.
-  */
+     * Định dạng số tiền theo chuẩn VNĐ khi người dùng nhập.
+     * Hỗ trợ phần thập phân, tự động thêm dấu phân cách hàng nghìn.
+     *
+     * @param {HTMLInputElement} inputElement - Trường input cần định dạng.
+     */
+    /**
+       * [SỬA LỖI] Định dạng số tiền theo chuẩn VNĐ.
+       * Hàm này được viết lại để xử lý an toàn hơn, tránh lỗi nhân sai số.
+       * @param {HTMLInputElement} inputElement - Trường input cần định dạng.
+       */
     function formatCurrencyInput(inputElement) {
-        inputElement.addEventListener('input', function (e) {
-            let value = e.target.value.replace(/[^0-9,]/g, ''); // Chỉ cho phép số và dấu phẩy
+        const formatValue = (value) => {
+            if (value === null || value === undefined || value === '') return '';
 
-            let parts = value.split(',');
-            let integerPart = parts[0].replace(/\./g, ''); // Xóa dấu chấm cũ nếu có
-            let decimalPart = parts.length > 1 ? ',' + parts[1] : '';
+            // Bước 1: Chỉ giữ lại các chữ số trong chuỗi.
+            // "50.000" -> "50000", "abc123def" -> "123"
+            const numberString = String(value).replace(/[^0-9]/g, '');
+            if (numberString === '') return '';
 
-            // Thêm dấu chấm phân cách hàng nghìn cho phần nguyên
-            integerPart = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+            // Bước 2: Chuyển chuỗi số thành số nguyên.
+            const number = parseInt(numberString, 10);
+            if (isNaN(number)) return '';
 
-            e.target.value = integerPart + decimalPart;
+            // Bước 3: Sử dụng Intl.NumberFormat để định dạng theo chuẩn vi-VN (dùng dấu chấm).
+            return new Intl.NumberFormat('vi-VN').format(number);
+        };
 
-            // Giữ con trỏ ở cuối cùng (hoặc có thể tối ưu nếu cần đặt ở vị trí cũ)
-            e.target.setSelectionRange(e.target.value.length, e.target.value.length);
+        // Định dạng giá trị ban đầu (nếu có)
+        inputElement.value = formatValue(inputElement.value);
+
+        // Thêm event listener để định dạng lại khi người dùng nhập liệu.
+        inputElement.addEventListener('input', (e) => {
+            const originalValue = e.target.value;
+            const caretPosition = e.target.selectionStart;
+            const originalLength = originalValue.length;
+
+            const formattedValue = formatValue(originalValue);
+            e.target.value = formattedValue;
+
+            // Cập nhật lại vị trí con trỏ một cách thông minh
+            const newLength = formattedValue.length;
+            const newCaretPosition = caretPosition + (newLength - originalLength);
+            e.target.setSelectionRange(newCaretPosition, newCaretPosition);
         });
 
+        // Chọn toàn bộ văn bản khi người dùng focus vào ô input
         inputElement.addEventListener('focus', function (e) {
             e.target.select();
         });
     }
 
+    function parseFormattedCurrency(formattedValue) {
+        if (typeof formattedValue !== 'string') return formattedValue;
+        // Chuyển '50.000' -> '50000' để gửi lên server
+        return formattedValue.replace(/\./g, '');
+    }
+
     /**
-     * Chuyển chuỗi tiền tệ "1.250.000,75" => "1250000.75"
-     *
-     * @param {string} formattedValue - Chuỗi tiền tệ VNĐ
-     * @returns {string} - Chuỗi số thập phân sạch gửi về server
+     * Chuyển đổi chuỗi số tiền định dạng VNĐ về số nguyên hoặc số thập phân.
+     * @param {string} formattedValue - VD: "1.250.000,75"
+     * @returns {string} - VD: "1250000.75"
      */
     function parseFormattedCurrency(formattedValue) {
         if (typeof formattedValue !== 'string') return formattedValue;
-        return formattedValue.replace(/\./g, '').replace(',', '.');
+        return formattedValue.replace(/\./g, '').replace(',', '.'); // chuẩn hóa về số thực
     }
 
 
@@ -341,7 +370,6 @@ document.addEventListener('DOMContentLoaded', function () {
             hideAppLoader();
         }
     }
-
     async function handleShowUpdateModal(button) {
         showAppLoader();
         try {
@@ -350,26 +378,39 @@ document.addEventListener('DOMContentLoaded', function () {
             const data = await response.json();
 
             const form = updateModalEl.querySelector('form');
-            form.action = button.dataset.updateUrl; // Lấy URL update từ nút sửa
+            form.action = button.dataset.updateUrl;
 
-            // Điền dữ liệu vào form cập nhật
             form.querySelector('#promoCodeUpdate').value = data.code;
             form.querySelector('#promoDescriptionUpdate').value = data.description || '';
-            form.querySelector('#promoDiscountTypeUpdate').value = data.discount_type; // Điền loại giảm giá
-
+            form.querySelector('#promoDiscountTypeUpdate').value = data.discount_type;
             form.querySelector('#promoDiscountUpdate').value = data.discount_percentage || '';
-            form.querySelector('#promoFixedDiscountAmountUpdate').value = data.fixed_discount_amount || '';
-            form.querySelector('#promoMaxDiscountAmountUpdate').value = data.max_discount_amount || '';
+
+            const fixedDiscountInput = form.querySelector('#promoFixedDiscountAmountUpdate');
+            const maxDiscountInput = form.querySelector('#promoMaxDiscountAmountUpdate');
+            const minOrderInput = form.querySelector('#promoMinOrderAmountUpdate');
+
+            /**
+             * [SỬA LỖI] Xử lý giá trị số thô từ CSDL trước khi gán vào input.
+             * Hàm này sẽ chuyển "50000.00" thành "50.000" đã được định dạng.
+             */
+            const formatInitialAmount = (amount) => {
+                if (amount === null || amount === undefined) return '';
+                // Chuyển "50000.00" thành số 50000
+                const number = Math.round(parseFloat(amount));
+                // Định dạng số đó thành "50.000"
+                return number > 0 ? new Intl.NumberFormat('vi-VN').format(number) : '';
+            };
+
+            fixedDiscountInput.value = formatInitialAmount(data.fixed_discount_amount);
+            maxDiscountInput.value = formatInitialAmount(data.max_discount_amount);
+            minOrderInput.value = formatInitialAmount(data.min_order_amount);
 
             form.querySelector('#promoStartDateUpdate').value = formatForInput(data.start_date);
             form.querySelector('#promoEndDateUpdate').value = formatForInput(data.end_date);
             form.querySelector('#promoMaxUsesUpdate').value = data.max_uses || '';
-            form.querySelector('#promoMinOrderAmountUpdate').value = data.min_order_amount || ''; // Điền giá trị đơn hàng tối thiểu
             form.querySelector('#promoStatusUpdate').value = data.status;
 
-            // Gọi hàm để ẩn/hiện các trường input dựa trên loại giảm giá đã chọn
             toggleDiscountInputs(data.discount_type, 'Update');
-
             updateModal.show();
         } catch (error) {
             console.error('Lỗi khi lấy dữ liệu cập nhật:', error);

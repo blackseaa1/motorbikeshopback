@@ -553,6 +553,9 @@
         if (document.getElementById('adminVehicleManagementPage') && typeof initializeVehicleManagementPage === 'function') {
             initializeVehicleManagementPage();
         }
+        if (document.getElementById('adminPaymentMethodsPage') && typeof initializePaymentMethodsPage === 'function') {
+            initializePaymentMethodsPage();
+        }
         if (document.getElementById('adminDeliveryServicesPage') && typeof initializeDeliveryServicesPage === 'function') {
             initializeDeliveryServicesPage();
         }

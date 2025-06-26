@@ -8,22 +8,22 @@
         <button class="sidebar-toggler" type="button" id="sidebarToggle" aria-label="Toggle navigation">
             <i class="bi bi-list"></i>
         </button>
-        <div class="input-group input-group-sm me-auto" style="max-width: 320px;">
+        {{-- <div class="input-group input-group-sm me-auto" style="max-width: 320px;">
             <span class="input-group-text bg-transparent border-end-0" id="searchAddon"><i class="bi bi-search"></i></span>
             <input type="text" class="form-control form-control-sm border-start-0"
                 placeholder="Tìm kiếm sản phẩm, đơn hàng..." aria-label="Search" aria-describedby="searchAddon">
-        </div>
+        </div> --}}
         <ul class="navbar-nav ms-auto d-flex flex-row align-items-center">
             {{-- Phần thông báo --}}
-            <li class="nav-item dropdown me-3">
+            {{-- <li class="nav-item dropdown me-3">
                 <a class="nav-link" href="#" id="navbarDropdownNotif" role="button" data-bs-toggle="dropdown"
                     aria-expanded="false">
                     <i class="bi bi-bell-fill"></i>
                     <span id="notification-badge-count"
                         class="badge rounded-pill bg-danger position-absolute top-0 start-100 translate-middle" ...>3</span>
                 </a>
-                {{-- Dropdown content --}}
-            </li>
+                Dropdown content
+            </li> --}}
 
             {{-- Phần thông tin người dùng --}}
             <li class="nav-item dropdown">
