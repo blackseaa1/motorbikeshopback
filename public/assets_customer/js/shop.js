@@ -43,6 +43,8 @@
 
         $('#vehicle-brand-select').on('changed.bs.select', function () {
             populateVehicleModels($(this).val());
+            // Trigger product fetch when vehicle brand changes
+            triggerProductFetch();
         });
 
         // Hàm gọi API và cập nhật giao diện
@@ -69,17 +71,28 @@
             }
         }
 
-        // Sự kiện submit form
-        filterForm.addEventListener('submit', function (e) {
-            e.preventDefault();
-            const formData = new FormData(this);
+        // Helper function to get form data and trigger product fetch
+        function triggerProductFetch() {
+            const formData = new FormData(filterForm);
             const params = new URLSearchParams(formData).toString();
-
             const newUrl = `${window.productsPageUrl}?${params}`;
             window.history.pushState({ path: newUrl }, '', newUrl);
 
             const apiUrl = `${window.productsApiUrl}?${params}`;
             fetchProducts(apiUrl);
+        }
+
+        // Add event listeners for selectpicker changes
+        // Use 'changed.bs.select' event for bootstrap-select
+        $('select[name="categories[]"]').on('changed.bs.select', triggerProductFetch);
+        $('select[name="brands[]"]').on('changed.bs.select', triggerProductFetch);
+        $('#vehicle-model-select').on('changed.bs.select', triggerProductFetch);
+
+
+        // Sự kiện submit form (keep this, it will also call triggerProductFetch)
+        filterForm.addEventListener('submit', function (e) {
+            e.preventDefault();
+            triggerProductFetch();
         });
 
         // Sự kiện click phân trang (sử dụng event delegation)
@@ -93,5 +106,11 @@
             window.history.pushState({ path: newUrl }, '', newUrl);
             fetchProducts(url);
         });
+
+        // *** THAY ĐỔI MỚI: Kích hoạt tìm kiếm sản phẩm ban đầu khi trang tải nếu có tham số trong URL ***
+        // Kiểm tra xem có bất kỳ tham số truy vấn nào trong URL hiện tại không
+        if (window.location.search) {
+            triggerProductFetch();
+        }
     };
 })();

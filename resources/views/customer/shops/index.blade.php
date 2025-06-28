@@ -99,6 +99,8 @@
         // Truyền dữ liệu từ PHP Controller sang JavaScript
         window.vehicleDataForFilter = @json($vehicleBrands->keyBy('id'));
         window.selectedFilters = {
+            // Đảm bảo categories là một mảng cho JavaScript
+            categories: @json($request->input('categories', [])),
             brandId: '{{ $request->input('vehicle_brand_id') }}',
             modelId: '{{ $request->input('vehicle_model_id') }}'
         };

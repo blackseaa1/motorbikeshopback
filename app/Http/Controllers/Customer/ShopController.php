@@ -36,7 +36,11 @@ class ShopController extends Controller
         // --- Logic lọc sản phẩm ---
         $selectedCategories = $request->input('categories', []);
         if ($category && $category->exists) {
-            $selectedCategories[] = $category->id;
+            // Đảm bảo ID của category từ route cũng được thêm vào selectedCategories
+            // Chỉ thêm nếu nó chưa tồn tại trong mảng
+            if (!in_array($category->id, $selectedCategories)) {
+                $selectedCategories[] = $category->id;
+            }
         }
         if (!empty($selectedCategories)) {
             $query->whereIn('category_id', $selectedCategories);
@@ -75,6 +79,15 @@ class ShopController extends Controller
      */
     public function index(Request $request, Category $category = null)
     {
+        // Điều chỉnh request để thêm category ID từ route vào input nếu có
+        if ($category && $category->exists) {
+            $currentCategories = $request->input('categories', []);
+            if (!in_array($category->id, $currentCategories)) {
+                $currentCategories[] = $category->id;
+            }
+            $request->merge(['categories' => $currentCategories]);
+        }
+
         $query = $this->getFilteredProductsQuery($request, $category);
         $products = $query->latest()->paginate(12)->withQueryString();
 
@@ -93,7 +106,7 @@ class ShopController extends Controller
             'categories' => $categories,
             'brands' => $brands,
             'vehicleBrands' => $vehicleBrands,
-            'request' => $request,
+            'request' => $request, // Truyền request đã được điều chỉnh
         ]);
     }
 

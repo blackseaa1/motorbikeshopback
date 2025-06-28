@@ -232,7 +232,8 @@
                     @foreach($brands as $brand)
                         {{-- SỬA LỖI: Đổi col-4 thành col-6 để hiển thị 2 item trên mobile --}}
                         <div class="col-lg-2 col-md-3 col-6">
-                            <a href="#" title="{{ $brand->name }}" class="text-decoration-none text-dark">
+                            <a href="{{ route('products.index', ['brands[]' => $brand->id]) }}"
+                                class="text-decoration-none text-dark">
                                 <div class="brand-card text-center p-3">
                                     <img src="{{ $brand->logo_full_url }}" alt="{{ $brand->name }}" class="img-fluid mb-2"
                                         style="height: 60px; object-fit: contain;">
