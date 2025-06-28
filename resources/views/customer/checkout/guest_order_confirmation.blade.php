@@ -45,7 +45,6 @@
                                 <div>
                                     <h6 class="my-0">Địa chỉ giao hàng</h6>
                                 </div>
-                                {{-- SỬA ĐỔI: Sử dụng accessor full_address --}}
                                 <span class="text-muted">{{ $order->full_address }}</span>
                             </li>
                             <li class="list-group-item d-flex justify-content-between lh-sm">
@@ -131,6 +130,18 @@
                                 </button>
                             @endif
                         </div>
+
+                        {{-- Nút "Thanh toán lại" cho đơn hàng chưa thành công --}}
+                        @if($order->isRetriable())
+                            <div class="alert alert-warning mt-4 text-center">
+                                <p class="mb-2">Đơn hàng này đang ở trạng thái chưa hoàn tất thanh toán.</p>
+                                <a href="{{ route('payment.momo.initiate', ['order_id' => $order->id]) }}"
+                                    class="btn btn-primary">
+                                    <i class="bi bi-wallet-fill"></i> Thanh toán lại ngay
+                                </a>
+                            </div>
+                        @endif
+
                     </div>
                 </div>
             </div>

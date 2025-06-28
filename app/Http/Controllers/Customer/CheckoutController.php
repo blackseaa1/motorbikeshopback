@@ -139,19 +139,6 @@ class CheckoutController extends Controller
                 'created_by_admin_id' => null,
             ]);
 
-            foreach ($cartDetails['items'] as $item) {
-                $order->items()->create([
-                    'product_id' => $item->product_id,
-                    'quantity' => $item->quantity,
-                    'price' => $item->product->price,
-                ]);
-
-                $product = Product::find($item->product_id);
-                if ($product) {
-                    $product->decrement('stock_quantity', $item->quantity);
-                }
-            }
-
             DB::commit();
 
             // DI CHUYỂN DÒNG NÀY: cartManager->clear() chỉ gọi khi đã xác định được chuyển hướng thành công

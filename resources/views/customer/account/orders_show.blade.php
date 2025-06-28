@@ -21,7 +21,6 @@
                     </p>
                     <p class="mb-1"><strong>Điện thoại:</strong>
                         {{ $order->guest_phone ?? ($order->customer->phone ?? 'N/A') }}</p>
-                    {{-- SỬA ĐỔI: Sử dụng accessor full_address --}}
                     <p class="mb-0"><strong>Địa chỉ giao hàng:</strong> {{ $order->full_address }}</p>
                 </div>
                 <div class="col-md-6">
@@ -31,13 +30,11 @@
                         <span class="badge {{ $order->status_badge_class }}">{{ $order->status_text }}</span>
                     </p>
                     <p class="mb-1"><strong>Ngày đặt:</strong> {{ $order->created_at->format('d/m/Y H:i') }}</p>
-                    {{-- SỬA ĐỔI: Hiển thị tên phương thức thanh toán qua quan hệ --}}
                     <p class="mb-1">
                         <strong>Phương thức thanh toán:</strong>
-                        {{-- Kiểm tra nếu có paymentMethod thì hiển thị tên, nếu không thì hiển thị 'N/A' --}}
                         {{ $order->paymentMethod->name ?? 'N/A' }}
                     </p>
-                    <p class="mb-0"><strong>Dịch vụ VC:</strong> {{ $order->deliveryService->name ?? 'Không xác định' }}</p>
+                    <p class="mb-1"><strong>Dịch vụ VC:</strong> {{ $order->deliveryService->name ?? 'Không xác định' }}</p>
                     <p class="mb-0"><strong>Ghi chú:</strong> {{ $order->notes ?? 'Không có ghi chú' }}</p>
                 </div>
             </div>
@@ -67,8 +64,6 @@
                                     @endif
                                 </td>
                                 <td>
-                                    {{-- SỬA ĐỔI: Thay đổi route('products.show', $item->product->slug) thành
-                                    route('products.show', $item->product->id) --}}
                                     @if($item->product && $item->product->id)
                                         <a href="{{ route('products.show', $item->product->id) }}"
                                             class="text-dark text-decoration-none">
@@ -121,6 +116,16 @@
                     </button>
                 @endif
             </div>
+
+            {{-- Nút "Thanh toán lại" cho đơn hàng chưa thành công --}}
+            @if($order->isRetriable())
+                <div class="alert alert-warning mt-4 text-center">
+                    <p class="mb-2">Đơn hàng này đang ở trạng thái chưa hoàn tất thanh toán.</p>
+                    <a href="{{ route('payment.momo.initiate', ['order_id' => $order->id]) }}" class="btn btn-primary">
+                        <i class="bi bi-wallet-fill"></i> Thanh toán lại ngay
+                    </a>
+                </div>
+            @endif
 
         </div>
     </div>

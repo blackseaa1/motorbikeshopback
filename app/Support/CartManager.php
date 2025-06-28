@@ -7,7 +7,7 @@ use App\Models\Promotion;
 use App\Models\DeliveryService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Validation\ValidationException;
+use Illuminate\Validation\ValidationException; // Đảm bảo import ValidationException
 
 class CartManager
 {
@@ -175,12 +175,11 @@ class CartManager
         }
 
         $promotionInfo = $this->getPromotionInfo();
-        $shippingFee = 0; // Phí vận chuyển luôn là 0
+        $shippingFee = 0;
 
         $discountAmount = 0;
-        // ĐÃ SỬA ĐỔI: Sử dụng phương thức calculateDiscount() từ Promotion model
         if ($promotionInfo) {
-            $calculatedDiscount = $promotionInfo->calculateDiscount($subtotal); // Truyền subtotal để kiểm tra điều kiện
+            $calculatedDiscount = $promotionInfo->calculateDiscount($subtotal);
 
             if ($calculatedDiscount > 0) {
                 $discountAmount = $calculatedDiscount;
@@ -216,19 +215,47 @@ class CartManager
     }
 
     /**
-     * Áp dụng mã giảm giá và lưu vào session.
+     * SỬA ĐỔI: Áp dụng mã giảm giá và lưu vào session với thông báo lỗi cụ thể hơn.
      */
     public function applyPromotion(string $promoCode): Promotion
     {
         $promoCode = strtoupper(trim($promoCode));
         $promotion = Promotion::where('code', $promoCode)->first();
-        $subtotal = $this->getCartTotal(); // LẤY SUBTITAL ĐỂ KIỂM TRA ĐIỀU KIỆN TỐI THIỂU
+        $subtotal = $this->getCartTotal();
 
-        // ĐÃ SỬA ĐỔI: Truyền subtotal vào phương thức isEffective()
-        if (!$promotion || !$promotion->isEffective($subtotal)) {
-            $this->clearPromotion();
-            throw ValidationException::withMessages(['promotion_code' => 'Mã giảm giá không hợp lệ hoặc đã hết hạn.']);
+        $this->clearPromotion(); // Luôn xóa khuyến mãi cũ trước khi áp dụng cái mới
+
+        if (!$promotion) {
+            throw ValidationException::withMessages(['promotion_code' => 'Mã giảm giá không tồn tại.']);
         }
+
+        if (!$promotion->isManuallyActive()) {
+            throw ValidationException::withMessages(['promotion_code' => 'Mã giảm giá đã bị vô hiệu hóa bởi quản trị viên.']);
+        }
+
+        if (!$promotion->isCurrentlyActive()) {
+            // Kiểm tra cụ thể hơn xem đã hết hạn hay chưa bắt đầu
+            if ($promotion->start_date && Carbon::now()->lt($promotion->start_date)) {
+                throw ValidationException::withMessages(['promotion_code' => 'Mã giảm giá chưa bắt đầu.']);
+            }
+            if ($promotion->end_date && Carbon::now()->gt($promotion->end_date)) {
+                throw ValidationException::withMessages(['promotion_code' => 'Mã giảm giá đã hết hạn.']);
+            }
+            // Fallback cho trường hợp không xác định rõ
+            throw ValidationException::withMessages(['promotion_code' => 'Mã giảm giá không hiệu lực vào thời điểm hiện tại.']);
+        }
+
+        if (!$promotion->hasUsesLeft()) {
+            throw ValidationException::withMessages(['promotion_code' => 'Mã giảm giá đã hết lượt sử dụng.']);
+        }
+
+        // THAY ĐỔI QUAN TRỌNG: Thông báo cụ thể cho điều kiện đơn hàng tối thiểu
+        if (!$promotion->meetsMinOrderAmount($subtotal)) {
+            $requiredAmount = number_format($promotion->min_order_amount, 0, ',', '.') . ' ₫';
+            throw ValidationException::withMessages(['promotion_code' => "Đơn hàng của bạn không đủ điều kiện (tối thiểu {$requiredAmount}) để dùng mã giảm giá."]);
+        }
+
+        // Nếu tất cả các điều kiện đều được thỏa mãn, lưu mã giảm giá vào session
         session([self::PROMOTION_SESSION_KEY => $promotion]);
         return $promotion;
     }

@@ -216,4 +216,12 @@ class Order extends Model
     {
         return $this->belongsTo(PaymentMethod::class);
     }
+    public function isRetriable(): bool
+    {
+        return in_array($this->status, [
+            self::STATUS_PENDING,
+            self::STATUS_FAILED,
+            self::STATUS_CANCELLED,
+        ]);
+    }
 }
