@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Customer;
 
 use App\Http\Controllers\Controller;
 use App\Models\Customer;
-use App\Models\Admin; // Thêm import model Admin
+use App\Models\Admin;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -42,6 +42,19 @@ class AuthController extends Controller
             'password' => ['required', 'string'],
         ]);
 
+        // Kiểm tra nếu người dùng đã đăng nhập với tài khoản quản trị viên
+        if (Auth::guard('admin')->check()) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'Bạn đã đăng nhập với tài khoản quản trị viên. Vui lòng đăng xuất khỏi tài khoản quản trị viên để đăng nhập với tư cách khách hàng.',
+                    'redirect_url' => route('admin.dashboard') // Chuyển hướng về trang chính của admin
+                ], 403);
+            }
+            return redirect()->route('admin.dashboard')->withErrors([
+                'email' => 'Bạn đã đăng nhập với tài khoản quản trị viên. Vui lòng đăng xuất khỏi tài khoản quản trị viên để đăng nhập với tư cách khách hàng.'
+            ]);
+        }
+
         // Thử đăng nhập với guard 'customer'
         if (Auth::guard('customer')->attempt($credentials, $request->boolean('remember'))) {
             $request->session()->regenerate();
@@ -52,8 +65,6 @@ class AuthController extends Controller
             /** @var \App\Models\Customer $customer */
             $customer = Auth::guard('customer')->user();
 
-            // Bắt đầu defensive programming: Kiểm tra null cho $customer
-            // Mặc dù về lý thuyết không nên null nếu attempt() thành công, nhưng để an toàn.
             if (!$customer) {
                 Auth::guard('customer')->logout();
                 throw ValidationException::withMessages([
@@ -63,13 +74,22 @@ class AuthController extends Controller
 
             // KIỂM TRA STATUS KHÁCH HÀNG (Nếu tài khoản bị khóa)
             if ($customer->status !== Customer::STATUS_ACTIVE) {
-                Auth::guard('customer')->logout(); // Đăng xuất khách hàng
+                Auth::guard('customer')->logout();
                 $request->session()->invalidate();
-                $request->session()->regenerateToken(); // Đảm bảo token mới sau khi logout
+                $request->session()->regenerateToken();
                 throw ValidationException::withMessages([
                     'email' => 'Tài khoản của bạn đã bị tạm khóa. Vui lòng liên hệ hỗ trợ.',
                 ]);
             }
+
+            // NEW LOGIC: Đăng xuất khỏi guard 'admin' nếu có session đang hoạt động
+            if (Auth::guard('admin')->check()) {
+                Auth::guard('admin')->logout();
+                // Có thể thêm invalidate session và regenerate token cho guard admin nếu muốn
+                // $request->session()->invalidate();
+                // $request->session()->regenerateToken();
+            }
+            // END NEW LOGIC
 
             // KIỂM TRA BẮT BUỘC ĐỔI MẬT KHẨU
             if ($customer->password_change_required) {
@@ -93,21 +113,19 @@ class AuthController extends Controller
         }
 
         // Nếu đăng nhập khách hàng thất bại, kiểm tra xem có phải là tài khoản quản trị viên không
-        // (Nếu email tồn tại trong bảng admins)
         if (Admin::where('email', $credentials['email'])->exists()) {
             if ($request->expectsJson()) {
                 return response()->json([
                     'message' => 'Đây là tài khoản quản trị viên. Vui lòng đăng nhập tại trang quản trị.',
                     'redirect_url' => route('admin.auth.login')
-                ], 403); // Sử dụng mã lỗi 403 Forbidden
+                ], 403);
             }
-            // Nếu không phải AJAX, chuyển hướng trực tiếp
             return redirect()->route('admin.auth.login')->withErrors([
                 'email' => 'Đây là tài khoản quản trị viên. Vui lòng đăng nhập tại trang quản trị.'
             ]);
         }
 
-        // Thông tin đăng nhập không chính xác hoặc tài khoản bị khóa (chung chung nếu không phải admin)
+        // Thông tin đăng nhập không chính xác hoặc tài khoản bị khóa
         throw ValidationException::withMessages([
             'email' => 'Thông tin đăng nhập không chính xác hoặc tài khoản của bạn đã bị khóa. Vui lòng liên hệ hỗ trợ.',
         ]);

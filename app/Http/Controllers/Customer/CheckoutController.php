@@ -158,12 +158,10 @@ class CheckoutController extends Controller
                 $this->cartManager->clear(); // Xóa giỏ hàng khi chuyển hướng đến Momo
                 // Chuyển hướng đến controller Momo để khởi tạo thanh toán
                 return redirect()->route('payment.momo.initiate', ['order_id' => $order->id]);
-            }
-            // else if ($paymentMethod->code === 'vnpay') {
-            //     $this->cartManager->clear(); // Xóa giỏ hàng khi chuyển hướng đến Vnpay
-            //     return redirect()->route('payment.vnpay.initiate', ['order_id' => $order->id]);
-            // }
-            else if ($paymentMethod->code === 'bank_transfer') {
+            } else if ($paymentMethod->code === 'vnpay') {
+                $this->cartManager->clear(); // Xóa giỏ hàng khi chuyển hướng đến Vnpay
+                return redirect()->route('payment.vnpay.initiate', ['order_id' => $order->id]);
+            } else if ($paymentMethod->code === 'bank_transfer') {
                 $this->cartManager->clear(); // Xóa giỏ hàng khi chuyển hướng đến trang hướng dẫn chuyển khoản
                 return redirect()->route('payment.bank_transfer.details', ['order_id' => $order->id])
                     ->with('info', 'Vui lòng chuyển khoản với nội dung đơn hàng để hoàn tất thanh toán.');

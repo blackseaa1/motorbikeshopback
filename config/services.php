@@ -44,4 +44,11 @@ return [
         'autoCapture' => env('MOMO_AUTO_CAPTURE', true),
         'lang' => env('MOMO_LANG', 'vi'),
     ],
+    'vnpay' => [
+        'tmn_code' => env('VNP_TMN_CODE', 'EX88K7KG'), # THAY ĐỔI giá trị mặc định
+        'hash_secret' => env('VNP_HASH_SECRET', '0KIAO1JWZK54YKNIVM4RENENN2TDP6KM'), # THAY ĐỔI giá trị mặc định
+        'url' => env('VNP_URL', 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html'),
+        'return_url' => env('VNP_RETURN_URL', 'http://127.0.0.1:8000'),
+        'ipn_url' => env('VNP_IPN_URL', 'http://127.0.0.1:8000'),
+    ],
 ];

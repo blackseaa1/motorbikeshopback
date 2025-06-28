@@ -7,7 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
 
-class RedirectIfAdmin
+class RedirectIfAdmin // This middleware should be applied to customer-facing routes
 {
     /**
      * Handle an incoming request.
@@ -16,14 +16,18 @@ class RedirectIfAdmin
      */
     public function handle(Request $request, Closure $next): Response
     {
-        // Kiểm tra xem người dùng có đang đăng nhập với guard 'admin' không.
+        // If an admin is currently logged in, force them to log out from admin
+        // if they try to access customer-specific functionalities
         if (Auth::guard('admin')->check()) {
-            // Nếu có, chuyển hướng họ về trang dashboard của admin
-            // kèm theo một thông báo cảnh báo.
-            return redirect()->route('home')->with('warning', 'Bạn không thể truy cập mục này vì, bạn đang đăng nhập với vai trò Quản trị viên.');
+            Auth::guard('admin')->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return redirect()->route('customer.auth.login')->withErrors([
+                'email' => 'Bạn đã đăng nhập với tài khoản quản trị viên. Phiên làm việc quản trị viên của bạn đã bị kết thúc để bạn có thể đăng nhập với tư cách khách hàng.'
+            ]);
         }
 
-        // Nếu không, cho phép họ đi tiếp.
         return $next($request);
     }
 }

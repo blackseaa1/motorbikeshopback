@@ -6,8 +6,8 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
-use App\Models\Admin; // Đảm bảo import Model Admin
-use App\Models\Customer; // Thêm import Model Customer
+use App\Models\Admin;
+use App\Models\Customer;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
 
@@ -55,11 +55,23 @@ class LoginController extends Controller
             'password' => ['required', 'string'],
         ]);
 
+        // Kiểm tra nếu người dùng đã đăng nhập với tài khoản khách hàng
+        if (Auth::guard('customer')->check()) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'Bạn đã đăng nhập với tài khoản khách hàng. Vui lòng đăng xuất khỏi tài khoản khách hàng để đăng nhập với tư cách quản trị viên.',
+                    'redirect_url' => route('home') // Chuyển hướng về trang chính của khách hàng
+                ], 403);
+            }
+            return redirect()->route('home')->withErrors([
+                'email' => 'Bạn đã đăng nhập với tài khoản khách hàng. Vui lòng đăng xuất khỏi tài khoản khách hàng để đăng nhập với tư cách quản trị viên.'
+            ]);
+        }
+
         if (Auth::guard('admin')->attempt($credentials, $request->boolean('remember'))) {
             /** @var \App\Models\Admin $admin */
             $admin = Auth::guard('admin')->user();
 
-            // Bắt đầu defensive programming: Kiểm tra null cho $admin
             if (!$admin) {
                 Auth::guard('admin')->logout();
                 throw ValidationException::withMessages([
@@ -77,31 +89,36 @@ class LoginController extends Controller
                 ]);
             }
 
+            // NEW LOGIC: Đăng xuất khỏi guard 'customer' nếu có session đang hoạt động
+            if (Auth::guard('customer')->check()) {
+                Auth::guard('customer')->logout();
+                // Có thể thêm invalidate session và regenerate token cho guard customer nếu muốn
+                // $request->session()->invalidate();
+                // $request->session()->regenerateToken();
+            }
+            // END NEW LOGIC
+
             $request->session()->regenerate();
 
             // KIỂM TRA BẮT BUỘC ĐỔI MẬT KHẨU
             if ($admin->password_change_required) {
-                // Nếu là yêu cầu AJAX, trả về JSON chứa URL chuyển hướng
                 if ($request->expectsJson()) {
                     return response()->json([
                         'message' => 'Yêu cầu đổi mật khẩu.',
                         'redirect_url' => route('admin.auth.showForcePasswordChangeForm'),
                     ]);
                 }
-                // Nếu không, thực hiện redirect bình thường
                 return redirect()->route('admin.auth.showForcePasswordChangeForm');
             }
 
             // KIỂM TRA ROLE (NẾU KHÔNG BỊ BUỘC ĐỔI MẬT KHẨU)
             if ($admin->role === null) {
-                // Nếu là yêu cầu AJAX, trả về JSON chứa URL chuyển hướng
                 if ($request->expectsJson()) {
                     return response()->json([
                         'message' => 'Tài khoản đang chờ xét duyệt.',
                         'redirect_url' => route('admin.pending_authorization'),
                     ]);
                 }
-                // Nếu không, thực hiện redirect bình thường
                 return redirect()->intended(route('admin.pending_authorization'));
             }
 
@@ -116,21 +133,19 @@ class LoginController extends Controller
         }
 
         // Nếu đăng nhập admin thất bại, kiểm tra xem có phải là tài khoản khách hàng không
-        // (Nếu email tồn tại trong bảng customers)
         if (Customer::where('email', $credentials['email'])->exists()) {
             if ($request->expectsJson()) {
                 return response()->json([
                     'message' => 'Đây là tài khoản khách hàng. Vui lòng đăng nhập tại trang khách hàng.',
-                    'redirect_url' => route('customer.auth.login') // Đảm bảo route này tồn tại và được định nghĩa đúng
-                ], 403); // Sử dụng mã lỗi 403 Forbidden
+                    'redirect_url' => route('customer.auth.login')
+                ], 403);
             }
-            // Nếu không phải AJAX, chuyển hướng trực tiếp
             return redirect()->route('customer.auth.login')->withErrors([
                 'email' => 'Đây là tài khoản khách hàng. Vui lòng đăng nhập tại trang khách hàng.'
             ]);
         }
 
-        // Thông tin đăng nhập không chính xác (chung chung nếu không phải khách hàng)
+        // Thông tin đăng nhập không chính xác
         throw ValidationException::withMessages([
             'email' => 'Thông tin đăng nhập không chính xác.',
         ]);

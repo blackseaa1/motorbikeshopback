@@ -324,14 +324,21 @@ Route::prefix('api')->name('api.')->group(function () {
         Route::get('/products', [CustomerShopController::class, 'getProductsApi'])->name('products.index');
     });
 });
+/*
+|--------------------------------------------------------------------------
+| Payment Gateway Routes
+|--------------------------------------------------------------------------
+*/
+// Các tuyến đường liên quan đến cổng thanh toán
 Route::prefix('payment')->name('payment.')->group(function () {
     Route::get('/momo/initiate/{order_id}', [PaymentController::class, 'initiateMomoPayment'])->name('momo.initiate');
     Route::get('/momo/callback', [PaymentController::class, 'handleMomoCallback'])->name('momo.callback');
-    Route::post('/momo/ipn', [PaymentController::class, 'handleMomoIpn'])->name('momo.ipn'); // Momo thường dùng POST cho IPN
+    Route::post('/momo/ipn', [PaymentController::class, 'handleMomoIpn'])->name('momo.ipn');
 
-    // Ví dụ cho các cổng khác (chưa tích hợp logic chi tiết)
+    // THÊM ROUTES CHO VNPAY
     Route::get('/vnpay/initiate/{order_id}', [PaymentController::class, 'initiateVnpayPayment'])->name('vnpay.initiate');
-    // Route::get('/vnpay/callback', [PaymentController::class, 'handleVnpayCallback'])->name('vnpay.callback');
+    Route::get('/vnpay/callback', [PaymentController::class, 'handleVnpayCallback'])->name('vnpay.callback'); // GET method cho callback
+    Route::post('/vnpay/ipn', [PaymentController::class, 'handleVnpayIpn'])->name('vnpay.ipn'); // POST method cho IPN
 
     Route::get('/bank-transfer/details/{order_id}', [PaymentController::class, 'showBankTransferDetails'])->name('bank_transfer.details');
 });
