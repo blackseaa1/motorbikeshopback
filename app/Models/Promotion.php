@@ -190,18 +190,16 @@ class Promotion extends Model
     {
         $value = '';
         if ($this->discount_type === self::DISCOUNT_TYPE_PERCENTAGE) {
-            $value = rtrim(rtrim(number_format($this->discount_percentage, 2, ',', '.'), '0'), '.') . '%';
+            // Change the last rtrim argument from '.' to ','
+            $value = rtrim(rtrim(number_format($this->discount_percentage, 2, ',', '.'), '0'), ',') . '%';
             if ($this->max_discount_amount !== null) {
-                // [SỬA LỖI] Thêm tham số để định dạng đúng chuẩn VNĐ
                 $value .= ' (Tối đa: ' . number_format($this->max_discount_amount, 0, ',', '.') . 'đ)';
             }
         } elseif ($this->discount_type === self::DISCOUNT_TYPE_FIXED) {
-            // [SỬA LỖI] Thêm tham số để định dạng đúng chuẩn VNĐ
             $value = number_format($this->fixed_discount_amount, 0, ',', '.') . 'đ';
         }
 
         if ($this->min_order_amount !== null) {
-            // [SỬA LỖI] Thêm tham số để định dạng đúng chuẩn VNĐ
             $value .= ' (Đơn hàng tối thiểu: ' . number_format($this->min_order_amount, 0, ',', '.') . 'đ)';
         }
         return $value;
