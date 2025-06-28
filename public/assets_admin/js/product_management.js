@@ -72,7 +72,12 @@ function initializeProductsPage() {
         try {
             const $pickers = $('.selectpicker');
             if ($pickers.length === 0) return;
-            if ($pickers.data('selectpicker')) $pickers.selectpicker('destroy');
+            // Chỉ destroy nếu selectpicker đã được khởi tạo
+            $pickers.each(function () {
+                if ($(this).data('selectpicker')) {
+                    $(this).selectpicker('destroy');
+                }
+            });
             $pickers.selectpicker({
                 liveSearch: true,
                 width: '100%',
@@ -87,28 +92,93 @@ function initializeProductsPage() {
         }
     };
 
+    // Map để lưu trữ các file ảnh mới được chọn cho từng input file (create/update)
+    const newProductImages = new Map(); // Key: inputElement, Value: File[]
+
     /**
-     * Thiết lập preview hình ảnh khi chọn file
-     * @param {HTMLInputElement} inputEl - Input file
-     * @param {HTMLElement} previewContainerEl - Container cho preview
+     * Render lại các ảnh preview từ một mảng File.
+     * @param {HTMLElement} previewContainerEl - Container để hiển thị preview.
+     * @param {File[]} files - Mảng các đối tượng File cần hiển thị.
+     * @param {string} type - 'new' cho ảnh mới chọn, 'existing' cho ảnh đã có (có hidden input).
      */
-    const setupImagePreviews = (inputEl, previewContainerEl) => {
-        if (!inputEl || !previewContainerEl) return;
-        inputEl.addEventListener('change', function (event) {
-            previewContainerEl.querySelectorAll('.new-preview').forEach(el => el.remove());
-            const files = event.target.files;
-            if (!files) return;
-            for (const file of files) {
-                if (!file.type.startsWith('image/')) continue;
-                const reader = new FileReader();
-                reader.onload = function (e) {
-                    const previewWrapper = document.createElement('div');
-                    previewWrapper.className = 'img-preview-wrapper new-preview';
-                    previewWrapper.innerHTML = `<img src="${e.target.result}" class="img-preview" alt="${file.name}"><button type="button" class="img-preview-remove" title="Xóa ảnh này">×</button>`;
-                    previewContainerEl.appendChild(previewWrapper);
-                };
+    const renderImagePreviews = (previewContainerEl, files, type = 'new') => {
+        previewContainerEl.innerHTML = ''; // Xóa tất cả preview cũ
+        files.forEach((file, index) => {
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                const previewWrapper = document.createElement('div');
+                previewWrapper.className = `img-preview-wrapper ${type}-preview`;
+                // Dùng data-index để xác định file nào sẽ bị xóa khi remove
+                previewWrapper.innerHTML = `
+                    <img src="${e.target.result}" class="img-preview" alt="${file.name}">
+                    <button type="button" class="img-preview-remove" title="Xóa ảnh này" data-file-index="${index}">×</button>
+                    ${type === 'existing' ? `<input type="hidden" name="existing_images[]" value="${file.id}">` : ''}
+                `;
+                previewContainerEl.appendChild(previewWrapper);
+            };
+            // Chỉ đọc file nếu là ảnh mới, ảnh cũ đã có URL
+            if (type === 'new') {
                 reader.readAsDataURL(file);
+            } else { // Xử lý trường hợp ảnh existing, nơi file là một object có image_full_url
+                // Đối với ảnh existing, chúng ta đã có URL, không cần FileReader
+                const previewWrapper = document.createElement('div');
+                previewWrapper.className = `img-preview-wrapper ${type}-preview`;
+                previewWrapper.innerHTML = `
+                     <img src="${file.image_full_url}" class="img-preview" alt="${file.image_url}">
+                     <button type="button" class="img-preview-remove" title="Xóa ảnh này" data-image-id="${file.id}">×</button>
+                     <input type="hidden" name="existing_images[]" value="${file.id}">
+                 `;
+                previewContainerEl.appendChild(previewWrapper);
             }
+        });
+    };
+
+    /**
+     * Thiết lập preview hình ảnh khi chọn file, hỗ trợ chọn nhiều lần (accumulate files).
+     * @param {HTMLInputElement} inputEl - Input file (productImagesCreate hoặc productImagesUpdate).
+     * @param {HTMLElement} previewContainerEl - Container cho preview (productImagesPreviewCreate/Update).
+     * @param {HTMLElement} formEl - Form chứa inputEl (để lấy context cho việc quản lý files).
+     */
+    const setupImageInputs = (inputEl, previewContainerEl, formEl) => {
+        if (!inputEl || !previewContainerEl || !formEl) return;
+
+        // Khởi tạo mảng file cho input này nếu chưa có
+        if (!newProductImages.has(inputEl)) {
+            newProductImages.set(inputEl, []);
+        }
+
+        inputEl.addEventListener('change', function (event) {
+            const currentFiles = newProductImages.get(inputEl);
+            const filesToAdd = Array.from(event.target.files).filter(file => file.type.startsWith('image/'));
+
+            // Thêm các file mới vào mảng đã có
+            const updatedFiles = currentFiles.concat(filesToAdd);
+            newProductImages.set(inputEl, updatedFiles);
+
+            // Cập nhật lại giao diện preview
+            renderImagePreviews(previewContainerEl, updatedFiles);
+
+            // Xóa giá trị của input file để cho phép chọn lại cùng một file nếu muốn
+            inputEl.value = '';
+        });
+
+        // Xử lý xóa ảnh preview mới
+        previewContainerEl.addEventListener('click', function (event) {
+            const removeButton = event.target.closest('.img-preview-remove');
+            if (!removeButton || !removeButton.dataset.fileIndex) return; // Chỉ xử lý ảnh mới ở đây
+
+            event.preventDefault();
+            const indexToRemove = parseInt(removeButton.dataset.fileIndex);
+
+            const currentFiles = newProductImages.get(inputEl);
+            if (!currentFiles) return;
+
+            // Xóa file khỏi mảng
+            const updatedFiles = currentFiles.filter((_, index) => index !== indexToRemove);
+            newProductImages.set(inputEl, updatedFiles);
+
+            // Render lại preview
+            renderImagePreviews(previewContainerEl, updatedFiles);
         });
     };
 
@@ -235,12 +305,13 @@ function initializeProductsPage() {
             form.reset();
             clearValidationErrors(form);
             document.getElementById('productImagesPreviewCreate').innerHTML = '';
+            newProductImages.set(document.getElementById('productImagesCreate'), []); // Reset files map
             $('#createProductForm .selectpicker').selectpicker('val', '');
             $('#createProductForm .selectpicker').selectpicker('refresh');
         });
         const createImagesInput = document.getElementById('productImagesCreate');
         const createImagesPreview = document.getElementById('productImagesPreviewCreate');
-        if (createImagesInput && createImagesPreview) setupImagePreviews(createImagesInput, createImagesPreview);
+        if (createImagesInput && createImagesPreview) setupImageInputs(createImagesInput, createImagesPreview, document.getElementById('createProductForm'));
 
         // Reset modal cập nhật
         updateProductModalEl.addEventListener('hidden.bs.modal', () => {
@@ -249,12 +320,13 @@ function initializeProductsPage() {
             clearValidationErrors(form);
             document.getElementById('productImagesPreviewUpdate').innerHTML = '';
             document.getElementById('productImagesUpdate').value = ''; // Clear file input
+            newProductImages.set(document.getElementById('productImagesUpdate'), []); // Reset files map
             $('#updateProductForm .selectpicker').selectpicker('val', '');
             $('#updateProductForm .selectpicker').selectpicker('refresh');
         });
         const updateImagesInput = document.getElementById('productImagesUpdate');
         const updateImagesPreview = document.getElementById('productImagesPreviewUpdate');
-        if (updateImagesInput && updateImagesPreview) setupImagePreviews(updateImagesInput, updateImagesPreview);
+        if (updateImagesInput && updateImagesPreview) setupImageInputs(updateImagesInput, updateImagesPreview, document.getElementById('updateProductForm'));
     };
 
     // --- CÁC HÀM HIỂN THỊ MODAL ---
@@ -347,12 +419,23 @@ function initializeProductsPage() {
             updateProductModalEl.dataset.vehicleModelIds = JSON.stringify(vehicleModelIds);
 
             const previewContainer = document.getElementById('productImagesPreviewUpdate');
-            previewContainer.innerHTML = '';
+            // Cập nhật existing images
+            previewContainer.innerHTML = ''; // Xóa hết để render lại
             if (product.images && product.images.length > 0) {
                 product.images.forEach(image => {
-                    previewContainer.innerHTML += `<div class="img-preview-wrapper existing-preview"><input type="hidden" name="existing_images[]" value="${image.id}"><img src="${image.image_full_url}" class="img-preview" alt=""><button type="button" class="img-preview-remove" title="Xóa ảnh này">×</button></div>`;
+                    const previewWrapper = document.createElement('div');
+                    previewWrapper.className = 'img-preview-wrapper existing-preview';
+                    previewWrapper.innerHTML = `
+                        <img src="${image.image_full_url}" class="img-preview" alt="">
+                        <button type="button" class="img-preview-remove" title="Xóa ảnh này" data-image-id="${image.id}">×</button>
+                        <input type="hidden" name="existing_images[]" value="${image.id}">
+                    `;
+                    previewContainer.appendChild(previewWrapper);
                 });
             }
+            // Đảm bảo xóa bỏ mọi ảnh mới đã chọn trước đó khi mở modal update
+            newProductImages.set(document.getElementById('productImagesUpdate'), []);
+
 
             // Gọi lại formatCurrencyInput sau khi gán giá trị
             const priceUpdateInput = form.querySelector('#productPriceUpdate');
@@ -480,10 +563,16 @@ function initializeProductsPage() {
             else if (button.classList.contains('btn-force-delete-product')) handleShowForceDeleteModal(deleteUrl, name);
         });
 
+        // Xử lý xóa ảnh hiện có (existing_images)
         document.body.addEventListener('click', function (event) {
-            if (event.target.classList.contains('img-preview-remove')) {
+            const removeButton = event.target.closest('.img-preview-remove');
+            if (removeButton && removeButton.dataset.imageId) { // Kiểm tra nếu là nút xóa ảnh hiện có
                 event.preventDefault();
-                event.target.closest('.img-preview-wrapper').remove();
+                const previewWrapper = removeButton.closest('.img-preview-wrapper');
+                if (previewWrapper) {
+                    previewWrapper.remove();
+                }
+                // Input hidden "existing_images[]" đã bị xóa cùng với wrapper, không cần xử lý thêm
             }
         });
 
@@ -545,6 +634,17 @@ function initializeProductsPage() {
             if (priceInput && formData.has('price')) {
                 formData.set('price', parseFormattedCurrency(priceInput.value));
             }
+
+            // --- Xử lý thêm các file ảnh mới từ newProductImages map ---
+            const fileInput = form.querySelector('input[type="file"][name="product_images[]"]');
+            if (fileInput && newProductImages.has(fileInput)) {
+                const filesToUpload = newProductImages.get(fileInput);
+                filesToUpload.forEach(file => {
+                    formData.append('product_images[]', file);
+                });
+            }
+            // --- Kết thúc xử lý file ảnh mới ---
+
 
             try {
                 const response = await fetch(form.action, {

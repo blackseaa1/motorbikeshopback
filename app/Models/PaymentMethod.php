@@ -55,8 +55,11 @@ class PaymentMethod extends Model
      */
     public function getLogoFullUrlAttribute(): string
     {
-        if ($this->logo_path && Storage::disk('public')->exists(str_replace('/storage/', '', $this->logo_path))) {
-            return asset($this->logo_path);
+        // $this->logo_path sẽ chứa đường dẫn như 'payment_methods/abc.jpg'
+        // Kiểm tra sự tồn tại của file trong disk 'public'
+        if ($this->logo_path && Storage::disk('public')->exists($this->logo_path)) {
+            // Sử dụng Storage::url() để tạo URL công khai cho file
+            return Storage::url($this->logo_path);
         }
         return 'https://placehold.co/100x50/EFEFEF/AAAAAA&text=N/A';
     }

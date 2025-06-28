@@ -153,9 +153,6 @@
                             <li class="nav-item"><a
                                     class="nav-link {{ request()->routeIs('admin.system.geography.*') ? 'active-submenu' : '' }}"
                                     href="{{ route('admin.system.geography.index') }}">Quản lý Địa lý</a></li>
-                            <li class="nav-item"><a
-                                    class="nav-link {{ request()->routeIs('admin.system.settings') ? 'active-submenu' : '' }}"
-                                    href="{{ route('admin.system.settings') }}">Cài đặt chung</a></li>
                         </ul>
                     </li>
                 @endif

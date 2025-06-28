@@ -87,12 +87,14 @@
                                     id="productVehicleModelsUpdate" multiple data-live-search="true"
                                     title="Chọn các dòng xe tương thích">
                                     @foreach ($vehicleBrands as $vehicleBrand)
-                                        <optgroup label="{{ $vehicleBrand->name }}">
-                                            @foreach ($vehicleBrand->vehicleModels as $model)
-                                                <option value="{{ $model->id }}">{{ $model->name }} {{ $model->year }}
-                                                </option>
-                                            @endforeach
-                                        </optgroup>
+                                        @if($vehicleBrand->vehicleModels->count() > 0)
+                                            <optgroup label="{{ $vehicleBrand->name }}">
+                                                @foreach ($vehicleBrand->vehicleModels as $model)
+                                                    <option value="{{ $model->id }}">{{ $model->name }} {{ $model->year }}
+                                                    </option>
+                                                @endforeach
+                                            </optgroup>
+                                        @endif
                                     @endforeach
                                 </select>
                                 <div class="invalid-feedback"></div>

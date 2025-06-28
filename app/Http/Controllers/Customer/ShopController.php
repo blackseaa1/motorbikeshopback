@@ -49,13 +49,17 @@ class ShopController extends Controller
         $selectedVehicleBrand = $request->input('vehicle_brand_id');
         $selectedVehicleModel = $request->input('vehicle_model_id');
 
+        // Áp dụng bộ lọc Dòng xe nếu có
+        if ($selectedVehicleBrand) {
+            $query->whereHas('vehicleModels.vehicleBrand', function ($q) use ($selectedVehicleBrand) {
+                $q->where('vehicle_brands.id', $selectedVehicleBrand);
+            });
+        }
+
+        // Áp dụng bộ lọc Mẫu xe nếu có (sẽ tinh chỉnh thêm nếu Dòng xe cũng được chọn)
         if ($selectedVehicleModel) {
             $query->whereHas('vehicleModels', function ($q) use ($selectedVehicleModel) {
                 $q->where('vehicle_models.id', $selectedVehicleModel);
-            });
-        } elseif ($selectedVehicleBrand) {
-            $query->whereHas('vehicleModels.vehicleBrand', function ($q) use ($selectedVehicleBrand) {
-                $q->where('vehicle_brands.id', $selectedVehicleBrand);
             });
         }
 
