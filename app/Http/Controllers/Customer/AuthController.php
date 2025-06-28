@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Customer;
 
 use App\Http\Controllers\Controller;
 use App\Models\Customer;
+use App\Models\Admin; // Thêm import model Admin
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -28,6 +29,11 @@ class AuthController extends Controller
 
     /**
      * Xử lý yêu cầu đăng nhập.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  \App\Support\CartManager  $cartManager
+     * @return \Illuminate\Http\RedirectResponse|\Illuminate\Http\JsonResponse
+     * @throws \Illuminate\Validation\ValidationException
      */
     public function login(Request $request, CartManager $cartManager)
     {
@@ -36,6 +42,7 @@ class AuthController extends Controller
             'password' => ['required', 'string'],
         ]);
 
+        // Thử đăng nhập với guard 'customer'
         if (Auth::guard('customer')->attempt($credentials, $request->boolean('remember'))) {
             $request->session()->regenerate();
 
@@ -44,6 +51,27 @@ class AuthController extends Controller
 
             /** @var \App\Models\Customer $customer */
             $customer = Auth::guard('customer')->user();
+
+            // Bắt đầu defensive programming: Kiểm tra null cho $customer
+            // Mặc dù về lý thuyết không nên null nếu attempt() thành công, nhưng để an toàn.
+            if (!$customer) {
+                Auth::guard('customer')->logout();
+                throw ValidationException::withMessages([
+                    'email' => 'Đã xảy ra lỗi không xác định trong quá trình đăng nhập. Vui lòng thử lại.',
+                ]);
+            }
+
+            // KIỂM TRA STATUS KHÁCH HÀNG (Nếu tài khoản bị khóa)
+            if ($customer->status !== Customer::STATUS_ACTIVE) {
+                Auth::guard('customer')->logout(); // Đăng xuất khách hàng
+                $request->session()->invalidate();
+                $request->session()->regenerateToken(); // Đảm bảo token mới sau khi logout
+                throw ValidationException::withMessages([
+                    'email' => 'Tài khoản của bạn đã bị tạm khóa. Vui lòng liên hệ hỗ trợ.',
+                ]);
+            }
+
+            // KIỂM TRA BẮT BUỘC ĐỔI MẬT KHẨU
             if ($customer->password_change_required) {
                 if ($request->expectsJson()) {
                     return response()->json([
@@ -54,6 +82,7 @@ class AuthController extends Controller
                 return redirect()->route('customer.password.force_change');
             }
 
+            // Đăng nhập thành công, chuyển hướng đến trang mong muốn hoặc trang chủ
             if ($request->expectsJson()) {
                 return response()->json([
                     'message' => 'Đăng nhập thành công!',
@@ -63,6 +92,22 @@ class AuthController extends Controller
             return redirect()->intended(route('home'));
         }
 
+        // Nếu đăng nhập khách hàng thất bại, kiểm tra xem có phải là tài khoản quản trị viên không
+        // (Nếu email tồn tại trong bảng admins)
+        if (Admin::where('email', $credentials['email'])->exists()) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'Đây là tài khoản quản trị viên. Vui lòng đăng nhập tại trang quản trị.',
+                    'redirect_url' => route('admin.auth.login')
+                ], 403); // Sử dụng mã lỗi 403 Forbidden
+            }
+            // Nếu không phải AJAX, chuyển hướng trực tiếp
+            return redirect()->route('admin.auth.login')->withErrors([
+                'email' => 'Đây là tài khoản quản trị viên. Vui lòng đăng nhập tại trang quản trị.'
+            ]);
+        }
+
+        // Thông tin đăng nhập không chính xác hoặc tài khoản bị khóa (chung chung nếu không phải admin)
         throw ValidationException::withMessages([
             'email' => 'Thông tin đăng nhập không chính xác hoặc tài khoản của bạn đã bị khóa. Vui lòng liên hệ hỗ trợ.',
         ]);
@@ -82,6 +127,9 @@ class AuthController extends Controller
 
     /**
      * Xử lý yêu cầu đăng ký.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\RedirectResponse|\Illuminate\Http\JsonResponse
      */
     public function register(Request $request)
     {
@@ -116,6 +164,9 @@ class AuthController extends Controller
 
     /**
      * Đăng xuất tài khoản khách hàng.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\RedirectResponse
      */
     public function logout(Request $request)
     {
@@ -135,6 +186,8 @@ class AuthController extends Controller
 
     /**
      * Hiển thị form bắt buộc đổi mật khẩu.
+     *
+     * @return \Illuminate\View\View|\Illuminate\Http\RedirectResponse
      */
     public function showForcePasswordChangeForm()
     {
@@ -151,11 +204,20 @@ class AuthController extends Controller
 
     /**
      * Xử lý việc đổi mật khẩu bắt buộc.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\RedirectResponse|\Illuminate\Http\JsonResponse
+     * @throws \Illuminate\Validation\ValidationException
      */
     public function handleForcePasswordChange(Request $request)
     {
         /** @var \App\Models\Customer $customer */
         $customer = Auth::guard('customer')->user();
+
+        // Nếu không có khách hàng hoặc không có yêu cầu đổi mật khẩu, chuyển hướng về trang chủ.
+        if (!$customer || !$customer->password_change_required) {
+            return redirect()->route('home');
+        }
 
         $request->validate([
             'password' => ['required', 'string', 'confirmed', Password::min(8)->mixedCase()->numbers()->symbols()],

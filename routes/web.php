@@ -117,7 +117,8 @@ Route::middleware(['web'])->group(function () {
 
 
     // --- CÁC ROUTE YÊU CẦU KHÁCH HÀNG ĐĂNG NHẬP ---
-    Route::middleware(['auth:customer'])->group(function () {
+    // *** UPDATED: Thêm middleware 'check.user.status:customer'
+    Route::middleware(['auth:customer', 'check.user.status:customer'])->group(function () {
         // --- Quản lý tài khoản ---
         Route::prefix('account')->name('account.')->group(function () {
             Route::get('/', [AccountController::class, 'profile'])->name('profile');
@@ -152,7 +153,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
     // --- XÁC THỰC ADMIN ---
     // Route cho admin đã đăng nhập (logout, đổi mật khẩu bắt buộc)
-    Route::middleware('auth:admin')->group(function () {
+    // *** UPDATED: Thêm middleware 'check.user.status:admin'
+    Route::middleware(['auth:admin', 'check.user.status:admin'])->group(function () {
         Route::controller(AdminLoginController::class)->group(function () {
             Route::get('/force-password-change', 'showForcePasswordChangeForm')->name('auth.showForcePasswordChangeForm');
             Route::post('/force-password-change', 'forcePasswordChange')->name('auth.forcePasswordChange');
@@ -175,7 +177,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
     // --- BẢNG ĐIỀU KHIỂN CHÍNH CỦA ADMIN ---
     // Yêu cầu: Đã đăng nhập, đã đổi mật khẩu lần đầu, có vai trò hợp lệ
-    Route::middleware(['auth:admin', 'password.changed', 'admin.hasrole'])->group(function () {
+    // *** UPDATED: Thêm middleware 'check.user.status:admin'
+    Route::middleware(['auth:admin', 'check.user.status:admin', 'password.changed', 'admin.hasrole'])->group(function () {
         Route::get('/', fn() => redirect()->route('admin.dashboard'));
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 

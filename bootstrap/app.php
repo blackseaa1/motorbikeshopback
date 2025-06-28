@@ -36,13 +36,15 @@ return Application::configure(basePath: dirname(__DIR__))
         /**
          * Đăng ký bí danh (alias) cho các middleware.
          * Vẫn giữ lại alias để có thể dùng trong tương lai nếu cần.
+         * Thêm 'check.user.status' vào đây để kiểm tra trạng thái tài khoản.
          */
         $middleware->alias([
             'admin.hasrole' => \App\Http\Middleware\CheckAdminHasRole::class,
             'password.changed' => \App\Http\Middleware\EnsurePasswordIsChanged::class,
-            'customer.password.changed' => \App\Http\Middleware\EnsureCustomerPasswordIsChanged::class, // Giữ lại alias
+            'customer.password.changed' => \App\Http\Middleware\EnsureCustomerPasswordIsChanged::class,
             'guest.customer' => \App\Http\Middleware\RedirectIfCustomer::class,
             'guest.admin' => \App\Http\Middleware\RedirectIfAdmin::class,
+            'check.user.status' => \App\Http\Middleware\CheckUserStatus::class, // Dòng mới được thêm vào
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

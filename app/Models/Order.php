@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Number;
 use App\Models\Admin;
-use App\Models\PaymentMethod;
+use App\Models\PaymentMethod; // Đảm bảo PaymentMethod được import
 
 class Order extends Model
 {
@@ -74,7 +74,6 @@ class Order extends Model
         'customer_name'
     ];
 
-
     // Relationships
     public function customer(): BelongsTo
     {
@@ -116,6 +115,11 @@ class Order extends Model
         return $this->belongsTo(Admin::class, 'created_by_admin_id');
     }
 
+    public function paymentMethod()
+    {
+        return $this->belongsTo(PaymentMethod::class);
+    }
+
     // Accessors for computed properties
 
     public function getSubtotalAttribute(): float
@@ -148,8 +152,11 @@ class Order extends Model
             self::STATUS_PROCESSING => 'Đang xử lý',
             self::STATUS_APPROVED => 'Đã duyệt',
             self::STATUS_SHIPPED => 'Đã giao vận chuyển',
-            self::STATUS_DELIVERED, self::STATUS_COMPLETED => 'Đã giao hàng',
-            self::STATUS_CANCELLED, self::STATUS_RETURNED, self::STATUS_FAILED => 'Đã hủy',
+            self::STATUS_DELIVERED => 'Đã giao hàng',
+            self::STATUS_COMPLETED => 'Hoàn thành',
+            self::STATUS_CANCELLED => 'Đã hủy',
+            self::STATUS_RETURNED => 'Đã trả hàng',
+            self::STATUS_FAILED => 'Thất bại',
             default => 'Không xác định',
         };
     }
@@ -200,10 +207,8 @@ class Order extends Model
 
     public function getShippingFeeAttribute(): float
     {
-        return 0.00; // Luôn trả về 0 cho phí vận chuyển
+        return 0.00;
     }
-
-    // NEW FUNCTIONALITY: CANCELLATION LOGIC
 
     public function isCancellable(): bool
     {
@@ -212,16 +217,30 @@ class Order extends Model
             self::STATUS_PROCESSING,
         ]);
     }
-    public function paymentMethod()
-    {
-        return $this->belongsTo(PaymentMethod::class);
-    }
+
+    /**
+     * SỬA ĐỔI: Kiểm tra xem đơn hàng có thể thanh toán lại không.
+     * Chỉ cho phép các đơn hàng PENDING, FAILED, CANCELLED và phương thức là Momo/Vnpay.
+     */
     public function isRetriable(): bool
     {
-        return in_array($this->status, [
+        // Tải mối quan hệ paymentMethod nếu chưa được tải
+        if (!$this->relationLoaded('paymentMethod')) {
+            $this->load('paymentMethod');
+        }
+
+        $isRetriableStatus = in_array($this->status, [
             self::STATUS_PENDING,
             self::STATUS_FAILED,
             self::STATUS_CANCELLED,
         ]);
+
+        $isOnlinePayment = false;
+        if ($this->paymentMethod) {
+            $onlinePaymentMethods = ['momo', 'vnpay']; // Các mã phương thức thanh toán online
+            $isOnlinePayment = in_array($this->paymentMethod->code, $onlinePaymentMethods);
+        }
+
+        return $isRetriableStatus && $isOnlinePayment;
     }
 }

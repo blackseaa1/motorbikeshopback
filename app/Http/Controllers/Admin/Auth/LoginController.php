@@ -6,7 +6,8 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
-use App\Models\Admin; // Quan trọng: Đảm bảo import Model Admin
+use App\Models\Admin; // Đảm bảo import Model Admin
+use App\Models\Customer; // Thêm import Model Customer
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
 
@@ -15,7 +16,7 @@ class LoginController extends Controller
     /**
      * Hiển thị trang đăng nhập của admin.
      *
-     * @return \Illuminate\View\View
+     * @return \Illuminate\View\View|\Illuminate\Http\RedirectResponse
      */
     public function showLoginForm()
     {
@@ -58,9 +59,19 @@ class LoginController extends Controller
             /** @var \App\Models\Admin $admin */
             $admin = Auth::guard('admin')->user();
 
-            // KIỂM TRA STATUS
+            // Bắt đầu defensive programming: Kiểm tra null cho $admin
+            if (!$admin) {
+                Auth::guard('admin')->logout();
+                throw ValidationException::withMessages([
+                    'email' => 'Đã xảy ra lỗi không xác định trong quá trình đăng nhập. Vui lòng thử lại.',
+                ]);
+            }
+
+            // KIỂM TRA STATUS (Nếu tài khoản bị tạm khóa)
             if ($admin->status !== Admin::STATUS_ACTIVE) {
                 Auth::guard('admin')->logout();
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
                 throw ValidationException::withMessages([
                     'email' => 'Tài khoản của bạn đã bị tạm khóa. Vui lòng liên hệ quản trị viên.',
                 ]);
@@ -104,6 +115,22 @@ class LoginController extends Controller
             return redirect()->intended(route('admin.dashboard'));
         }
 
+        // Nếu đăng nhập admin thất bại, kiểm tra xem có phải là tài khoản khách hàng không
+        // (Nếu email tồn tại trong bảng customers)
+        if (Customer::where('email', $credentials['email'])->exists()) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'Đây là tài khoản khách hàng. Vui lòng đăng nhập tại trang khách hàng.',
+                    'redirect_url' => route('customer.auth.login') // Đảm bảo route này tồn tại và được định nghĩa đúng
+                ], 403); // Sử dụng mã lỗi 403 Forbidden
+            }
+            // Nếu không phải AJAX, chuyển hướng trực tiếp
+            return redirect()->route('customer.auth.login')->withErrors([
+                'email' => 'Đây là tài khoản khách hàng. Vui lòng đăng nhập tại trang khách hàng.'
+            ]);
+        }
+
+        // Thông tin đăng nhập không chính xác (chung chung nếu không phải khách hàng)
         throw ValidationException::withMessages([
             'email' => 'Thông tin đăng nhập không chính xác.',
         ]);
@@ -111,6 +138,8 @@ class LoginController extends Controller
 
     /**
      * Hiển thị form bắt buộc đổi mật khẩu.
+     *
+     * @return \Illuminate\View\View|\Illuminate\Http\RedirectResponse
      */
     public function showForcePasswordChangeForm()
     {
@@ -127,6 +156,10 @@ class LoginController extends Controller
 
     /**
      * Xử lý việc đổi mật khẩu bắt buộc.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\RedirectResponse
+     * @throws \Illuminate\Validation\ValidationException
      */
     public function forcePasswordChange(Request $request)
     {
@@ -145,6 +178,11 @@ class LoginController extends Controller
 
         /** @var \App\Models\Admin $admin */
         $admin = Auth::guard('admin')->user();
+
+        // Nếu không có admin hoặc không có yêu cầu đổi mật khẩu, chuyển hướng về dashboard.
+        if (!$admin || !$admin->password_change_required) {
+            return redirect()->route('admin.dashboard');
+        }
 
         if (!Hash::check($request->current_password, $admin->password)) {
             throw ValidationException::withMessages([
