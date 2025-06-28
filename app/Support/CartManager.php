@@ -174,16 +174,21 @@ class CartManager
             ];
         }
 
-        $shippingInfo = $this->getShippingInfo();
         $promotionInfo = $this->getPromotionInfo();
-        $shippingFee = $shippingInfo['fee'] ?? 0;
+        $shippingFee = 0; // Phí vận chuyển luôn là 0
 
         $discountAmount = 0;
-        if ($promotionInfo && $promotionInfo->isEffective()) {
-            $discountAmount = ($subtotal * $promotionInfo->discount_percentage) / 100;
-        } else if ($promotionInfo) {
-            $this->clearPromotion();
-            $promotionInfo = null;
+        // ĐÃ SỬA ĐỔI: Sử dụng phương thức calculateDiscount() từ Promotion model
+        if ($promotionInfo) {
+            $calculatedDiscount = $promotionInfo->calculateDiscount($subtotal); // Truyền subtotal để kiểm tra điều kiện
+
+            if ($calculatedDiscount > 0) {
+                $discountAmount = $calculatedDiscount;
+            } else {
+                // Nếu mã không hợp lệ hoặc không có giảm giá, xóa khỏi session
+                $this->clearPromotion();
+                $promotionInfo = null;
+            }
         }
 
         $grandTotal = $subtotal + $shippingFee - $discountAmount;
@@ -192,7 +197,7 @@ class CartManager
             'items' => $this->getItems(),
             'count' => $this->getCartCount(),
             'subtotal' => $subtotal,
-            'shipping_info' => $shippingInfo,
+            'shipping_info' => ['id' => null, 'name' => 'Miễn phí vận chuyển', 'fee' => 0],
             'promotion_info' => $promotionInfo,
             'shipping_fee' => $shippingFee,
             'discount_amount' => $discountAmount,
@@ -205,11 +210,7 @@ class CartManager
      */
     public function applyShipping(int $deliveryServiceId): array
     {
-        $deliveryService = DeliveryService::find($deliveryServiceId);
-        if (!$deliveryService || !$deliveryService->isActive()) {
-            throw ValidationException::withMessages(['delivery_service' => 'Dịch vụ vận chuyển không hợp lệ.']);
-        }
-        $shippingInfo = ['id' => $deliveryService->id, 'name' => $deliveryService->name, 'fee' => $deliveryService->shipping_fee];
+        $shippingInfo = ['id' => $deliveryServiceId, 'name' => 'Miễn phí vận chuyển', 'fee' => 0];
         session([self::SHIPPING_SESSION_KEY => $shippingInfo]);
         return $shippingInfo;
     }
@@ -221,7 +222,10 @@ class CartManager
     {
         $promoCode = strtoupper(trim($promoCode));
         $promotion = Promotion::where('code', $promoCode)->first();
-        if (!$promotion || !$promotion->isEffective()) {
+        $subtotal = $this->getCartTotal(); // LẤY SUBTITAL ĐỂ KIỂM TRA ĐIỀU KIỆN TỐI THIỂU
+
+        // ĐÃ SỬA ĐỔI: Truyền subtotal vào phương thức isEffective()
+        if (!$promotion || !$promotion->isEffective($subtotal)) {
             $this->clearPromotion();
             throw ValidationException::withMessages(['promotion_code' => 'Mã giảm giá không hợp lệ hoặc đã hết hạn.']);
         }
@@ -351,5 +355,4 @@ class CartManager
         unset($cart[$productId]);
         session([self::SESSION_KEY => $cart]);
     }
-    
 }

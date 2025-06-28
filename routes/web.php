@@ -48,7 +48,7 @@ use App\Http\Controllers\Customer\CheckoutController;
 use App\Http\Controllers\Customer\HomeController;
 use App\Http\Controllers\Customer\ReviewController as CustomerReviewController;
 use App\Http\Controllers\Customer\ShopController as CustomerShopController;
-
+use App\Http\Controllers\PaymentController;
 
 /*
 |--------------------------------------------------------------------------
@@ -320,4 +320,15 @@ Route::prefix('api')->name('api.')->group(function () {
         // API để lấy danh sách sản phẩm (có lọc, phân trang) cho front-end
         Route::get('/products', [CustomerShopController::class, 'getProductsApi'])->name('products.index');
     });
+});
+Route::prefix('payment')->name('payment.')->group(function () {
+    Route::get('/momo/initiate/{order_id}', [PaymentController::class, 'initiateMomoPayment'])->name('momo.initiate');
+    Route::get('/momo/callback', [PaymentController::class, 'handleMomoCallback'])->name('momo.callback');
+    Route::post('/momo/ipn', [PaymentController::class, 'handleMomoIpn'])->name('momo.ipn'); // Momo thường dùng POST cho IPN
+
+    // Ví dụ cho các cổng khác (chưa tích hợp logic chi tiết)
+    Route::get('/vnpay/initiate/{order_id}', [PaymentController::class, 'initiateVnpayPayment'])->name('vnpay.initiate');
+    // Route::get('/vnpay/callback', [PaymentController::class, 'handleVnpayCallback'])->name('vnpay.callback');
+
+    Route::get('/bank-transfer/details/{order_id}', [PaymentController::class, 'showBankTransferDetails'])->name('bank_transfer.details');
 });

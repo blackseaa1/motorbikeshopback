@@ -101,7 +101,7 @@
         <div class="form-check border rounded p-3 mb-2">
             <input class="form-check-input"
                    type="radio"
-                   name="payment_method_id"  {{-- Sửa tên input thành payment_method_id --}}
+                   name="payment_method_id"
                    id="payment_method_{{ $method->id }}"
                    value="{{ $method->id }}"
                    {{-- Luôn chọn mặc định phương thức đầu tiên, hoặc giữ lựa chọn cũ nếu có lỗi validation --}}
@@ -173,14 +173,15 @@
 
                             <hr>
                             <div class="mb-3">
-                                <label for="delivery_service_id" class="form-label fw-bold">Đơn vị vận chuyển</label>
+                                <label for="delivery_service_id" class="form-label fw-bold">Đơn vị vận chuyển (Miễn phí)</label>
                                 <select class="selectpicker form-control" id="delivery_service_id"
                                     name="delivery_service_id" data-live-search="true" title="Chọn đơn vị vận chuyển..."
                                     required>
                                     @if($deliveryServices->isNotEmpty())
                                         @foreach($deliveryServices as $service)
+                                            {{-- ĐÃ SỬA: Thêm &nbsp; để tạo khoảng trống giữa tên dịch vụ và "Miễn phí" --}}
                                             <option value="{{ $service->id }}"
-                                                data-content="{{ $service->name }} <span class='text-muted float-end'>+{{ number_format($service->shipping_fee) }} ₫</span>"
+                                                data-content="{{ $service->name }}&nbsp;&nbsp;&nbsp;&nbsp;<span class='text-success float-end'>Miễn phí</span>"
                                                 {{ ($cartDetails['shipping_info']['id'] ?? null) == $service->id ? 'selected' : '' }}>
                                                 {{ $service->name }}
                                             </option>
@@ -215,8 +216,7 @@
                                 </li>
                                 <li class="list-group-item d-flex justify-content-between">
                                     <span>Phí vận chuyển</span>
-                                    <strong id="summary-shipping-fee">{{ number_format($cartDetails['shipping_fee'] ?? 0) }}
-                                        ₫</strong>
+                                    <strong id="summary-shipping-fee" class="text-success">Miễn phí vận chuyển</strong> {{-- Hiển thị chữ "Miễn phí vận chuyển" --}}
                                 </li>
                                 <li id="summary-discount-row"
                                     class="list-group-item d-flex justify-content-between text-success {{ ($cartDetails['discount_amount'] ?? 0) > 0 ? '' : 'd-none' }}">

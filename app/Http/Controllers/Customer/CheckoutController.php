@@ -41,7 +41,6 @@ class CheckoutController extends Controller
         $cartDetails = $this->cartManager->getCartDetails();
         $deliveryServices = DeliveryService::where('status', 'active')->get();
 
-        // SỬA ĐỔI: Lấy danh sách các phương thức thanh toán đang hoạt động
         $paymentMethods = PaymentMethod::where('status', PaymentMethod::STATUS_ACTIVE)->get();
 
         $customerAddresses = Auth::guard('customer')->check()
@@ -55,7 +54,7 @@ class CheckoutController extends Controller
             'deliveryServices',
             'customerAddresses',
             'provinces',
-            'paymentMethods' // <-- SỬA ĐỔI: Truyền biến mới ra view
+            'paymentMethods'
         ));
     }
 
@@ -71,13 +70,10 @@ class CheckoutController extends Controller
         /** @var \App\Models\Customer|null $customer */
         $customer = Auth::guard('customer')->user();
 
-        // SỬA ĐỔI: Cập nhật lại các quy tắc xác thực (validation)
         $validationRules = [
-            // 'payment_method' => ['required', Rule::in(['cod', 'vnpay'])], // <<<--- XÓA DÒNG NÀY
-            'payment_method_id' => [ // <<<--- THÊM KHỐI NÀY
+            'payment_method_id' => [
                 'required',
                 Rule::exists('payment_methods', 'id')->where(function ($query) {
-                    // Chỉ chấp nhận các phương thức đang ở trạng thái 'active'
                     $query->where('status', \App\Models\PaymentMethod::STATUS_ACTIVE);
                 }),
             ],
@@ -105,21 +101,26 @@ class CheckoutController extends Controller
         DB::beginTransaction();
         try {
             $shippingAddressInfo = $this->getShippingAddressInfo($validatedData, $customer);
-            $deliveryService = DeliveryService::find($validatedData['delivery_service_id']);
-
-            if (!$deliveryService) {
-                return back()->with('error', 'Dịch vụ vận chuyển không hợp lệ.')->withInput();
-            }
+            $deliveryServiceId = $validatedData['delivery_service_id'];
 
             $subtotal = $cartDetails['subtotal'];
-            $shippingFee = $deliveryService->shipping_fee;
+            $shippingFee = 0; // Phí vận chuyển luôn là 0
             $discountAmount = $cartDetails['discount_amount'];
             $totalPrice = $subtotal + $shippingFee - $discountAmount;
 
-            // SỬA ĐỔI: Cập nhật lại khối tạo đơn hàng
+            // Lấy thông tin phương thức thanh toán
+            $paymentMethod = PaymentMethod::find($validatedData['payment_method_id']);
+            if (!$paymentMethod) {
+                DB::rollBack();
+                return back()->with('error', 'Phương thức thanh toán không hợp lệ.')->withInput();
+            }
+
+            // Xác định trạng thái ban đầu của đơn hàng
+            $initialStatus = Order::STATUS_PENDING;
+
             $order = Order::create([
                 'customer_id' => $customer?->id,
-                'payment_method_id' => $validatedData['payment_method_id'], // <<<--- THÊM DÒNG NÀY
+                'payment_method_id' => $paymentMethod->id,
                 'guest_name' => $customer ? null : $shippingAddressInfo['name'],
                 'guest_email' => $customer ? null : $shippingAddressInfo['email'],
                 'guest_phone' => $customer ? null : $shippingAddressInfo['phone'],
@@ -127,14 +128,13 @@ class CheckoutController extends Controller
                 'province_id' => $shippingAddressInfo['province_id'],
                 'district_id' => $shippingAddressInfo['district_id'],
                 'ward_id' => $shippingAddressInfo['ward_id'],
-                'status' => Order::STATUS_PENDING,
+                'status' => $initialStatus,
                 'total_price' => $totalPrice,
                 'subtotal' => $subtotal,
                 'shipping_fee' => $shippingFee,
                 'discount_amount' => $discountAmount,
                 'promotion_id' => $cartDetails['promotion_info']->id ?? null,
-                'delivery_service_id' => $validatedData['delivery_service_id'],
-                // 'payment_method' => $validatedData['payment_method'], // <<<--- XÓA DÒNG NÀY
+                'delivery_service_id' => $deliveryServiceId,
                 'notes' => $validatedData['notes'] ?? null,
                 'created_by_admin_id' => null,
             ]);
@@ -154,18 +154,43 @@ class CheckoutController extends Controller
 
             DB::commit();
 
-            $this->cartManager->clear();
+            // DI CHUYỂN DÒNG NÀY: cartManager->clear() chỉ gọi khi đã xác định được chuyển hướng thành công
+            // $this->cartManager->clear();
 
-            if ($customer) {
-                return redirect()->route('account.orders.show', $order->id)
-                    ->with('success', 'Đặt hàng thành công! Cảm ơn bạn đã mua hàng.');
+            // LOGIC MỚI: Xử lý chuyển hướng dựa trên phương thức thanh toán
+            if ($paymentMethod->code === 'cod') {
+                $this->cartManager->clear(); // Xóa giỏ hàng khi COD
+                if ($customer) {
+                    return redirect()->route('account.orders.show', $order->id)
+                        ->with('success', 'Đặt hàng thành công! Cảm ơn bạn đã mua hàng.');
+                } else {
+                    return redirect()->route('guest.order.show', $order->id)
+                        ->with('success', 'Đặt hàng thành công! Cảm ơn bạn đã mua hàng. Vui lòng ghi lại **Mã đơn hàng: #' . $order->id . '** và email/số điện thoại bạn đã dùng để tra cứu sau này.');
+                }
+            } else if ($paymentMethod->code === 'momo') {
+                $this->cartManager->clear(); // Xóa giỏ hàng khi chuyển hướng đến Momo
+                // Chuyển hướng đến controller Momo để khởi tạo thanh toán
+                return redirect()->route('payment.momo.initiate', ['order_id' => $order->id]);
+            }
+            // else if ($paymentMethod->code === 'vnpay') {
+            //     $this->cartManager->clear(); // Xóa giỏ hàng khi chuyển hướng đến Vnpay
+            //     return redirect()->route('payment.vnpay.initiate', ['order_id' => $order->id]);
+            // }
+            else if ($paymentMethod->code === 'bank_transfer') {
+                $this->cartManager->clear(); // Xóa giỏ hàng khi chuyển hướng đến trang hướng dẫn chuyển khoản
+                return redirect()->route('payment.bank_transfer.details', ['order_id' => $order->id])
+                    ->with('info', 'Vui lòng chuyển khoản với nội dung đơn hàng để hoàn tất thanh toán.');
             } else {
-                return redirect()->route('guest.order.show', $order->id)
-                    ->with('success', 'Đặt hàng thành công! Cảm ơn bạn đã mua hàng. Vui lòng ghi lại **Mã đơn hàng: #' . $order->id . '** và email/số điện thoại bạn đã dùng để tra cứu sau này.');
+                // Nếu đến đây, có nghĩa là paymentMethod->code không khớp với bất kỳ case nào
+                // Đây là nơi lỗi của bạn đang xảy ra
+                DB::rollBack(); // Hoàn tác đơn hàng nếu không xử lý được
+                Log::error('Phương thức thanh toán này hiện không khả dụng hoặc chưa tích hợp: ' . $paymentMethod->code . ' - Order ID: ' . $order->id);
+                return back()->with('error', 'Phương thức thanh toán này hiện không khả dụng. Vui lòng chọn phương thức khác.')->withInput();
             }
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Lỗi khi đặt hàng: ' . $e->getMessage());
+            Log::error('Lỗi khi đặt hàng: ' . $e->getMessage() . ' - File: ' . $e->getFile() . ' - Line: ' . $e->getLine());
+            // Giỏ hàng không bị xóa nếu có lỗi trước khi commit DB
             return back()->with('error', 'Đã có lỗi xảy ra trong quá trình đặt hàng. Vui lòng thử lại.')->withInput();
         }
     }
@@ -179,7 +204,7 @@ class CheckoutController extends Controller
             return redirect()->route('guest.order.lookup')->with('error', 'Đơn hàng này không phải của khách vãng lai hoặc yêu cầu đăng nhập để xem.');
         }
 
-        $order->load(['items.product.images', 'deliveryService', 'promotion', 'province', 'district', 'ward']);
+        $order->load(['items.product.images', 'deliveryService', 'promotion', 'province', 'district', 'ward', 'paymentMethod']);
 
         return view('customer.checkout.guest_order_confirmation', compact('order'));
     }
@@ -222,9 +247,8 @@ class CheckoutController extends Controller
     public function cancelOrder(Request $request, Order $order)
     {
         $customer = Auth::guard('customer')->user();
-        $oldStatus = $order->status; // Lấy trạng thái cũ trước khi thay đổi
+        $oldStatus = $order->status;
 
-        // 1. Xác thực quyền hủy đơn hàng
         $isGuest = ($order->customer_id === null);
 
         if ($customer) {
@@ -252,35 +276,30 @@ class CheckoutController extends Controller
             return back()->with('error', 'Không thể xác định quyền hủy đơn hàng.');
         }
 
-        // 2. Kiểm tra trạng thái đơn hàng có cho phép hủy không
         if (!$order->isCancellable()) {
             return back()->with('error', 'Đơn hàng này không thể hủy vì đã được xử lý hoặc hoàn thành.');
         }
 
         DB::beginTransaction();
         try {
-            // 3. Cập nhật trạng thái đơn hàng thành 'cancelled'
             $order->status = Order::STATUS_CANCELLED;
             $order->save();
 
-            // SỬA ĐỔI: Chỉ hoàn trả số lượng sản phẩm vào kho nếu trạng thái cũ là ĐÃ DUYỆT
             if ($oldStatus === Order::STATUS_APPROVED) {
-                $order->load('items.product'); // Tải lại items.product để đảm bảo dữ liệu mới nhất
+                $order->load('items.product');
                 foreach ($order->items as $item) {
                     $product = Product::find($item->product_id);
                     if ($product) {
                         $product->increment('stock_quantity', $item->quantity);
                     }
                 }
-                // SỬA ĐỔI: Giảm số lượt sử dụng của mã giảm giá (nếu có)
                 if ($order->promotion_id) {
                     $promotion = Promotion::find($order->promotion_id);
-                    if ($promotion && $promotion->uses_count > 0) { // Đảm bảo uses_count không âm
+                    if ($promotion && $promotion->uses_count > 0) {
                         $promotion->decrement('uses_count');
                     }
                 }
             }
-
 
             DB::commit();
 

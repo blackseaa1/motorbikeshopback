@@ -24,7 +24,16 @@
 
         // Format numbers to Vietnamese locale
         elements.subtotal.textContent = `${Number(data.subtotal || 0).toLocaleString('vi-VN')} ₫`;
-        elements.shippingFee.textContent = `${Number(data.shipping_fee || 0).toLocaleString('vi-VN')} ₫`;
+
+        // ĐÃ SỬA ĐỔI: Hiển thị "Miễn phí vận chuyển" nếu phí là 0, ngược lại hiển thị số tiền
+        if (Number(data.shipping_fee || 0) === 0) {
+            elements.shippingFee.textContent = `Miễn phí vận chuyển`;
+            elements.shippingFee.classList.add('text-success'); // Thêm class để đổi màu xanh như Miễn phí
+        } else {
+            elements.shippingFee.textContent = `${Number(data.shipping_fee || 0).toLocaleString('vi-VN')} ₫`;
+            elements.shippingFee.classList.remove('text-success'); // Đảm bảo bỏ class nếu có phí
+        }
+
         elements.discount.textContent = `-${Number(data.discount_amount || 0).toLocaleString('vi-VN')} ₫`;
         elements.grandTotal.textContent = `${Number(data.grand_total || 0).toLocaleString('vi-VN')} ₫`;
 
