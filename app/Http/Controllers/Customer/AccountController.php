@@ -3,134 +3,164 @@
 namespace App\Http\Controllers\Customer;
 
 use App\Http\Controllers\Controller;
+use App\Models\CustomerAddress;
+use App\Models\CustomerSavedPaymentMethod;
 use App\Models\Order;
+use App\Models\PaymentMethod; // Thêm import cho PaymentMethod
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Validation\Rules\Password;
+use Illuminate\Validation\Rule;
 
 class AccountController extends Controller
 {
     /**
-     * Hiển thị trang hồ sơ chính của người dùng.
+     * Display a listing of the resource.
      */
-    public function profile()
+    public function index()
+    {
+        return view('customer.account.index');
+    }
+
+    /**
+     * Show the account info form.
+     */
+    public function showAccountInfo()
     {
         $customer = Auth::guard('customer')->user();
         return view('customer.account.info', compact('customer'));
     }
 
     /**
-     * Hiển thị lịch sử đơn hàng của người dùng.
+     * Update account info.
      */
-    public function orders()
+    public function updateAccountInfo(Request $request)
     {
         $customer = Auth::guard('customer')->user();
-        $orders = Order::where('customer_id', $customer->id)->latest()->paginate(10);
-        return view('customer.account.orders_index', compact('customer', 'orders'));
+
+        $validatedData = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'phone' => ['nullable', 'string', 'max:20', Rule::unique('customers')->ignore($customer->id)],
+            'email' => ['required', 'string', 'email', 'max:255', Rule::unique('customers')->ignore($customer->id)],
+        ]);
+
+        $customer->update($validatedData);
+
+        return back()->with('success', 'Cập nhật thông tin tài khoản thành công!');
     }
 
     /**
-     * Hiển thị chi tiết một đơn hàng.
-     */ public function showOrder(Order $order)
+     * Change password.
+     */
+    public function changePassword(Request $request)
     {
-        // Đảm bảo đơn hàng thuộc về người dùng đang đăng nhập
-        if ($order->customer_id !== Auth::guard('customer')->id()) {
-            abort(403); // Hoặc chuyển hướng với lỗi
+        $customer = Auth::guard('customer')->user();
+
+        $validatedData = $request->validate([
+            'current_password' => ['required', 'current_password:customer'],
+            'password' => ['required', 'confirmed', 'min:8'],
+        ]);
+
+        $customer->update(['password' => bcrypt($validatedData['password'])]);
+
+        return back()->with('success', 'Đổi mật khẩu thành công!');
+    }
+
+    /**
+     * SỬA ĐỔI: Hiển thị danh sách đơn hàng của khách hàng với tìm kiếm, lọc, sắp xếp.
+     *
+     * @param \Illuminate\Http\Request $request
+     * @return \Illuminate\View\View
+     */
+    public function showOrdersIndex(Request $request)
+    {
+        /** @var \App\Models\Customer $customer */
+        $customer = Auth::guard('customer')->user();
+
+        $query = $customer->orders()->with(['paymentMethod', 'deliveryService']);
+
+        // Tìm kiếm theo ID đơn hàng hoặc tên sản phẩm
+        if ($search = $request->input('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('id', 'like', '%' . $search . '%') // Tìm kiếm theo ID đơn hàng
+                    ->orWhereHas('items.product', function ($p) use ($search) { // Tìm kiếm theo tên sản phẩm trong đơn hàng
+                        $p->where('name', 'like', '%' . $search . '%');
+                    });
+            });
         }
 
-        // Tải các quan hệ cần thiết cho việc tính toán accessor và hiển thị
-        $order->load(['items.product.images', 'deliveryService', 'promotion', 'province', 'district', 'ward']);
+        // Lọc theo trạng thái đơn hàng
+        if ($statusFilter = $request->input('status_filter')) {
+            if ($statusFilter !== 'all') {
+                $query->where('status', $statusFilter);
+            }
+        }
+
+        // Sắp xếp đơn hàng
+        $sortBy = $request->input('sort_by', 'created_at_desc'); // Mặc định sắp xếp theo ngày tạo giảm dần
+        switch ($sortBy) {
+            case 'created_at_asc':
+                $query->orderBy('created_at', 'asc');
+                break;
+            case 'total_price_desc':
+                $query->orderBy('total_price', 'desc');
+                break;
+            case 'total_price_asc':
+                $query->orderBy('total_price', 'asc');
+                break;
+            case 'status_asc': // Sắp xếp theo bảng chữ cái của trạng thái
+                $query->orderBy('status', 'asc');
+                break;
+            case 'status_desc': // Sắp xếp theo bảng chữ cái của trạng thái
+                $query->orderBy('status', 'desc');
+                break;
+            default: // created_at_desc
+                $query->orderBy('created_at', 'desc');
+                break;
+        }
+
+        $orders = $query->paginate(10)->withQueryString(); // Phân trang và giữ lại query string
+
+        // Truyền các giá trị đã chọn ra view để giữ trạng thái trên form
+        $selectedFilters = [
+            'search' => $search,
+            'status_filter' => $statusFilter,
+            'sort_by' => $sortBy,
+        ];
+
+        // Lấy danh sách các trạng thái để hiển thị trong bộ lọc
+        $orderStatuses = Order::STATUSES;
+
+        return view('customer.account.orders_index', compact('orders', 'selectedFilters', 'orderStatuses'));
+    }
+
+    /**
+     * SỬA ĐỔI: Hiển thị chi tiết một đơn hàng của khách hàng.
+     *
+     * @param \App\Models\Order $order
+     * @return \Illuminate\View\View|\Illuminate\Http\RedirectResponse
+     */
+    public function showOrdersShow(Order $order)
+    {
+        // Đảm bảo người dùng hiện tại có quyền xem đơn hàng này
+        if (Auth::guard('customer')->id() !== $order->customer_id) {
+            abort(403, 'Bạn không có quyền truy cập đơn hàng này.');
+        }
+
+        // Tải các mối quan hệ cần thiết để hiển thị chi tiết
+        $order->load(['items.product.images', 'deliveryService', 'promotion', 'province', 'district', 'ward', 'paymentMethod']);
 
         return view('customer.account.orders_show', compact('order'));
     }
 
     /**
-     * Hiển thị địa chỉ của người dùng (tạm thời ẩn).
+     * Show the saved payment methods list.
      */
-    public function addresses()
+    public function showSavedPaymentMethodsIndex()
     {
-        return redirect()->route('account.profile');
-    }
-
-    /**
-     * Cập nhật thông tin hồ sơ của khách hàng.
-     */
-    public function updateProfile(Request $request)
-    {
-        /** @var \App\Models\Customer $customer */
         $customer = Auth::guard('customer')->user();
+        $savedPaymentMethods = $customer->savedPaymentMethods()->with('paymentMethod')->get();
+        $paymentMethods = PaymentMethod::where('status', PaymentMethod::STATUS_ACTIVE)->get();
 
-        $validatedData = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'phone' => ['nullable', 'string', 'regex:/^([0-9\s\-\+\(\)]*)$/', 'min:10', 'max:20'],
-        ]);
-
-        $customer->update($validatedData);
-
-        return response()->json(['message' => 'Cập nhật thông tin thành công!']);
-    }
-
-    /**
-     * Cập nhật mật khẩu của khách hàng.
-     */
-    public function updatePassword(Request $request)
-    {
-        /** @var \App\Models\Customer $customer */
-        $customer = Auth::guard('customer')->user();
-
-        $request->validate([
-            'current_password' => ['required', function ($attribute, $value, $fail) use ($customer) {
-                if (!Hash::check($value, $customer->password)) {
-                    $fail('Mật khẩu hiện tại không chính xác.');
-                }
-            }],
-            'password' => [
-                'required',
-                'string',
-                'confirmed', // Kiểm tra trùng khớp với password_confirmation
-                // Quy tắc độ mạnh mật khẩu
-                Password::min(8)
-                    ->mixedCase()
-                    ->numbers()
-                    ->symbols()
-            ],
-        ]);
-
-        $customer->update([
-            'password' => Hash::make($request->password)
-        ]);
-
-        return response()->json(['message' => 'Đổi mật khẩu thành công!']);
-    }
-
-    /**
-     * Cập nhật ảnh đại diện của khách hàng.
-     */
-    public function updateAvatar(Request $request)
-    {
-        $request->validate([
-            'avatar' => ['required', 'image', 'mimes:jpg,jpeg,png', 'max:2048'],
-        ]);
-
-        /** @var \App\Models\Customer $customer */
-        $customer = Auth::guard('customer')->user();
-
-        // Xóa avatar cũ nếu có
-        if ($customer->img && Storage::disk('public')->exists($customer->img)) {
-            Storage::disk('public')->delete($customer->img);
-        }
-
-        $path = $request->file('avatar')->store('avatars/customers', 'public');
-
-        // Cập nhật vào cột 'img' để khớp với database
-        $customer->img = $path;
-        $customer->save();
-
-        return response()->json([
-            'message' => 'Cập nhật ảnh đại diện thành công!',
-            'avatar_url' => Storage::url($path)
-        ]);
+        return view('customer.account.saved_payment_methods.index', compact('savedPaymentMethods', 'paymentMethods'));
     }
 }

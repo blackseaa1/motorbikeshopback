@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Number;
 use App\Models\Admin;
-use App\Models\PaymentMethod; // Đảm bảo PaymentMethod được import
+use App\Models\PaymentMethod;
 
 class Order extends Model
 {
@@ -71,7 +71,8 @@ class Order extends Model
         'subtotal',
         'shipping_fee',
         'discount_amount',
-        'customer_name'
+        'customer_name',
+        'formatted_id', // THÊM DÒNG NÀY: Để tự động thêm 'formatted_id' vào đối tượng Order
     ];
 
     // Relationships
@@ -121,6 +122,14 @@ class Order extends Model
     }
 
     // Accessors for computed properties
+
+    /**
+     * SỬA ĐỔI: Accessor để định dạng ID thành 6 chữ số có số 0 ở đầu.
+     */
+    public function getFormattedIdAttribute(): string
+    {
+        return str_pad($this->id, 6, '0', STR_PAD_LEFT);
+    }
 
     public function getSubtotalAttribute(): float
     {
@@ -218,13 +227,8 @@ class Order extends Model
         ]);
     }
 
-    /**
-     * SỬA ĐỔI: Kiểm tra xem đơn hàng có thể thanh toán lại không.
-     * Chỉ cho phép các đơn hàng PENDING, FAILED, CANCELLED và phương thức là Momo/Vnpay.
-     */
     public function isRetriable(): bool
     {
-        // Tải mối quan hệ paymentMethod nếu chưa được tải
         if (!$this->relationLoaded('paymentMethod')) {
             $this->load('paymentMethod');
         }
@@ -237,7 +241,7 @@ class Order extends Model
 
         $isOnlinePayment = false;
         if ($this->paymentMethod) {
-            $onlinePaymentMethods = ['momo', 'vnpay']; // Các mã phương thức thanh toán online
+            $onlinePaymentMethods = ['momo', 'vnpay'];
             $isOnlinePayment = in_array($this->paymentMethod->code, $onlinePaymentMethods);
         }
 

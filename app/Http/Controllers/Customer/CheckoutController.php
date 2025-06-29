@@ -19,6 +19,8 @@ use App\Models\Product;
 use App\Models\PaymentMethod;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\OrderConfirmation;
 
 class CheckoutController extends Controller
 {
@@ -104,18 +106,16 @@ class CheckoutController extends Controller
             $deliveryServiceId = $validatedData['delivery_service_id'];
 
             $subtotal = $cartDetails['subtotal'];
-            $shippingFee = 0; // Phí vận chuyển luôn là 0
+            $shippingFee = 0;
             $discountAmount = $cartDetails['discount_amount'];
             $totalPrice = $subtotal + $shippingFee - $discountAmount;
 
-            // Lấy thông tin phương thức thanh toán
             $paymentMethod = PaymentMethod::find($validatedData['payment_method_id']);
             if (!$paymentMethod) {
                 DB::rollBack();
                 return back()->with('error', 'Phương thức thanh toán không hợp lệ.')->withInput();
             }
 
-            // Xác định trạng thái ban đầu của đơn hàng
             $initialStatus = Order::STATUS_PENDING;
 
             $order = Order::create([
@@ -139,43 +139,50 @@ class CheckoutController extends Controller
                 'created_by_admin_id' => null,
             ]);
 
+            foreach ($cartDetails['items'] as $item) {
+                $order->items()->create([
+                    'product_id' => $item->product_id,
+                    'quantity' => $item->quantity,
+                    'price' => $item->product->price,
+                ]);
+            }
+
             DB::commit();
 
-            // DI CHUYỂN DÒNG NÀY: cartManager->clear() chỉ gọi khi đã xác định được chuyển hướng thành công
-            // $this->cartManager->clear();
+            $this->cartManager->clear();
 
-            // LOGIC MỚI: Xử lý chuyển hướng dựa trên phương thức thanh toán
-            if ($paymentMethod->code === 'cod') {
-                $this->cartManager->clear(); // Xóa giỏ hàng khi COD
-                if ($customer) {
-                    return redirect()->route('account.orders.show', $order->id)
-                        ->with('success', 'Đặt hàng thành công! Cảm ơn bạn đã mua hàng.');
+            // Gửi email xác nhận đơn hàng sau khi tạo thành công
+            try {
+                $customerEmail = $customer->email ?? $shippingAddressInfo['email'];
+                if ($customerEmail) {
+                    Mail::to($customerEmail)->send(new OrderConfirmation($order));
+                    Log::info('Order confirmation email sent to: ' . $customerEmail . ' for order #' . $order->id);
                 } else {
-                    return redirect()->route('guest.order.show', $order->id)
-                        ->with('success', 'Đặt hàng thành công! Cảm ơn bạn đã mua hàng. Vui lòng ghi lại **Mã đơn hàng: #' . $order->id . '** và email/số điện thoại bạn đã dùng để tra cứu sau này.');
+                    Log::warning('No email address found for order #' . $order->id . ' to send confirmation.');
                 }
+            } catch (\Exception $e) {
+                Log::error('Failed to send order confirmation email for order #' . $order->id . ': ' . $e->getMessage());
+            }
+
+            // Logic chuyển hướng dựa trên phương thức thanh toán
+            if ($paymentMethod->code === 'cod') {
+                return redirect()->route($customer ? 'account.orders.show' : 'guest.order.show', $order->id)
+                    ->with('success', 'Đặt hàng thành công! Cảm ơn bạn đã mua hàng. Đơn hàng sẽ được xử lý khi nhận hàng.');
             } else if ($paymentMethod->code === 'momo') {
-                $this->cartManager->clear(); // Xóa giỏ hàng khi chuyển hướng đến Momo
-                // Chuyển hướng đến controller Momo để khởi tạo thanh toán
                 return redirect()->route('payment.momo.initiate', ['order_id' => $order->id]);
             } else if ($paymentMethod->code === 'vnpay') {
-                $this->cartManager->clear(); // Xóa giỏ hàng khi chuyển hướng đến Vnpay
                 return redirect()->route('payment.vnpay.initiate', ['order_id' => $order->id]);
             } else if ($paymentMethod->code === 'bank_transfer') {
-                $this->cartManager->clear(); // Xóa giỏ hàng khi chuyển hướng đến trang hướng dẫn chuyển khoản
                 return redirect()->route('payment.bank_transfer.details', ['order_id' => $order->id])
-                    ->with('info', 'Vui lòng chuyển khoản với nội dung đơn hàng để hoàn tất thanh toán.');
+                    ->with('info', 'Đặt hàng thành công! Vui lòng chuyển khoản với nội dung đơn hàng để hoàn tất thanh toán.');
             } else {
-                // Nếu đến đây, có nghĩa là paymentMethod->code không khớp với bất kỳ case nào
-                // Đây là nơi lỗi của bạn đang xảy ra
-                DB::rollBack(); // Hoàn tác đơn hàng nếu không xử lý được
+                DB::rollBack();
                 Log::error('Phương thức thanh toán này hiện không khả dụng hoặc chưa tích hợp: ' . $paymentMethod->code . ' - Order ID: ' . $order->id);
                 return back()->with('error', 'Phương thức thanh toán này hiện không khả dụng. Vui lòng chọn phương thức khác.')->withInput();
             }
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Lỗi khi đặt hàng: ' . $e->getMessage() . ' - File: ' . $e->getFile() . ' - Line: ' . $e->getLine());
-            // Giỏ hàng không bị xóa nếu có lỗi trước khi commit DB
             return back()->with('error', 'Đã có lỗi xảy ra trong quá trình đặt hàng. Vui lòng thử lại.')->withInput();
         }
     }
@@ -185,6 +192,9 @@ class CheckoutController extends Controller
      */
     public function showGuestOrder(Order $order)
     {
+        // Logic truy cập cho khách vãng lai sẽ được điều chỉnh để kiểm tra số điện thoại
+        // hoặc email nếu khách hàng đến từ trang tra cứu.
+        // Hiện tại, chỉ kiểm tra xem nó có phải đơn hàng khách vãng lai không.
         if ($order->customer_id !== null) {
             return redirect()->route('guest.order.lookup')->with('error', 'Đơn hàng này không phải của khách vãng lai hoặc yêu cầu đăng nhập để xem.');
         }
@@ -199,32 +209,95 @@ class CheckoutController extends Controller
         return view('customer.checkout.guest_order_lookup');
     }
 
+    /**
+     * SỬA ĐỔI: Xử lý tra cứu đơn hàng của khách vãng lai.
+     * Sẽ tìm kiếm và hiển thị danh sách đơn hàng tương tự như khách có tài khoản.
+     *
+     * @param \Illuminate\Http\Request $request
+     * @return \Illuminate\View\View|\Illuminate\Http\RedirectResponse
+     */
     public function lookupGuestOrder(Request $request)
     {
-        $request->validate([
-            'order_id' => ['required', 'string'],
-            'guest_contact' => ['required', 'string'],
-        ]);
+        // Validate guest_phone only on initial POST request for lookup
+        $validationRules = ['guest_phone' => ['required', 'string', 'max:255']];
 
-        $orderId = trim($request->input('order_id'));
-        $guestContact = trim($request->input('guest_contact'));
-
-        $order = Order::find($orderId);
-
-        if (!$order) {
-            return back()->with('error', 'Mã đơn hàng không tồn tại. Vui lòng kiểm tra lại.')->withInput();
+        // If it's a GET request (after filters are applied), validate only if guest_phone is present
+        // Otherwise, it means user is trying to apply filters on an already looked up list
+        if ($request->isMethod('GET') && !$request->has('guest_phone')) {
+            // If it's a GET request and guest_phone is NOT present, it's an invalid lookup attempt without initial contact
+            // Or it's a direct visit to the list page without lookup, which is not allowed.
+            return redirect()->route('guest.order.lookup')->with('error', 'Vui lòng nhập số điện thoại hoặc email để tra cứu đơn hàng.');
         }
 
-        $isGuestOrder = ($order->customer_id === null);
-        $contactMatches = ($order->guest_email === $guestContact || $order->guest_phone === $guestContact);
+        // If it's a POST, validate and store in session. If it's a GET with guest_phone, use it.
+        $guestContact = $request->isMethod('POST')
+            ? trim($request->validate($validationRules)['guest_phone'])
+            : trim($request->input('guest_phone'));
 
-        if ($isGuestOrder && $contactMatches) {
-            return redirect()->route('guest.order.show', $order->id)
-                ->with('success', 'Tìm thấy đơn hàng của bạn.');
-        } else {
-            return back()->with('error', 'Thông tin tra cứu không hợp lệ. Vui lòng kiểm tra mã đơn hàng và email/số điện thoại đã dùng khi đặt hàng.')->withInput();
+        // Store guestContact in session to persist across pagination/filters
+        $request->session()->flash('guest_contact', $guestContact);
+
+
+        $query = Order::whereNull('customer_id') // Đảm bảo là đơn hàng của khách vãng lai
+            ->where(function ($q) use ($guestContact) {
+                $q->where('guest_phone', $guestContact)
+                    ->orWhere('guest_email', $guestContact);
+            });
+
+        // Áp dụng tìm kiếm, lọc, sắp xếp (tương tự như AccountController)
+        if ($search = $request->input('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('id', 'like', '%' . $search . '%') // Tìm kiếm theo ID đơn hàng
+                    ->orWhereHas('items.product', function ($p) use ($search) { // Tìm kiếm theo tên sản phẩm trong đơn hàng
+                        $p->where('name', 'like', '%' . $search . '%');
+                    });
+            });
         }
+
+        if ($statusFilter = $request->input('status_filter')) {
+            if ($statusFilter !== 'all') {
+                $query->where('status', $statusFilter);
+            }
+        }
+
+        $sortBy = $request->input('sort_by', 'created_at_desc');
+        switch ($sortBy) {
+            case 'created_at_asc':
+                $query->orderBy('created_at', 'asc');
+                break;
+            case 'total_price_desc':
+                $query->orderBy('total_price', 'desc');
+                break;
+            case 'total_price_asc':
+                $query->orderBy('total_price', 'asc');
+                break;
+            case 'status_asc':
+                $query->orderBy('status', 'asc');
+                break;
+            case 'status_desc':
+                $query->orderBy('status', 'desc');
+                break;
+            default:
+                $query->orderBy('created_at', 'desc');
+                break;
+        }
+
+        $orders = $query->paginate(10)->withQueryString(); // Phân trang
+
+        // Truyền các giá trị đã chọn ra view để giữ trạng thái trên form
+        $selectedFilters = [
+            'search' => $search,
+            'status_filter' => $statusFilter,
+            'sort_by' => $sortBy,
+            'guest_phone' => $guestContact, // Đảm bảo truyền lại contact đã tra cứu
+        ];
+
+        $orderStatuses = Order::STATUSES;
+
+        // SỬA ĐỔI: Trả về view guest_order_list
+        return view('customer.checkout.guest_order_list', compact('orders', 'selectedFilters', 'orderStatuses'));
     }
+    // ... (Toàn bộ phần còn lại của file giữ nguyên không thay đổi) ...
 
     /**
      * Xử lý yêu cầu hủy đơn hàng.
@@ -292,7 +365,7 @@ class CheckoutController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Lỗi khi hủy đơn hàng: ' . $e->getMessage() . ' - Order ID: ' . $order->id);
-            return back()->with('error', 'Đã xảy ra lỗi khi hủy đơn hàng. Vui lòng thử lại.')->withInput();
+            return back()->with('error', 'Đã có lỗi xảy ra trong quá trình đặt hàng. Vui lòng thử lại.')->withInput();
         }
     }
 
@@ -306,7 +379,7 @@ class CheckoutController extends Controller
             $addressInfo = [
                 'name' => $address->full_name,
                 'email' => $customer->email,
-                'phone' => $address->phone,
+                'phone' => $customer->phone,
                 'province_id' => $address->province_id,
                 'district_id' => $address->district_id,
                 'ward_id' => $address->ward_id,

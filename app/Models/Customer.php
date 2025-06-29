@@ -1,60 +1,68 @@
 <?php
-// app/Models/Customer.php
 
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
-use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Foundation\Auth\User as Authenticatable; // Import Authenticatable
 use Illuminate\Notifications\Notifiable;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Database\Eloquent\Relations\MorphMany; // SỬA ĐỔI 1: Thêm use MorphMany
+use Illuminate\Database\Eloquent\Relations\HasMany; // Import HasMany
+use Illuminate\Database\Eloquent\Relations\HasOne; // Đảm bảo HasOne cũng được import nếu chưa có
+use Illuminate\Database\Eloquent\SoftDeletes; // Đảm bảo SoftDeletes cũng được import nếu chưa có
+use Illuminate\Support\Facades\Storage; // Đảm bảo Storage cũng được import nếu chưa có
+use Illuminate\Database\Eloquent\Relations\MorphMany; // Đảm bảo MorphMany cũng được import nếu chưa có
 
-/**
- * Class Customer
- *
- * Đại diện cho một tài khoản khách hàng trong hệ thống.
- * Kế thừa từ Authenticatable để có thể sử dụng các tính năng đăng nhập.
- * Sử dụng SoftDeletes để hỗ trợ chức năng "Thùng rác".
- *
- * @package App\Models
- */
-class Customer extends Authenticatable
+class Customer extends Authenticatable // Kế thừa Authenticatable
 {
-    use HasFactory, Notifiable, SoftDeletes;
+    use HasFactory, Notifiable, SoftDeletes; // Đảm bảo SoftDeletes được sử dụng nếu bạn muốn nó
 
     protected $table = 'customers';
-    const STATUS_ACTIVE = 'active';
-    const STATUS_SUSPENDED = 'suspended';
+    const STATUS_ACTIVE = 'active'; // Giữ các hằng số trạng thái nếu bạn có
+    const STATUS_SUSPENDED = 'suspended'; // Giữ các hằng số trạng thái nếu bạn có
 
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var array<int, string>
+     */
     protected $fillable = [
         'name',
         'email',
         'password',
         'phone',
-        'img',
-        'status',
-        'password_change_required',
+        'img', // Nếu bạn có trường này
+        'status', // Nếu bạn có trường này
+        'password_change_required', // Nếu bạn có trường này
     ];
 
+    /**
+     * The attributes that should be hidden for serialization.
+     *
+     * @var array<int, string>
+     */
     protected $hidden = [
         'password',
         'remember_token',
     ];
 
+    /**
+     * The attributes that should be cast.
+     *
+     * @var array<string, string>
+     */
     protected $casts = [
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
-        'password_change_required' => 'boolean',
+        'phone_verified_at' => 'datetime', // Nếu bạn có trường này
+        'password_change_required' => 'boolean', // Nếu bạn có trường này
     ];
 
+    // Accessors (Nếu bạn có các accessors này, hãy giữ chúng)
     protected $appends = [
-        'avatar_url',
-        'status_text',
-        'status_badge_class',
-        'is_active',
+        'avatar_url', // Nếu bạn có accessor này
+        'status_text', // Nếu bạn có accessor này
+        'status_badge_class', // Nếu bạn có accessor này
+        'is_active', // Nếu bạn có accessor này
     ];
 
     public function getAvatarUrlAttribute(): string
@@ -85,45 +93,55 @@ class Customer extends Authenticatable
         return $this->isActive() ? 'bg-success' : 'bg-danger';
     }
 
+
     /*
     |--------------------------------------------------------------------------
     | Mối quan hệ (Relationships)
     |--------------------------------------------------------------------------
     */
+
+    /**
+     * Một khách hàng có nhiều địa chỉ.
+     */
     public function addresses(): HasMany
     {
-        return $this->hasMany(CustomerAddress::class)->orderByDesc('is_default');
+        return $this->hasMany(CustomerAddress::class, 'customer_id')->orderByDesc('is_default');
     }
 
     /**
-     * Lấy địa chỉ mặc định của khách hàng.
+     * Một khách hàng có thể có nhiều phương thức thanh toán đã lưu.
      */
-    public function defaultAddress(): HasOne
+    public function savedPaymentMethods(): HasMany
     {
-        return $this->hasOne(CustomerAddress::class)->where('is_default', true);
-    }
-    public function orders(): HasMany
-    {
-        return $this->hasMany(Order::class);
+        return $this->hasMany(CustomerSavedPaymentMethod::class, 'customer_id');
     }
 
-    public function reviews(): HasMany
-    {
-        // Giả sử bạn sẽ có model Review
-        // return $this->hasMany(Review::class);
-        return $this->hasMany('App\Models\Review');
-    }
-
+    /**
+     * Một khách hàng có thể có một giỏ hàng.
+     */
     public function cart(): HasOne
     {
-        return $this->hasOne(Cart::class);
+        return $this->hasOne(Cart::class, 'customer_id');
     }
 
     /**
-     * SỬA ĐỔI 2: Chuyển quan hệ sang đa hình (Polymorphic).
-     * Một khách hàng có thể là tác giả của nhiều bài viết.
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\MorphMany
+     * SỬA ĐỔI: Một khách hàng có thể có nhiều đơn hàng.
+     */
+    public function orders(): HasMany
+    {
+        return $this->hasMany(Order::class, 'customer_id');
+    }
+
+    /**
+     * Mối quan hệ với Review (Nếu bạn có model Review)
+     */
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(Review::class, 'customer_id');
+    }
+
+    /**
+     * Mối quan hệ đa hình với BlogPost (Nếu bạn có cấu trúc này)
      */
     public function blogPosts(): MorphMany
     {

@@ -81,12 +81,40 @@ Route::middleware(['web'])->group(function () {
         Route::get('/{blogPost}', 'show')->name('show');
     });
 
-    // --- TRA CỨU ĐƠN HÀNG CỦA KHÁCH VÃNG LAI ---
-    Route::controller(CheckoutController::class)->group(function () {
-        Route::get('/guest/order-lookup', 'showOrderLookupForm')->name('guest.order.lookup');
-        Route::post('/guest/order-lookup', 'lookupGuestOrder')->name('guest.order.lookup.post');
-        Route::get('/guest/orders/{order}', 'showGuestOrder')->name('guest.order.show');
-        Route::post('/guest/orders/{order}/cancel', 'cancelOrder')->name('guest.order.cancel');
+    /*
+|--------------------------------------------------------------------------
+| Guest Order Routes
+|--------------------------------------------------------------------------
+*/
+    // Tuyến đường cho khách vãng lai xem đơn hàng
+    Route::get('/guest/order-lookup', [CheckoutController::class, 'showOrderLookupForm'])->name('guest.order.lookup');
+    Route::post('/guest/order-lookup', [CheckoutController::class, 'lookupGuestOrder']);
+    // SỬA ĐỔI: Route guest.order.lookup sẽ xử lý cả POST và GET cho việc tìm kiếm và lọc
+    // Xóa Route::get('/guest/orders-list', ...) nếu nó đã tồn tại
+    // Route::get('/guest/orders-list', function () {
+    //     return redirect()->route('guest.order.lookup');
+    // })->name('guest.order.list');
+
+    Route::get('/guest/orders/{order}', [CheckoutController::class, 'showGuestOrder'])->name('guest.order.show');
+    Route::post('/guest/orders/{order}/cancel', [CheckoutController::class, 'cancelOrder'])->name('guest.order.cancel');
+
+    /*
+|--------------------------------------------------------------------------
+| Payment Gateway Routes
+|--------------------------------------------------------------------------
+*/
+    // Các tuyến đường liên quan đến cổng thanh toán
+    Route::prefix('payment')->name('payment.')->group(function () {
+        Route::get('/momo/initiate/{order_id}', [PaymentController::class, 'initiateMomoPayment'])->name('momo.initiate');
+        Route::get('/momo/callback', [PaymentController::class, 'handleMomoCallback'])->name('momo.callback');
+        Route::post('/momo/ipn', [PaymentController::class, 'handleMomoIpn'])->name('momo.ipn');
+
+        // THÊM ROUTES CHO VNPAY
+        Route::get('/vnpay/initiate/{order_id}', [PaymentController::class, 'initiateVnpayPayment'])->name('vnpay.initiate');
+        Route::get('/vnpay/callback', [PaymentController::class, 'handleVnpayCallback'])->name('vnpay.callback'); // GET method cho callback
+        Route::post('/vnpay/ipn', [PaymentController::class, 'handleVnpayIpn'])->name('vnpay.ipn'); // POST method cho IPN
+
+        Route::get('/bank-transfer/details/{order_id}', [PaymentController::class, 'showBankTransferDetails'])->name('bank_transfer.details');
     });
 
 
@@ -121,14 +149,14 @@ Route::middleware(['web'])->group(function () {
     Route::middleware(['auth:customer', 'check.user.status:customer'])->group(function () {
         // --- Quản lý tài khoản ---
         Route::prefix('account')->name('account.')->group(function () {
-            Route::get('/', [AccountController::class, 'profile'])->name('profile');
+            Route::get('/', [AccountController::class, 'showAccountInfo'])->name('profile');
             Route::post('/update-profile', [AccountController::class, 'updateInfo'])->name('updateProfile');
             Route::post('/update-password', [AccountController::class, 'updatePassword'])->name('updatePassword');
             Route::post('/update-avatar', [AccountController::class, 'updateAvatar'])->name('updateAvatar');
 
             // Đơn hàng
-            Route::get('/orders', [AccountController::class, 'orders'])->name('orders.index');
-            Route::get('/orders/{order}', [AccountController::class, 'showOrder'])->name('orders.show');
+            Route::get('/orders', [AccountController::class, 'showOrdersIndex'])->name('orders.index'); // ĐÃ SỬA
+            Route::get('/orders/{order}', [AccountController::class, 'showOrdersShow'])->name('orders.show');
             Route::post('/orders/{order}/cancel', [CheckoutController::class, 'cancelOrder'])->name('orders.cancel');
 
             // Sổ địa chỉ
@@ -323,22 +351,4 @@ Route::prefix('api')->name('api.')->group(function () {
         // API để lấy danh sách sản phẩm (có lọc, phân trang) cho front-end
         Route::get('/products', [CustomerShopController::class, 'getProductsApi'])->name('products.index');
     });
-});
-/*
-|--------------------------------------------------------------------------
-| Payment Gateway Routes
-|--------------------------------------------------------------------------
-*/
-// Các tuyến đường liên quan đến cổng thanh toán
-Route::prefix('payment')->name('payment.')->group(function () {
-    Route::get('/momo/initiate/{order_id}', [PaymentController::class, 'initiateMomoPayment'])->name('momo.initiate');
-    Route::get('/momo/callback', [PaymentController::class, 'handleMomoCallback'])->name('momo.callback');
-    Route::post('/momo/ipn', [PaymentController::class, 'handleMomoIpn'])->name('momo.ipn');
-
-    // THÊM ROUTES CHO VNPAY
-    Route::get('/vnpay/initiate/{order_id}', [PaymentController::class, 'initiateVnpayPayment'])->name('vnpay.initiate');
-    Route::get('/vnpay/callback', [PaymentController::class, 'handleVnpayCallback'])->name('vnpay.callback'); // GET method cho callback
-    Route::post('/vnpay/ipn', [PaymentController::class, 'handleVnpayIpn'])->name('vnpay.ipn'); // POST method cho IPN
-
-    Route::get('/bank-transfer/details/{order_id}', [PaymentController::class, 'showBankTransferDetails'])->name('bank_transfer.details');
 });
