@@ -213,7 +213,7 @@
                     throw new Error(result.message || `Lỗi HTTP: ${response.status}`);
                 }
             } catch (error) {
-                console.error(`AJAX Form Submission Error for ${formId}:`, error);
+                console.error(`AJAX Form Submission Error for ${formId}:`,error);
                 onError(error, this);
             } finally {
                 window.hideAppLoader(); // Hide loader

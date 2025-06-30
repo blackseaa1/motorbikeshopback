@@ -30,9 +30,9 @@ class Customer extends Authenticatable // Kế thừa Authenticatable
         'email',
         'password',
         'phone',
-        'img', // Nếu bạn có trường này
-        'status', // Nếu bạn có trường này
-        'password_change_required', // Nếu bạn có trường này
+        'img',
+        'status',
+        'password_change_required',
     ];
 
     /**
@@ -53,8 +53,8 @@ class Customer extends Authenticatable // Kế thừa Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
-        'phone_verified_at' => 'datetime', // Nếu bạn có trường này
-        'password_change_required' => 'boolean', // Nếu bạn có trường này
+        'phone_verified_at' => 'datetime',
+        'password_change_required' => 'boolean',
     ];
 
     // Accessors (Nếu bạn có các accessors này, hãy giữ chúng)

@@ -6,10 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Models\CustomerAddress;
 use App\Models\CustomerSavedPaymentMethod;
 use App\Models\Order;
-use App\Models\PaymentMethod; // Thêm import cho PaymentMethod
+use App\Models\PaymentMethod;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Storage; // Import Storage facade
 
 class AccountController extends Controller
 {
@@ -32,38 +33,122 @@ class AccountController extends Controller
 
     /**
      * Update account info.
+     * Phương thức này tương ứng với route 'account.updateProfile' trong info.blade.php
      */
-    public function updateAccountInfo(Request $request)
+    public function updateInfo(Request $request)
     {
         $customer = Auth::guard('customer')->user();
 
+        // Validate the request data
         $validatedData = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'phone' => ['nullable', 'string', 'max:20', Rule::unique('customers')->ignore($customer->id)],
-            'email' => ['required', 'string', 'email', 'max:255', Rule::unique('customers')->ignore($customer->id)],
+            // Email không được phép thay đổi từ frontend qua form này vì nó readonly,
+            // nên không cần validate email ở đây.
+            // Nếu bạn muốn cho phép đổi email, hãy bỏ readonly trên input và thêm validation.
         ]);
 
-        $customer->update($validatedData);
+        $customer->update([
+            'name' => $validatedData['name'],
+            'phone' => $validatedData['phone'],
+        ]);
 
-        return back()->with('success', 'Cập nhật thông tin tài khoản thành công!');
+        // Kiểm tra nếu yêu cầu là AJAX
+        if ($request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Cập nhật thông tin cá nhân thành công!',
+                'customer' => $customer // Có thể trả về thông tin khách hàng đã cập nhật
+            ]);
+        }
+
+        return back()->with('success', 'Cập nhật thông tin cá nhân thành công!');
     }
 
     /**
      * Change password.
+     * Phương thức này tương ứng với route 'account.updatePassword' trong info.blade.php
      */
-    public function changePassword(Request $request)
+    public function updatePassword(Request $request)
     {
         $customer = Auth::guard('customer')->user();
 
         $validatedData = $request->validate([
             'current_password' => ['required', 'current_password:customer'],
-            'password' => ['required', 'confirmed', 'min:8'],
+            // Thêm các quy tắc phức tạp cho mật khẩu mới
+            'password' => [
+                'required',
+                'confirmed',
+                'min:8',
+                'regex:/[a-z]/',      // Ít nhất một chữ thường
+                'regex:/[A-Z]/',      // Ít nhất một chữ hoa
+                'regex:/[0-9]/',      // Ít nhất một chữ số
+                'regex:/[^A-Za-z0-9]/', // Ít nhất một ký tự đặc biệt
+            ],
+        ], [
+            'password.regex' => 'Mật khẩu mới phải bao gồm ít nhất 8 ký tự, 1 chữ hoa, 1 chữ thường, 1 chữ số và 1 ký tự đặc biệt.',
         ]);
 
         $customer->update(['password' => bcrypt($validatedData['password'])]);
 
+        // Kiểm tra nếu yêu cầu là AJAX
+        if ($request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Đổi mật khẩu thành công!'
+            ]);
+        }
+
         return back()->with('success', 'Đổi mật khẩu thành công!');
     }
+
+    /**
+     * Update avatar.
+     * Phương thức này tương ứng với route 'account.updateAvatar' trong info.blade.php
+     */
+    public function updateAvatar(Request $request)
+    {
+        $customer = Auth::guard('customer')->user();
+
+        $request->validate([
+            'avatar' => ['required', 'image', 'mimes:jpeg,png,jpg,gif', 'max:2048'], // Max 2MB
+        ]);
+
+        if ($request->hasFile('avatar')) {
+            // Xóa avatar cũ nếu có và không phải là avatar mặc định (có thể bạn có một avatar placeholder)
+            // Cần cẩn thận với việc xóa: chỉ xóa những file đã upload, không xóa file mặc định
+            if ($customer->img && !str_contains($customer->img, 'default_avatar.png')) { // Sửa từ $customer->avatar thành $customer->img
+                Storage::disk('public')->delete($customer->img); // Sửa từ $customer->avatar thành $customer->img
+            }
+
+            // Lưu avatar mới
+            $path = $request->file('avatar')->store('avatars/customers', 'public');
+            $customer->img = $path; // Sửa từ $customer->avatar thành $customer->img
+            $customer->save();
+
+            // Kiểm tra nếu yêu cầu là AJAX
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Cập nhật ảnh đại diện thành công!',
+                    'avatar_url' => $customer->avatar_url // Trả về URL ảnh mới để frontend cập nhật
+                ]);
+            }
+
+            return back()->with('success', 'Cập nhật ảnh đại diện thành công!');
+        }
+
+        // Kiểm tra nếu yêu cầu là AJAX khi không có ảnh được tải lên
+        if ($request->ajax()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Không có ảnh nào được tải lên.'
+            ], 400); // Trả về mã lỗi 400 Bad Request
+        }
+
+        return back()->with('error', 'Không có ảnh nào được tải lên.');
+    }
+
 
     /**
      * SỬA ĐỔI: Hiển thị danh sách đơn hàng của khách hàng với tìm kiếm, lọc, sắp xếp.
