@@ -96,5 +96,16 @@
 @endsection
 
 @push('scripts')
+    {{-- Nhúng tệp JavaScript xử lý logic --}}
     <script src="{{ asset('assets_customer/js/auth.js') }}" defer></script>
+
+    {{-- SỬA ĐỔI: Thêm đoạn script này để gọi hàm khởi tạo --}}
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Kiểm tra xem hàm đã tồn tại trên window object chưa trước khi gọi
+            if (typeof window.initializeAuthPages === 'function') {
+                window.initializeAuthPages();
+            }
+        });
+    </script>
 @endpush

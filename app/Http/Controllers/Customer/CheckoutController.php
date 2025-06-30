@@ -136,17 +136,27 @@ class CheckoutController extends Controller
             // Luôn đặt trạng thái ban đầu là PENDING
             $initialStatus = Order::STATUS_PENDING;
 
+            // ========================= SỬA ĐỔI QUAN TRỌNG =========================
             // Tạo bản ghi đơn hàng mới trong cơ sở dữ liệu.
+            // Logic mới sẽ luôn sao chép thông tin giao hàng vào đơn hàng để đảm bảo tính toàn vẹn.
             $order = Order::create([
-                'customer_id' => $customer?->id, // ID khách hàng nếu đã đăng nhập, ngược lại là null.
+                'customer_id' => $customer?->id, // ID khách hàng nếu có, ngược lại là null.
                 'payment_method_id' => $paymentMethod->id,
-                'guest_name' => $customer ? null : $shippingAddressInfo['name'],
-                'guest_email' => $customer ? null : $shippingAddressInfo['email'],
-                'guest_phone' => $customer ? null : $shippingAddressInfo['phone'],
+
+                // SỬA ĐỔI: Các trường này giờ đây sẽ LLUÔN được điền từ thông tin giao hàng đã chọn.
+                // Lưu ý: Tên cột trong DB của bạn có thể là `customer_name`, `customer_phone`.
+                // Ở đây tôi dùng `guest_name` và `guest_phone` theo file bạn cung cấp.
+                'guest_name' => $shippingAddressInfo['name'],
+                'guest_phone' => $shippingAddressInfo['phone'],
+                'guest_email' => $shippingAddressInfo['email'],
+
+                // Lưu chi tiết địa chỉ vào đơn hàng
                 'shipping_address_line' => $shippingAddressInfo['full_address_line'],
                 'province_id' => $shippingAddressInfo['province_id'],
                 'district_id' => $shippingAddressInfo['district_id'],
                 'ward_id' => $shippingAddressInfo['ward_id'],
+
+                // Các thông tin tài chính và khác
                 'status' => $initialStatus,
                 'total_price' => $totalPrice,
                 'subtotal' => $subtotal,
@@ -157,6 +167,8 @@ class CheckoutController extends Controller
                 'notes' => $validatedData['notes'] ?? null,
                 'created_by_admin_id' => null, // Đơn hàng này được tạo bởi khách hàng, không phải admin.
             ]);
+            // ======================= KẾT THÚC SỬA ĐỔI QUAN TRỌNG =======================
+
 
             // Thêm các mặt hàng từ giỏ hàng vào đơn hàng.
             foreach ($cartDetails['items'] as $item) {
@@ -173,9 +185,8 @@ class CheckoutController extends Controller
 
             // Gửi email xác nhận đơn hàng.
             try {
-                $customerEmail = $customer->email ?? $shippingAddressInfo['email'];
+                $customerEmail = $shippingAddressInfo['email'];
                 if ($customerEmail) {
-                    // Tải các mối quan hệ cần thiết cho email
                     $order->load(['customer', 'province', 'district', 'ward', 'items.product']);
                     Mail::to($customerEmail)->send(new OrderConfirmation($order));
                     Log::info('Order confirmation email sent to: ' . $customerEmail . ' for order #' . $order->id);
@@ -188,7 +199,6 @@ class CheckoutController extends Controller
 
             // Chuyển hướng người dùng dựa trên tổng giá trị đơn hàng hoặc phương thức thanh toán đã chọn.
             if ($totalPrice == 0) {
-                // Nếu tổng giá trị đơn hàng là 0, chuyển hướng thẳng đến trang xác nhận đơn hàng mà không qua cổng thanh toán
                 return redirect()->route($customer ? 'account.orders.show' : 'guest.order.show', $order->id)
                     ->with('success', 'Đặt hàng thành công! Đơn hàng của bạn đã được xử lý.');
             } else if ($paymentMethod->code === 'cod') {
@@ -212,7 +222,6 @@ class CheckoutController extends Controller
             return back()->with('error', 'Đã có lỗi xảy ra trong quá trình đặt hàng. Vui lòng thử lại.')->withInput();
         }
     }
-
     /**
      * Hiển thị trang chi tiết đơn hàng cho khách vãng lai.
      *
@@ -273,8 +282,8 @@ class CheckoutController extends Controller
         // Bắt đầu truy vấn đơn hàng
         $query = Order::whereNull('customer_id')
             ->where(function ($q) use ($guestContact) {
-                $q->where('guest_phone', $guestContact)
-                    ->orWhere('guest_email', $guestContact);
+                $q->where('customer_phone', $guestContact) // Sửa: Dùng cột customer_phone đã thống nhất
+                    ->orWhere('customer_email', $guestContact); // Sửa: Dùng cột customer_email đã thống nhất
             });
 
         // Áp dụng tìm kiếm
@@ -387,7 +396,8 @@ class CheckoutController extends Controller
             ]);
 
             $guestContact = trim($request->input('guest_contact_confirm'));
-            if (!($order->guest_email === $guestContact || $order->guest_phone === $guestContact)) {
+            // Sửa: Dùng cột customer_email và customer_phone đã thống nhất
+            if (!($order->customer_email === $guestContact || $order->customer_phone === $guestContact)) {
                 return back()->with('error', 'Xác thực thông tin không thành công. Vui lòng nhập đúng email hoặc số điện thoại đã dùng khi đặt hàng.')->withInput();
             }
         } else {
@@ -432,35 +442,32 @@ class CheckoutController extends Controller
 
     private function getShippingAddressInfo(array $validatedData, ?Customer $customer): array
     {
-        $addressInfo = [];
-
         if ($customer) {
             $address = CustomerAddress::with(['province', 'district', 'ward'])->find($validatedData['shipping_address_id']);
-            $addressInfo = [
+            return [
                 'name' => $address->full_name,
-                'email' => $customer->email,
-                'phone' => $customer->phone,
+                'email' => $customer->email, // Giữ lại email chính của tài khoản để liên lạc
+                'phone' => $address->phone, // SỬA ĐỔI: Lấy SĐT từ địa chỉ đã chọn
                 'province_id' => $address->province_id,
                 'district_id' => $address->district_id,
                 'ward_id' => $address->ward_id,
                 'full_address_line' => $address->address_line,
             ];
-        } else {
-            $province = Province::find($validatedData['guest_province_id']);
-            $district = District::find($validatedData['guest_district_id']);
-            $ward = Ward::find($validatedData['guest_ward_id']);
-
-            $addressInfo = [
-                'name' => $validatedData['guest_name'],
-                'email' => $validatedData['guest_email'],
-                'phone' => $validatedData['guest_phone'],
-                'province_id' => $validatedData['guest_province_id'],
-                'district_id' => $validatedData['guest_district_id'],
-                'ward_id' => $validatedData['guest_ward_id'],
-                'full_address_line' => $validatedData['guest_address_line'],
-            ];
         }
 
-        return $addressInfo;
+        // Logic cho khách vãng lai giữ nguyên
+        $province = Province::find($validatedData['guest_province_id']);
+        $district = District::find($validatedData['guest_district_id']);
+        $ward = Ward::find($validatedData['guest_ward_id']);
+
+        return [
+            'name' => $validatedData['guest_name'],
+            'email' => $validatedData['guest_email'],
+            'phone' => $validatedData['guest_phone'],
+            'province_id' => $validatedData['guest_province_id'],
+            'district_id' => $validatedData['guest_district_id'],
+            'ward_id' => $validatedData['guest_ward_id'],
+            'full_address_line' => $validatedData['guest_address_line'],
+        ];
     }
 }

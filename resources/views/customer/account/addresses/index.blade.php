@@ -44,7 +44,7 @@
                                             <form action="{{ route('account.addresses.setDefault', $address->id) }}" method="POST"
                                                 class="d-inline">
                                                 @csrf
-                                                @method('PATCH')
+                                                @method('POST')
                                                 <button type="submit" class="btn btn-outline-primary btn-sm">Đặt làm mặc định</button>
                                             </form>
                                         @endif

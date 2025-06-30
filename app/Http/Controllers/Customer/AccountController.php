@@ -39,13 +39,9 @@ class AccountController extends Controller
     {
         $customer = Auth::guard('customer')->user();
 
-        // Validate the request data
         $validatedData = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'phone' => ['nullable', 'string', 'max:20', Rule::unique('customers')->ignore($customer->id)],
-            // Email không được phép thay đổi từ frontend qua form này vì nó readonly,
-            // nên không cần validate email ở đây.
-            // Nếu bạn muốn cho phép đổi email, hãy bỏ readonly trên input và thêm validation.
         ]);
 
         $customer->update([
@@ -53,17 +49,18 @@ class AccountController extends Controller
             'phone' => $validatedData['phone'],
         ]);
 
-        // Kiểm tra nếu yêu cầu là AJAX
-        if ($request->ajax()) {
+        // SỬA ĐỔI: Thay $request->ajax() bằng $request->wantsJson()
+        if ($request->wantsJson()) {
             return response()->json([
                 'success' => true,
                 'message' => 'Cập nhật thông tin cá nhân thành công!',
-                'customer' => $customer // Có thể trả về thông tin khách hàng đã cập nhật
+                'customer' => $customer
             ]);
         }
 
         return back()->with('success', 'Cập nhật thông tin cá nhân thành công!');
     }
+
 
     /**
      * Change password.
@@ -75,15 +72,14 @@ class AccountController extends Controller
 
         $validatedData = $request->validate([
             'current_password' => ['required', 'current_password:customer'],
-            // Thêm các quy tắc phức tạp cho mật khẩu mới
             'password' => [
                 'required',
                 'confirmed',
                 'min:8',
-                'regex:/[a-z]/',      // Ít nhất một chữ thường
-                'regex:/[A-Z]/',      // Ít nhất một chữ hoa
-                'regex:/[0-9]/',      // Ít nhất một chữ số
-                'regex:/[^A-Za-z0-9]/', // Ít nhất một ký tự đặc biệt
+                'regex:/[a-z]/',
+                'regex:/[A-Z]/',
+                'regex:/[0-9]/',
+                'regex:/[^A-Za-z0-9]/',
             ],
         ], [
             'password.regex' => 'Mật khẩu mới phải bao gồm ít nhất 8 ký tự, 1 chữ hoa, 1 chữ thường, 1 chữ số và 1 ký tự đặc biệt.',
@@ -91,8 +87,8 @@ class AccountController extends Controller
 
         $customer->update(['password' => bcrypt($validatedData['password'])]);
 
-        // Kiểm tra nếu yêu cầu là AJAX
-        if ($request->ajax()) {
+        // SỬA ĐỔI: Thay $request->ajax() bằng $request->wantsJson()
+        if ($request->wantsJson()) {
             return response()->json([
                 'success' => true,
                 'message' => 'Đổi mật khẩu thành công!'
@@ -111,39 +107,36 @@ class AccountController extends Controller
         $customer = Auth::guard('customer')->user();
 
         $request->validate([
-            'avatar' => ['required', 'image', 'mimes:jpeg,png,jpg,gif', 'max:2048'], // Max 2MB
+            'avatar' => ['required', 'image', 'mimes:jpeg,png,jpg,gif', 'max:2048'],
         ]);
 
         if ($request->hasFile('avatar')) {
-            // Xóa avatar cũ nếu có và không phải là avatar mặc định (có thể bạn có một avatar placeholder)
-            // Cần cẩn thận với việc xóa: chỉ xóa những file đã upload, không xóa file mặc định
-            if ($customer->img && !str_contains($customer->img, 'default_avatar.png')) { // Sửa từ $customer->avatar thành $customer->img
-                Storage::disk('public')->delete($customer->img); // Sửa từ $customer->avatar thành $customer->img
+            if ($customer->img && !str_contains($customer->img, 'default_avatar.png')) {
+                Storage::disk('public')->delete($customer->img);
             }
 
-            // Lưu avatar mới
             $path = $request->file('avatar')->store('avatars/customers', 'public');
-            $customer->img = $path; // Sửa từ $customer->avatar thành $customer->img
+            $customer->img = $path;
             $customer->save();
 
-            // Kiểm tra nếu yêu cầu là AJAX
-            if ($request->ajax()) {
+            // SỬA ĐỔI: Thay $request->ajax() bằng $request->wantsJson()
+            if ($request->wantsJson()) {
                 return response()->json([
                     'success' => true,
                     'message' => 'Cập nhật ảnh đại diện thành công!',
-                    'avatar_url' => $customer->avatar_url // Trả về URL ảnh mới để frontend cập nhật
+                    'avatar_url' => $customer->avatar_url
                 ]);
             }
 
             return back()->with('success', 'Cập nhật ảnh đại diện thành công!');
         }
 
-        // Kiểm tra nếu yêu cầu là AJAX khi không có ảnh được tải lên
-        if ($request->ajax()) {
+        // SỬA ĐỔI: Thay $request->ajax() bằng $request->wantsJson()
+        if ($request->wantsJson()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Không có ảnh nào được tải lên.'
-            ], 400); // Trả về mã lỗi 400 Bad Request
+            ], 400);
         }
 
         return back()->with('error', 'Không có ảnh nào được tải lên.');
@@ -223,16 +216,15 @@ class AccountController extends Controller
      *
      * @param \App\Models\Order $order
      * @return \Illuminate\View\View|\Illuminate\Http\RedirectResponse
-     */
-    public function showOrdersShow(Order $order)
+     */ public function showOrdersShow(Order $order)
     {
         // Đảm bảo người dùng hiện tại có quyền xem đơn hàng này
         if (Auth::guard('customer')->id() !== $order->customer_id) {
             abort(403, 'Bạn không có quyền truy cập đơn hàng này.');
         }
 
-        // Tải các mối quan hệ cần thiết để hiển thị chi tiết
-        $order->load(['items.product.images', 'deliveryService', 'promotion', 'province', 'district', 'ward', 'paymentMethod']);
+        // SỬA ĐỔI: Thêm 'customer' vào mảng load()
+        $order->load(['items.product.images', 'deliveryService', 'paymentMethod', 'customer', 'province', 'district', 'ward']);
 
         return view('customer.account.orders_show', compact('order'));
     }
