@@ -94,7 +94,7 @@
 
                 {{-- Vùng chứa phân trang sẽ được cập nhật bởi JS --}}
                 <div class="mt-4 d-flex justify-content-center" id="pagination-links">
-                    {{ $products->links() }}
+                  {{ $products->links('customer.vendor.pagination') }}
                 </div>
             </div>
         </div>

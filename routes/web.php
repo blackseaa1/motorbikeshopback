@@ -91,14 +91,7 @@ Route::middleware(['web'])->group(function () {
 |--------------------------------------------------------------------------
 */
     // Tuyến đường cho khách vãng lai xem đơn hàng
-    Route::get('/guest/order-lookup', [CheckoutController::class, 'showOrderLookupForm'])->name('guest.order.lookup');
-    Route::post('/guest/order-lookup', [CheckoutController::class, 'lookupGuestOrder']);
-    // SỬA ĐỔI: Route guest.order.lookup sẽ xử lý cả POST và GET cho việc tìm kiếm và lọc
-    // Xóa Route::get('/guest/orders-list', ...) nếu nó đã tồn tại
-    // Route::get('/guest/orders-list', function () {
-    //     return redirect()->route('guest.order.lookup');
-    // })->name('guest.order.list');
-
+    Route::match(['get', 'post'], '/guest/order-lookup', [CheckoutController::class, 'lookupGuestOrder'])->name('guest.order.lookup');
     Route::get('/guest/orders/{order}', [CheckoutController::class, 'showGuestOrder'])->name('guest.order.show');
     Route::post('/guest/orders/{order}/cancel', [CheckoutController::class, 'cancelOrder'])->name('guest.order.cancel');
 
@@ -129,7 +122,6 @@ Route::middleware(['web'])->group(function () {
             Route::post('login', 'login');
             Route::get('register', 'showRegisterForm')->name('register');
             Route::post('register', 'register');
-            
         });
         Route::post('logout', 'logout')->name('logout')->middleware('auth:customer');
     });

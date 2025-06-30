@@ -260,7 +260,8 @@ class CheckoutController extends Controller
             }
         }
 
-        $sortBy = $request->input('sort_by', 'created_at_desc');
+        $sortBy = $request->input('sort_by', 'created_at_desc'); // Mặc định là 'Mới nhất'
+
         switch ($sortBy) {
             case 'created_at_asc':
                 $query->orderBy('created_at', 'asc');
@@ -272,13 +273,33 @@ class CheckoutController extends Controller
                 $query->orderBy('total_price', 'asc');
                 break;
             case 'status_asc':
-                $query->orderBy('status', 'asc');
+                // Sắp xếp trạng thái theo thứ tự ưu tiên tăng dần (Đang xử lý -> Đã giao -> Đã hủy)
+                $query->orderByRaw("CASE
+                    WHEN status IN ('pending', 'processing', 'shipped') THEN 1
+                    WHEN status = 'delivered' THEN 2
+                    WHEN status = 'cancelled' THEN 3
+                    ELSE 4
+                END ASC");
                 break;
             case 'status_desc':
-                $query->orderBy('status', 'desc');
+                // Sắp xếp trạng thái theo thứ tự ưu tiên giảm dần (Đã hủy -> Đã giao -> Đang xử lý)
+                $query->orderByRaw("CASE
+                    WHEN status IN ('pending', 'processing', 'shipped') THEN 1
+                    WHEN status = 'delivered' THEN 2
+                    WHEN status = 'cancelled' THEN 3
+                    ELSE 4
+                END DESC");
                 break;
-            default:
+            default: // Xử lý trường hợp 'created_at_desc' và các trường hợp mặc định khác
                 $query->orderBy('created_at', 'desc');
+                // Áp dụng sắp xếp phụ theo trạng thái khi sắp xếp chính là 'Ngày đặt (Mới nhất)'
+                // Sắp xếp trạng thái theo thứ tự ưu tiên (Đang xử lý -> Đã giao -> Đã hủy)
+                $query->orderByRaw("CASE
+                    WHEN status IN ('pending', 'processing', 'shipped') THEN 1
+                    WHEN status = 'delivered' THEN 2
+                    WHEN status = 'cancelled' THEN 3
+                    ELSE 4
+                END ASC");
                 break;
         }
 
