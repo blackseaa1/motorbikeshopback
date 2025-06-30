@@ -34,8 +34,8 @@
                         <div class="row align-items-center">
                             <div class="col-lg-6 text-white">
                                 <h1 class="display-4 fw-bold mb-4">Miễn phí vận chuyển</h1>
-                                <p class="lead mb-4">Cho đơn hàng trên 1.000.000đ. Giao hàng nhanh chóng và tin cậy.</p>
-                                <a href="#" class="btn btn-light btn-lg px-4">Tìm hiểu thêm <i
+                                <p class="lead mb-4">Cho tất cả đơn hàng.<br> Giao hàng nhanh chóng và tin cậy.</p>
+                                <a href="{{ route('products.index') }}" class="btn btn-light btn-lg px-4">Mua ngay <i
                                         class="bi bi-truck ms-2"></i></a>
                             </div>
                             <div class="col-lg-6 text-center d-none d-lg-block">

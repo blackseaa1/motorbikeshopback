@@ -146,7 +146,7 @@
     ])
     @include('admin.sales.order.modals.view_order_modal')
     @include('admin.sales.order.modals.update_order_modal', ['orderStatuses' => $orderStatuses, 'deliveryServices' => $deliveryServices])
-        @include('admin.sales.order.modals.delete_order_modal')
+                @include('admin.sales.order.modals.delete_order_modal')
 
 @endsection
 

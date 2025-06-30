@@ -14,6 +14,14 @@
                             <i class="bi bi-funnel-fill me-2"></i>Bộ lọc
                         </div>
                         <div class="card-body">
+                            {{-- THÊM: Trường tìm kiếm sản phẩm --}}
+                            <div class="mb-4">
+                                <label for="search_product" class="form-label">Tìm kiếm sản phẩm</label>
+                                <input type="search" class="form-control" id="search_product" name="search"
+                                    placeholder="Tìm theo tên sản phẩm..." value="{{ $request->input('search') }}">
+                            </div>
+                            {{-- HẾT THÊM --}}
+
                             <div class="mb-4">
                                 <h5>Danh mục</h5>
                                 <select class="selectpicker form-control" name="categories[]" multiple
@@ -99,7 +107,7 @@
         // Truyền dữ liệu từ PHP Controller sang JavaScript
         window.vehicleDataForFilter = @json($vehicleBrands->keyBy('id'));
         window.selectedFilters = {
-            // Đảm bảo categories là một mảng cho JavaScript
+            search: '{{ $request->input('search') }}', // THÊM: Truyền giá trị tìm kiếm
             categories: @json($request->input('categories', [])),
             brandId: '{{ $request->input('vehicle_brand_id') }}',
             modelId: '{{ $request->input('vehicle_model_id') }}'

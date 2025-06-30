@@ -3,8 +3,8 @@
 namespace App\Helpers;
 
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str; // Import Str cho các hàm làm sạch chuỗi
-use App\Models\Order; // Import Order model
+use Illuminate\Support\Str; 
+use App\Models\Order; 
 
 class VnpayService
 {
@@ -52,7 +52,6 @@ class VnpayService
             "vnp_ReturnUrl" => $this->vnp_ReturnUrl,
             "vnp_TxnRef" => $vnp_TxnRef,
             "vnp_ExpireDate" => date('YmdHis', strtotime('+15 minutes', time())),
-            // "vnp_BankCode" => "NCB", // Optional: Uncomment and set a bank code to pre-select a bank
         );
 
         // Sort parameters alphabetically
@@ -110,11 +109,9 @@ class VnpayService
                 $i = 1;
             }
         }
-        // $hashData = rtrim($hashData, '&'); // Không cần trim()
 
         Log::info('VNPAY Callback Hashdata (URL-encoded): ' . $hashData);
         Log::info('VNPAY Callback Hash Secret Length: ' . strlen($this->vnp_HashSecret));
-        // SỬA ĐỔI: Xác minh chữ ký bằng SHA512
         $secureHash = hash_hmac('sha512', $hashData, $this->vnp_HashSecret);
 
         $orderId = explode('_', $inputData['vnp_TxnRef'])[0];
@@ -167,7 +164,7 @@ class VnpayService
 
         ksort($inputData);
         $hashData = "";
-        $i = 0; // Biến đếm để xử lý dấu '&' như trong mẫu VNPAY
+        $i = 0; 
         foreach ($inputData as $key => $value) {
             if ($i == 1) {
                 $hashData .= '&' . urlencode($key) . "=" . urlencode($value);
@@ -176,8 +173,6 @@ class VnpayService
                 $i = 1;
             }
         }
-        // $hashData = rtrim($hashData, '&'); // Không cần trim()
-
         Log::info('VNPAY IPN Hashdata (URL-encoded): ' . $hashData);
         Log::info('VNPAY IPN Hash Secret Length: ' . strlen($this->vnp_HashSecret));
         // SỬA ĐỔI: Xác minh chữ ký bằng SHA512

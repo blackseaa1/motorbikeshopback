@@ -6,9 +6,13 @@
                     class="d-inline-block align-top">
                 Thành Đô Shop
             </a>
+            {{-- Form tìm kiếm toàn cầu cho desktop --}}
             <div class="d-none d-md-flex flex-grow-1 mx-4">
-                <form class="input-group" action="#">
-                    <input type="text" class="form-control" placeholder="Tìm kiếm sản phẩm, thương hiệu...">
+                <form class="input-group" action="{{ route('global.search') }}" method="GET"> {{-- ĐÃ SỬA: trỏ đến route
+                    tìm kiếm toàn cầu --}}
+                    <input type="text" class="form-control" name="query"
+                        placeholder="Tìm kiếm sản phẩm, thương hiệu, bài blog..." value="{{ request('query') }}"> {{--
+                    ĐÃ SỬA: tên tham số là 'query' --}}
                     <button class="btn btn-primary" type="submit">
                         <i class="bi bi-search"></i>
                     </button>
@@ -40,8 +44,8 @@
                         <a class="nav-link" href="{{ route('contact.index') }}">Liên hệ</a>
                     </li>
                     <li class="nav-item">
-        <a class="nav-link" href="{{ route('guest.order.lookup') }}">Tra cứu đơn hàng</a>
-    </li>
+                        <a class="nav-link" href="{{ route('guest.order.lookup') }}">Tra cứu đơn hàng</a>
+                    </li>
                     {{-- === NEW LINKS END === --}}
                     <li class="nav-item dropdown">
                         <a class="nav-link position-relative" href="#" id="cartDropdown" role="button"
@@ -94,9 +98,9 @@
                             @auth('customer')
                                 <li><a class="dropdown-item" href="{{ route('account.profile') }}">Tài khoản của tôi</a>
                                 </li>
-                                <li><a class="dropdown-item" href="{{ route('account.orders.index') }}">Đơn hàng của tôi</a></li>
+                                <li><a class="dropdown-item" href="{{ route('account.orders.index') }}">Đơn hàng của tôi</a>
+                                </li>
                                 <li>
-                                    
                                     <hr class="dropdown-divider">
                                 </li>
                                 <li>
@@ -114,10 +118,13 @@
             </div>
         </div>
     </nav>
+    {{-- Form tìm kiếm toàn cầu cho mobile (hiển thị khi màn hình nhỏ) --}}
     <div class="d-md-none bg-light p-3">
-        <form class="input-group" action="#">
-            <input type="text" class="form-control" placeholder="Tìm kiếm sản phẩm...">
-            <button class="btn btn-primary" type="button">
+        <form class="input-group" action="{{ route('global.search') }}" method="GET"> {{-- ĐÃ SỬA: trỏ đến route tìm
+            kiếm toàn cầu --}}
+            <input type="text" class="form-control" name="query" placeholder="Tìm kiếm sản phẩm..."
+                value="{{ request('query') }}"> {{-- ĐÃ SỬA: tên tham số là 'query' --}}
+            <button class="btn btn-primary" type="submit">
                 <i class="bi bi-search"></i>
             </button>
         </form>

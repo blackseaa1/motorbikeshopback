@@ -155,6 +155,7 @@ class AuthController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:customers,email'],
             'password' => ['required', 'string', 'confirmed', Password::min(8)->mixedCase()->numbers()->symbols()],
+            'terms' => ['accepted'],
         ]);
 
         // Tạo khách hàng mới với trạng thái mặc định là 'active'
@@ -188,6 +189,15 @@ class AuthController extends Controller
      */
     public function logout(Request $request)
     {
+        /** @var \App\Models\Customer $customer */
+        $customer = Auth::guard('customer')->user();
+
+        // Nếu người dùng có tồn tại, xóa remember_token
+        if ($customer) {
+            $customer->setRememberToken(null);
+            $customer->save();
+        }
+
         Auth::guard('customer')->logout();
 
         $request->session()->invalidate();

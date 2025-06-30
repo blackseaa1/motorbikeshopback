@@ -39,6 +39,7 @@ use App\Http\Controllers\Admin\UserManagement\StaffAccountController;
 use App\Http\Controllers\Api\GeographyApiController;
 
 // --- CUSTOMER CONTROLLERS ---
+use App\Http\Controllers\Customer\SearchController;
 use App\Http\Controllers\Customer\AccountController;
 use App\Http\Controllers\Customer\AddressController;
 use App\Http\Controllers\Customer\AuthController;
@@ -67,8 +68,10 @@ use App\Http\Controllers\PaymentController;
 Route::middleware(['web'])->group(function () {
 
     // --- CÁC TRANG CÔNG KHAI & CHUNG ---
+    Route::get('/search', [SearchController::class, 'index'])->name('global.search');
     Route::get('/', [HomeController::class, 'index'])->name('home');
     Route::get('/contact', [HomeController::class, 'contact'])->name('contact.index');
+    Route::post('/contact', [HomeController::class, 'submitContactForm'])->name('contact.submit');
 
     Route::controller(CustomerShopController::class)->group(function () {
         Route::get('/products', 'index')->name('products.index');
@@ -80,6 +83,7 @@ Route::middleware(['web'])->group(function () {
         Route::get('/', 'index')->name('index');
         Route::get('/{blogPost}', 'show')->name('show');
     });
+
 
     /*
 |--------------------------------------------------------------------------
@@ -125,6 +129,7 @@ Route::middleware(['web'])->group(function () {
             Route::post('login', 'login');
             Route::get('register', 'showRegisterForm')->name('register');
             Route::post('register', 'register');
+            
         });
         Route::post('logout', 'logout')->name('logout')->middleware('auth:customer');
     });

@@ -51,7 +51,7 @@
 
           <div class="mb-3 form-check">
           <input type="checkbox" class="form-check-input" id="terms" name="terms" required>
-          <label class="form-check-label" for="terms">Tôi đồng ý với <a href="#">Điều khoản dịch vụ</a></label>
+          <label class="form-check-label" for="terms">Tôi đồng ý với <a href="">Điều khoản dịch vụ</a></label>
           </div>
 
           <div class="d-grid gap-2">

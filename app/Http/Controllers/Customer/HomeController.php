@@ -3,68 +3,84 @@
 namespace App\Http\Controllers\Customer;
 
 use App\Http\Controllers\Controller;
-use App\Models\Category;
+use Illuminate\Http\Request;
+use App\Models\Brand; // Import Brand model
+use App\Models\Category; // Import Category model
 use App\Models\Product;
-use App\Models\Brand;
 use App\Models\BlogPost;
+use App\Models\Review; // Import Review model for products
+use App\Mail\ContactFormSubmission; // Import Mailable class
+use Illuminate\Support\Facades\Mail; // Import Mail facade
+use Illuminate\Support\Facades\Log; // Import Log facade
 
 class HomeController extends Controller
 {
-    /**
-     * Hiển thị trang chủ của khách hàng.
-     *
-     * @return \Illuminate\View\View
-     */
     public function index()
     {
-        // Lấy 4 danh mục đang hoạt động
-        // Code mới: Lấy tất cả danh mục, sắp xếp theo mới nhất
-        $categories = Category::where('status', 'active')->latest()->get();
-
-        // Lấy 8 sản phẩm mới nhất
-        $newProducts = Product::where('status', 'active')->latest()->take(8)->get();
-
-        // Lấy 8 sản phẩm ngẫu nhiên làm sản phẩm nổi bật
-        $featuredProducts = Product::where('status', 'active')->inRandomOrder()->take(8)->get();
-
-        // --- THÊM MỚI: LẤY 4 THƯƠNG HIỆU NGẪU NHIÊN ---
-        $brands = Brand::where('status', 'active')->inRandomOrder()->take(6)->get();
-        // ------------------------------------------
-
-        // Truyền tất cả dữ liệu qua view
-        return view('customer.home', compact('categories', 'newProducts', 'featuredProducts', 'brands'));
-    }
-
-    /**
-     * Hiển thị trang Blog.
-     *
-     * @return \Illuminate\View\View
-     */
-    public function blog()
-    {
-        // 1. Lấy danh sách bài viết chính để phân trang
-        $posts = BlogPost::where('status', BlogPost::STATUS_PUBLISHED)
-            ->with('author')
-            ->latest()
-            ->paginate(5);
-
-        // 2. Lấy 5 bài viết mới nhất cho sidebar
-        $recentPosts = BlogPost::where('status', BlogPost::STATUS_PUBLISHED)
-            ->latest()
-            ->take(5)
+        // Lấy các sản phẩm mới nhất (sẽ dùng cho cả latestProducts và featuredProducts)
+        $latestProducts = Product::where('status', Product::STATUS_ACTIVE)
+            ->latest() // Sắp xếp theo created_at DESC
+            ->limit(8) // Lấy 8 sản phẩm mới nhất
+            ->with('images') // Tải ảnh sản phẩm
             ->get();
 
-        // 3. Truyền cả 2 biến ($posts và $recentPosts) qua view
-        return view('customer.blog', compact('posts', 'recentPosts'));
+        // Lấy các bài blog mới nhất
+        $latestBlogPosts = BlogPost::where('status', BlogPost::STATUS_PUBLISHED)
+            ->latest() // Sắp xếp theo created_at DESC
+            ->limit(3) // Lấy 3 bài blog mới nhất
+            ->get();
+
+        // Tải các review cho sản phẩm nếu cần (cho trang chủ)
+        $latestProducts->loadAvg(['reviews' => function ($query) {
+            $query->where('status', Review::STATUS_APPROVED);
+        }], 'rating');
+        $latestProducts->loadCount(['reviews' => function ($query) {
+            $query->where('status', Review::STATUS_APPROVED);
+        }]);
+
+        // THÊM: Gán $featuredProducts. Bạn có thể thay đổi logic lấy sản phẩm nổi bật nếu muốn.
+        // Hiện tại, dùng chung latestProducts làm featuredProducts.
+        $featuredProducts = $latestProducts;
+
+        // THÊM: Lấy danh sách Brands (ví dụ: 6 thương hiệu ngẫu nhiên đang hoạt động)
+        $brands = Brand::where('status', 'active')->inRandomOrder()->take(6)->get();
+
+        // THÊM: Lấy danh sách Categories (ví dụ: tất cả danh mục đang hoạt động, sắp xếp mới nhất)
+        $categories = Category::where('status', 'active')->latest()->get();
+
+
+        return view('customer.home', compact('latestProducts', 'latestBlogPosts', 'featuredProducts', 'brands', 'categories')); // THÊM 'brands' và 'categories'
     }
 
-    /**
-     * Hiển thị trang Liên hệ.
-     *
-     * @return \Illuminate\View\View
-     */
     public function contact()
     {
         return view('customer.contact');
+    }
+
+    /**
+     * Xử lý gửi form liên hệ.
+     *
+     * @param \Illuminate\Http\Request $request
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function submitContactForm(Request $request)
+    {
+        $validatedData = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|max:255',
+            'phone' => 'nullable|string|max:255',
+            'message' => 'required|string|max:2000',
+        ]);
+
+        try {
+            // Gửi email đến địa chỉ MAIL_FROM_ADDRESS hoặc một địa chỉ cụ thể
+            Mail::to(config('mail.from.address')) // Gửi đến địa chỉ cấu hình trong .env/mail.php
+                ->send(new ContactFormSubmission($validatedData));
+
+            return back()->with('success', 'Tin nhắn của bạn đã được gửi thành công! Chúng tôi sẽ liên hệ lại sớm nhất có thể.');
+        } catch (\Exception $e) {
+            Log::error('Failed to send contact form email: ' . $e->getMessage());
+            return back()->with('error', 'Đã có lỗi xảy ra khi gửi tin nhắn. Vui lòng thử lại sau.');
+        }
     }
 }

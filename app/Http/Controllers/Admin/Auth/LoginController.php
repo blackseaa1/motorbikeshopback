@@ -221,6 +221,15 @@ class LoginController extends Controller
      */
     public function logout(Request $request)
     {
+        /** @var \App\Models\Admin $admin */
+        $admin = Auth::guard('admin')->user();
+
+        // Nếu người dùng có tồn tại, xóa remember_token
+        if ($admin) {
+            $admin->setRememberToken(null);
+            $admin->save();
+        }
+
         Auth::guard('admin')->logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();

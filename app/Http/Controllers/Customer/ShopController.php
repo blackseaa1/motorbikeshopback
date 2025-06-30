@@ -34,6 +34,16 @@ class ShopController extends Controller
             }], 'rating');
 
         // --- Logic lọc sản phẩm ---
+        // THÊM: Tìm kiếm theo tên hoặc mô tả sản phẩm
+        if ($search = $request->input('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', '%' . $search . '%')
+                    ->orWhere('description', 'like', '%' . $search . '%');
+            });
+        }
+        // HẾT THÊM: Tìm kiếm sản phẩm
+
+
         $selectedCategories = $request->input('categories', []);
         if ($category && $category->exists) {
             // Đảm bảo ID của category từ route cũng được thêm vào selectedCategories

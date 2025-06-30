@@ -205,8 +205,6 @@ class MomoService
                     $order->status = Order::STATUS_APPROVED;
                     $order->save();
                     Log::info('Momo IPN: Order #' . $order->id . ' status updated to APPROVED.');
-
-                    // ... (logic trừ kho và tăng lượt mã giảm giá) ...
                 }
             } else {
                 Log::warning('Momo IPN: Order not found for ID ' . ($momoResponse['orderId'] ?? 'N/A') . ' (Original: ' . $originalOrderId . ')');
