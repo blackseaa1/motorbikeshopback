@@ -10,6 +10,7 @@ use App\Models\Review;
 use App\Models\VehicleBrand;
 use App\Models\VehicleModel;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth; // Import facade Auth
 
 class ShopController extends Controller
 {
@@ -41,7 +42,6 @@ class ShopController extends Controller
                     ->orWhere('description', 'like', '%' . $search . '%');
             });
         }
-
 
         // Lọc theo danh mục
         if ($category) {
@@ -154,6 +154,7 @@ class ShopController extends Controller
      */
     public function show(Product $product)
     {
+        // Kiểm tra trạng thái sản phẩm, nếu không active thì báo lỗi 404
         if ($product->status !== Product::STATUS_ACTIVE) {
             abort(404);
         }
@@ -171,6 +172,18 @@ class ShopController extends Controller
             }
         ]);
 
-        return view('customer.products.show', compact('product'));
+        $hasReviewed = false;
+        // Kiểm tra xem khách hàng đã đăng nhập chưa
+        if (Auth::guard('customer')->check()) {
+            $customer = Auth::guard('customer')->user();
+            // Kiểm tra xem khách hàng này đã đánh giá sản phẩm này chưa
+            $existingReview = $product->reviews()->where('customer_id', $customer->id)->first();
+            if ($existingReview) {
+                $hasReviewed = true;
+            }
+        }
+
+        // Truyền biến $hasReviewed vào view
+        return view('customer.products.show', compact('product', 'hasReviewed'));
     }
 }
