@@ -24,7 +24,7 @@
 
     $validationErrorsHtml = null;
     if ($errors->any() && !request()->expectsJson()) { // Chỉ xử lý nếu không phải AJAX request mong muốn JSON
-        $errorHtml = '<ul class="mb-0 ps-3 text-start" style="list-style-type: disc; text-align: left !important;">';
+        $errorHtml = '<ul class="mb-0 ps-3 text-start" style=" text-align: left !important;">';
         foreach ($errors->all() as $error) {
             $errorHtml .= '<li>' . e($error) . '</li>'; // Dùng e() để escape HTML
         }

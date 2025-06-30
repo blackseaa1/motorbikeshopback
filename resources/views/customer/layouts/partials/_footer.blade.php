@@ -76,8 +76,8 @@
                                 onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
                                 Đăng xuất
                             </a>
-                            <form id="logout-form" action="{{ route('logout') }}" method="POST"
-                                class="d-none">@csrf {{-- Đã sửa route 'logout' thành 'customer.auth.logout' --}}
+                            <form id="header-logout-form" action="{{ route('logout') }}" method="POST"
+                                class="d-none">@csrf 
                             </form>
                         </li>
                     @endauth
