@@ -1,55 +1,67 @@
 <header class="sticky-top bg-light shadow-sm">
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
         <div class="container">
-            <a class="navbar-brand" href="{{ route('home') }}">
+            {{-- ĐÃ SỬA: Thêm flex-shrink-0 để navbar-brand không bị co lại --}}
+            <a class="navbar-brand flex-shrink-0" href="{{ route('home') }}">
                 <img src="{{ asset('assets_admin/images/thanhdo_shop_logo.png') }}" alt="Thành Đô Shop" height="40"
                     class="d-inline-block align-top">
                 Thành Đô Shop
             </a>
             {{-- Form tìm kiếm toàn cầu cho desktop --}}
+            {{-- ĐÃ SỬA: Xóa mx-4 và thêm flex-grow-1 vào input-group để ô tìm kiếm mở rộng hơn --}}
             <div class="d-none d-md-flex flex-grow-1 mx-4">
-                <form class="input-group" action="{{ route('global.search') }}" method="GET"> {{-- ĐÃ SỬA: trỏ đến route
-                    tìm kiếm toàn cầu --}}
+                <form class="input-group flex-grow-1" action="{{ route('global.search') }}" method="GET">
                     <input type="text" class="form-control" name="query"
-                        placeholder="Tìm kiếm sản phẩm, thương hiệu, bài blog..." value="{{ request('query') }}"> {{--
-                    ĐÃ SỬA: tên tham số là 'query' --}}
+                        placeholder="Tìm kiếm sản phẩm, thương hiệu, bài blog..." value="{{ request('query') }}">
                     <button class="btn btn-primary" type="submit">
                         <i class="bi bi-search"></i>
                     </button>
                 </form>
             </div>
 
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            {{-- ĐÃ SỬA: Thêm ms-auto để đẩy navbar-toggler sang phải --}}
+            <button class="navbar-toggler ms-auto" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
 
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ route('home') }}">Trang Chủ</a>
+                        <a class="nav-link text-nowrap" href="{{ route('home') }}">Trang Chủ</a> {{-- Thêm text-nowrap
+                        --}}
                     </li>
 
                     {{-- === MODIFIED CATEGORY DROPDOWN START === --}}
                     <li class="nav-item dropdown category-nav-item">
                         {{-- Link này sẽ điều hướng đến trang lọc sản phẩm --}}
-                        <a class="nav-link" href="{{ route('products.index') }}">Cửa hàng</a>
+                        <a class="nav-link text-nowrap" href="{{ route('products.index') }}">Cửa hàng</a> {{-- Thêm
+                        text-nowrap --}}
                     </li>
                     {{-- === MODIFIED CATEGORY DROPDOWN END === --}}
 
                     {{-- === NEW LINKS START === --}}
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ route('blog.index') }}">Blog</a>
+                        <a class="nav-link text-nowrap" href="{{ route('blog.index') }}">Blog</a> {{-- Thêm text-nowrap
+                        --}}
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ route('contact.index') }}">Liên hệ</a>
+                        <a class="nav-link text-nowrap" href="{{ route('contact.index') }}">Liên hệ</a> {{-- Thêm
+                        text-nowrap --}}
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ route('guest.order.lookup') }}">Tra cứu đơn hàng</a>
+                        {{-- Logic điều kiện cho "Tra cứu đơn hàng" --}}
+                        @auth('customer')
+                            <a class="nav-link text-nowrap" href="{{ route('account.orders.index') }}">Đơn hàng của tôi</a>
+                            {{-- Thêm text-nowrap --}}
+                        @else
+                            <a class="nav-link text-nowrap" href="{{ route('guest.order.lookup') }}">Tra cứu đơn hàng</a>
+                            {{-- Thêm text-nowrap --}}
+                        @endauth
                     </li>
                     {{-- === NEW LINKS END === --}}
                     <li class="nav-item dropdown">
-                        <a class="nav-link position-relative" href="#" id="cartDropdown" role="button"
-                            data-bs-toggle="dropdown" aria-expanded="false">
+                        <a class="nav-link text-nowrap position-relative" href="#" id="cartDropdown" role="button" {{--
+                            Thêm text-nowrap --}} data-bs-toggle="dropdown" aria-expanded="false">
                             <i class="bi bi-cart3"></i>
                             <span id="header-cart-count"
                                 class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
@@ -85,8 +97,8 @@
                         </div>
                     </li>
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button"
-                            data-bs-toggle="dropdown" aria-expanded="false">
+                        <a class="nav-link text-nowrap dropdown-toggle" href="#" id="navbarDropdown" role="button" {{--
+                            Thêm text-nowrap --}} data-bs-toggle="dropdown" aria-expanded="false">
                             <i class="bi bi-person-circle"></i> Tài khoản
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark"
@@ -120,10 +132,9 @@
     </nav>
     {{-- Form tìm kiếm toàn cầu cho mobile (hiển thị khi màn hình nhỏ) --}}
     <div class="d-md-none bg-light p-3">
-        <form class="input-group" action="{{ route('global.search') }}" method="GET"> {{-- ĐÃ SỬA: trỏ đến route tìm
-            kiếm toàn cầu --}}
+        <form class="input-group" action="{{ route('global.search') }}" method="GET">
             <input type="text" class="form-control" name="query" placeholder="Tìm kiếm sản phẩm..."
-                value="{{ request('query') }}"> {{-- ĐÃ SỬA: tên tham số là 'query' --}}
+                value="{{ request('query') }}">
             <button class="btn btn-primary" type="submit">
                 <i class="bi bi-search"></i>
             </button>

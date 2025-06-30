@@ -224,8 +224,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
             // Reviews
             Route::controller(ReviewController::class)->prefix('reviews')->name('reviews.')->group(function () {
                 Route::get('/', 'index')->name('index');
-                Route::delete('/{review}', 'destroy')->name('destroy');
                 Route::post('/{review}/update-status', 'updateStatus')->name('updateStatus');
+                Route::delete('/{review}', 'destroy')->name('destroy');
             });
         });
 

@@ -112,7 +112,7 @@ class ShopController extends Controller
      */
     public function index(Request $request, Category $category = null)
     {
-        $products = $this->getFilteredProductsQuery($request, $category)->latest()->paginate(10)->withQueryString(); // Thay đổi thành 10 sản phẩm mỗi trang
+        $products = $this->getFilteredProductsQuery($request, $category)->latest()->paginate(9)->withQueryString(); // Thay đổi thành 9 sản phẩm mỗi trang
         $categories = Category::all();
         $brands = Brand::all();
         $vehicleBrands = VehicleBrand::all();
@@ -137,7 +137,7 @@ class ShopController extends Controller
     public function getProductsApi(Request $request)
     {
         $query = $this->getFilteredProductsQuery($request);
-        $products = $query->latest()->paginate(10)->withQueryString(); // Thay đổi thành 10 sản phẩm mỗi trang
+        $products = $query->latest()->paginate(9)->withQueryString(); // Thay đổi thành 9 sản phẩm mỗi trang
 
         return response()->json([
             'products_html' => view('customer.shops.partials.product_list', ['products' => $products])->render(),

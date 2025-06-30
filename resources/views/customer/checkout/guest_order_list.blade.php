@@ -84,7 +84,7 @@
             </div>
 
             <div class="d-flex justify-content-center mt-3">
-                {{ $orders->appends(['guest_phone' => $selectedFilters['guest_phone']])->links('vendor.pagination.bootstrap-5') }}
+                {{ $orders->appends(['guest_phone' => $selectedFilters['guest_phone']])->links('customer.vendor.pagination') }}
             </div>
         @endif
         <div class="text-center mt-4">
