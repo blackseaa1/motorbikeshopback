@@ -1,3 +1,4 @@
+// products.js
 /**
  * ===================================================================
  * products.js
@@ -36,9 +37,53 @@
 
         // 2. Xử lý gửi Review bằng AJAX
         const reviewForm = document.getElementById('review-form');
+        const reviewFormContainer = document.getElementById('review-form-container'); // Assuming a container for the form
+        const reviewStatusMessage = document.getElementById('review-status-message'); // Assuming an element to display messages
+
         if (reviewForm) {
+            // Check review status on page load (e.g., if admin rejected a previous review)
+            const currentReviewStatus = reviewForm.dataset.reviewStatus; // Assuming data-review-status attribute
+            if (currentReviewStatus === 'rejected') {
+                if (reviewFormContainer) {
+                    reviewFormContainer.style.display = 'none'; // Hide the form
+                }
+                if (reviewStatusMessage) {
+                    reviewStatusMessage.innerHTML = '<div class="alert alert-warning">Đánh giá trước đó của bạn đã bị từ chối. Vui lòng liên hệ bộ phận hỗ trợ nếu bạn muốn gửi lại đánh giá.</div>';
+                    reviewStatusMessage.style.display = 'block';
+                }
+            } else if (currentReviewStatus === 'pending') {
+                if (reviewFormContainer) {
+                    reviewFormContainer.style.display = 'none'; // Hide the form
+                }
+                if (reviewStatusMessage) {
+                    reviewStatusMessage.innerHTML = '<div class="alert alert-info">Đánh giá của bạn đang chờ phê duyệt. Vui lòng đợi quản trị viên xem xét.</div>';
+                    reviewStatusMessage.style.display = 'block';
+                }
+            } else {
+                // Show the form if no special status or status allows submission
+                if (reviewFormContainer) {
+                    reviewFormContainer.style.display = 'block';
+                }
+                if (reviewStatusMessage) {
+                    reviewStatusMessage.style.display = 'none';
+                }
+            }
+
+
             reviewForm.addEventListener('submit', function (e) {
                 e.preventDefault();
+
+                // Client-side validation for phone number (assuming an input with name="phone_number")
+                const phoneNumberInput = this.querySelector('input[name="phone_number"]');
+                if (phoneNumberInput) {
+                    const phoneNumber = phoneNumberInput.value.trim();
+                    if (phoneNumber.length !== 10 || !/^\d{10}$/.test(phoneNumber)) {
+                        // Changed message to "Bạn cần nhập đủ 10 kí tự"
+                        window.showAppInfoModal('Bạn cần nhập đủ 10 kí tự.', 'error', 'Lỗi Nhập Liệu!');
+                        return; // Stop submission
+                    }
+                }
+
                 window.showAppLoader(); // Hiện loading overlay
 
                 const formData = new FormData(this);
@@ -65,16 +110,32 @@
                             // Reset lại các ngôi sao
                             document.querySelectorAll('.rating-stars label').forEach(label => label.style.color = '#ddd');
 
+                            // If a new review is submitted successfully, you might want to hide the form
+                            // and show a pending message, or refresh the review list.
+                            if (reviewFormContainer) {
+                                reviewFormContainer.style.display = 'none';
+                            }
+                            if (reviewStatusMessage) {
+                                reviewStatusMessage.innerHTML = '<div class="alert alert-info">Đánh giá của bạn đã được gửi và đang chờ phê duyệt.</div>';
+                                reviewStatusMessage.style.display = 'block';
+                            }
+
                         } else if (status === 422) {
                             // Lỗi validation
-                            let errorHtml = '<ul class="mb-0 text-start ps-3">';
+                            let errorMessages = [];
                             for (const field in body.errors) {
-                                body.errors[field].forEach(error => {
-                                    errorHtml += `<li>${error}</li>`;
-                                });
+                                // Check for specific phone number error, if backend sends it
+                                if (field === 'phone_number') { // Use the actual name of your phone number input field
+                                    errorMessages.push(`Số điện thoại: ${body.errors[field].join(', ')}`);
+                                } else {
+                                    body.errors[field].forEach(error => {
+                                        errorMessages.push(error);
+                                    });
+                                }
                             }
-                            errorHtml += '</ul>';
-                            window.showAppInfoModal({ html: errorHtml }, 'validation_error', 'Lỗi Dữ Liệu!');
+                            // Join all error messages with newline characters
+                            const finalErrorMessage = 'Lỗi Dữ Liệu!\n' + errorMessages.join('\n');
+                            window.showAppInfoModal(finalErrorMessage, 'error', 'Lỗi Dữ Liệu!'); // Changed type to 'error' and passed a plain string
                         } else {
                             // Các lỗi khác
                             window.showAppInfoModal(body.message || 'Có lỗi không xác định xảy ra.', 'error');

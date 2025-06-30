@@ -520,6 +520,9 @@
         if (typeof initializeBlogsPage === 'function' && document.getElementById('adminBlogsPage')) {
             initializeBlogsPage();
         }
+        if (typeof initializeReviewsPage === 'function' && document.getElementById('adminReviewsPage')) {
+            initializeReviewsPage();
+        }
         // MODIFIED: Pass global utility functions to initializeOrderManager
         if (typeof initializeOrderManager === 'function' && document.getElementById('adminOrdersPage')) {
             initializeOrderManager(

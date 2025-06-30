@@ -88,26 +88,12 @@
 
         {{-- Phần tab mô tả chi tiết, thông số và đánh giá --}}
         <div class="row mt-5">
-            <div class="col-12">
-                <ul class="nav nav-tabs" id="productTab" role="tablist">
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link active" id="specifications-tab" data-bs-toggle="tab"
-                            data-bs-target="#specifications-pane" type="button" role="tab"
-                            aria-controls="specifications-pane" aria-selected="true">Thông số kỹ thuật</button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="reviews-tab" data-bs-toggle="tab" data-bs-target="#reviews-pane"
-                            type="button" role="tab" aria-controls="reviews-pane" aria-selected="false">Đánh giá</button>
-                    </li>
-                </ul>
-                <div class="tab-content pt-4" id="productTabContent">
-                    {{-- Gọi file partial cho tab thông số --}}
-                    @include('customer.products.partials._specifications_tab', ['product' => $product])
-
-                    {{-- Gọi file partial cho tab đánh giá --}}
-                    @include('customer.products.partials._reviews_tab')
-                </div>
-            </div>
+            <h3 class="mb-3">Thông số kỹ thuật</h3>
+            @include('customer.products.partials._specifications_tab', ['product' => $product])
+        </div>
+        <div class="row mt-5">
+            <h3 class="mb-3">Đánh giá</h3>
+            @include('customer.products.partials._reviews_tab')
         </div>
     </main>
 @endsection

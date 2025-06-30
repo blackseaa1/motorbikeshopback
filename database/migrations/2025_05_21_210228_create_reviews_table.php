@@ -26,7 +26,8 @@ return new class extends Migration
 
             $table->integer('rating')->nullable()->comment('Đánh giá từ 1 đến 5 sao');
             $table->text('comment')->nullable();
-            $table->string('status', 50)->default('pending_approval'); // 'pending_approval', 'approved', 'rejected'
+            // Đã sửa: Thay đổi giá trị mặc định của status từ 'pending_approval' thành 'pending'
+            $table->string('status', 50)->default('pending'); // 'pending', 'approved', 'rejected'
             $table->timestamps();
 
             // Thiết lập khóa chính phức hợp: mỗi khách hàng chỉ được review 1 sản phẩm 1 lần

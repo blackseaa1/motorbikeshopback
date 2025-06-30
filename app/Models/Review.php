@@ -11,20 +11,22 @@ class Review extends Model
 
     protected $table = 'reviews';
 
-    /**
-     * SỬA ĐỔI 1: Bỏ các khai báo khóa chính phức hợp để dùng id tự tăng.
-     */
-    // public $incrementing = false; // Bỏ dòng này
+    // Khai báo khóa chính phức hợp
+    protected $primaryKey = ['customer_id', 'product_id'];
+    // Tắt tính năng tự tăng ID vì khóa chính là phức hợp
+    public $incrementing = false;
+    // RẤT QUAN TRỌNG: Khai báo kiểu dữ liệu của khóa chính là 'array'
+    protected $keyType = 'array';
 
     /**
-     * SỬA ĐỔI 2: Định nghĩa các hằng số cho trạng thái.
+     * Định nghĩa các hằng số cho trạng thái.
      */
     const STATUS_PENDING = 'pending';
     const STATUS_APPROVED = 'approved';
     const STATUS_REJECTED = 'rejected';
 
     /**
-     * Thêm hằng số STATUSES kiểu mảng để sửa lỗi "Undefined constant".
+     * Hằng số STATUSES kiểu mảng.
      */
     public const STATUSES = [
         self::STATUS_PENDING => 'Chờ duyệt',
@@ -41,7 +43,7 @@ class Review extends Model
     ];
 
     /**
-     * SỬA ĐỔI 3: Thêm $appends.
+     * Các thuộc tính được thêm vào khi serialize Model.
      * @var array
      */
     protected $appends = ['status_text', 'status_badge_class'];
@@ -49,6 +51,23 @@ class Review extends Model
     protected $casts = [
         'rating' => 'integer',
     ];
+
+    /**
+     * Ghi đè phương thức để đặt các khóa cho truy vấn lưu/cập nhật.
+     * Điều này là cần thiết cho các khóa chính phức hợp để đảm bảo Laravel tìm đúng bản ghi để cập nhật.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    protected function setKeysForSaveQuery($query)
+    {
+        // Thêm điều kiện where cho từng phần của khóa chính phức hợp.
+        // Điều này đảm bảo khi phương thức save() được gọi, Laravel biết cách tìm bản ghi cụ thể.
+        $query->where('customer_id', $this->getAttribute('customer_id'))
+            ->where('product_id', $this->getAttribute('product_id'));
+
+        return $query;
+    }
 
     public function customer()
     {
@@ -61,7 +80,7 @@ class Review extends Model
     }
 
     /**
-     * SỬA ĐỔI 4: Thêm các Accessor cho trạng thái.
+     * Accessor cho trạng thái hiển thị bằng văn bản.
      */
     public function getStatusTextAttribute(): string
     {
@@ -73,6 +92,9 @@ class Review extends Model
         };
     }
 
+    /**
+     * Accessor cho class badge CSS dựa trên trạng thái.
+     */
     public function getStatusBadgeClassAttribute(): string
     {
         return match ($this->status) {

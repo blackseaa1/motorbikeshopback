@@ -224,8 +224,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
             // Reviews
             Route::controller(ReviewController::class)->prefix('reviews')->name('reviews.')->group(function () {
                 Route::get('/', 'index')->name('index');
-                Route::post('/{review}/update-status', 'updateStatus')->name('updateStatus');
-                Route::delete('/{review}', 'destroy')->name('destroy');
+                // Đã sửa: Sử dụng customer_id và product_id làm tham số định tuyến
+                Route::post('/{customer_id}/{product_id}/update-status', 'updateStatus')->name('updateStatus');
+                // Đã sửa: Sử dụng customer_id và product_id làm tham số định tuyến
+                Route::delete('/{customer_id}/{product_id}', 'destroy')->name('destroy');
             });
         });
 
