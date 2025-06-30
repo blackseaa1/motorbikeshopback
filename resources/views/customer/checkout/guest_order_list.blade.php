@@ -7,8 +7,7 @@
         <h2 class="text-center mb-4">Các đơn hàng của bạn (SĐT/Email: {{ $selectedFilters['guest_phone'] }})</h2>
 
         {{-- Form tìm kiếm, lọc, sắp xếp --}}
-        {{-- ĐÃ SỬA: Form action trỏ đến route của phương thức listGuestOrders mới --}}
-        <form action="{{ route('guest.order.list') }}" method="GET" class="mb-4 p-3 border rounded shadow-sm bg-light">
+        <form action="{{ route('guest.order.lookup') }}" method="GET" class="mb-4 p-3 border rounded shadow-sm bg-light">
             <input type="hidden" name="guest_phone" value="{{ $selectedFilters['guest_phone'] }}"> {{-- Giữ lại số điện
             thoại đã tra cứu --}}
             <div class="row g-3 align-items-center">
@@ -32,14 +31,14 @@
                 <div class="col-md-3">
                     <label for="sort_by" class="form-label visually-hidden">Sắp xếp theo</label>
                     <select class="form-select" id="sort_by" name="sort_by">
-                        <option value="latest" {{ $selectedFilters['sort_by'] == 'latest' ? 'selected' : '' }}>Mới nhất
-                        </option>
-                        <option value="oldest" {{ $selectedFilters['sort_by'] == 'oldest' ? 'selected' : '' }}>Cũ nhất
-                        </option>
-                        <option value="total_desc" {{ $selectedFilters['sort_by'] == 'total_desc' ? 'selected' : '' }}>Tổng
-                            tiền (Giảm dần)</option>
-                        <option value="total_asc" {{ $selectedFilters['sort_by'] == 'total_asc' ? 'selected' : '' }}>Tổng tiền
-                            (Tăng dần)</option>
+                        <option value="created_at_desc" {{ $selectedFilters['sort_by'] == 'created_at_desc' ? 'selected' : '' }}>Ngày đặt (Mới nhất)</option>
+                        <option value="created_at_asc" {{ $selectedFilters['sort_by'] == 'created_at_asc' ? 'selected' : '' }}>Ngày đặt (Cũ nhất)</option>
+                        <option value="total_price_desc" {{ $selectedFilters['sort_by'] == 'total_price_desc' ? 'selected' : '' }}>Tổng tiền (Giảm dần)</option>
+                        <option value="total_price_asc" {{ $selectedFilters['sort_by'] == 'total_price_asc' ? 'selected' : '' }}>Tổng tiền (Tăng dần)</option>
+                        <option value="status_asc" {{ $selectedFilters['sort_by'] == 'status_asc' ? 'selected' : '' }}>Trạng
+                            thái (A-Z)</option>
+                        <option value="status_desc" {{ $selectedFilters['sort_by'] == 'status_desc' ? 'selected' : '' }}>Trạng
+                            thái (Z-A)</option>
                     </select>
                 </div>
                 <div class="col-md-2">
@@ -48,21 +47,22 @@
             </div>
         </form>
 
-        @if ($orders->isEmpty())
+        @if($orders->isEmpty())
             <div class="alert alert-info text-center" role="alert">
-                Không tìm thấy đơn hàng nào phù hợp với số điện thoại/email và tiêu chí tìm kiếm của bạn.
+                Không tìm thấy đơn hàng nào với số điện thoại/email này phù hợp với tiêu chí tìm kiếm/lọc.
+                Vui lòng <a href="{{ route('guest.order.lookup') }}">tra cứu lại</a>.
             </div>
         @else
             <div class="table-responsive">
-                <table class="table table-hover table-striped">
-                    <thead>
+                <table class="table table-striped table-hover align-middle">
+                    <thead class="table-dark">
                         <tr>
-                            <th>Mã đơn hàng</th>
-                            <th>Ngày đặt</th>
-                            <th>Tổng tiền</th>
-                            <th>Trạng thái</th>
-                            <th>Phương thức TT</th>
-                            <th>Hành động</th>
+                            <th scope="col">Mã đơn hàng</th>
+                            <th scope="col">Ngày đặt</th>
+                            <th scope="col">Tổng tiền</th>
+                            <th scope="col">Trạng thái</th>
+                            <th scope="col">Phương thức TT</th>
+                            <th scope="col">Hành động</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -84,8 +84,7 @@
             </div>
 
             <div class="d-flex justify-content-center mt-3">
-                {{-- ĐÃ SỬA: Sử dụng template phân trang tùy chỉnh của bạn --}}
-                {{ $orders->appends(['guest_phone' => $selectedFilters['guest_phone']])->links('customer.vendor.pagination') }}
+                {{ $orders->appends(['guest_phone' => $selectedFilters['guest_phone']])->links('vendor.pagination.bootstrap-5') }}
             </div>
         @endif
         <div class="text-center mt-4">
