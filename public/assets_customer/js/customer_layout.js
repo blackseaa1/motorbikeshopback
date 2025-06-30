@@ -42,118 +42,98 @@
      * @param {string} title - Tiêu đề của modal.
      */
     window.showAppInfoModal = (message, type = 'info', title = 'Thông báo') => {
-        const modalElement = document.getElementById('appInfoModal');
-        if (!modalElement) return;
-
-        const modalTitle = modalElement.querySelector('.modal-title');
-        const modalBody = modalElement.querySelector('.modal-body');
-        const modalHeader = modalElement.querySelector('.modal-header');
-
-        modalTitle.textContent = title;
-        modalBody.innerHTML = message; // Dùng innerHTML để có thể render HTML nếu cần
-
-        // Reset class
-        modalHeader.className = 'modal-header';
-        switch (type) {
-            case 'success':
-                modalHeader.classList.add('bg-success', 'text-white');
-                break;
-            case 'error':
-                modalHeader.classList.add('bg-danger', 'text-white');
-                break;
-            case 'warning':
-                modalHeader.classList.add('bg-warning', 'text-dark');
-                break;
-            default:
-                modalHeader.classList.add('bg-primary', 'text-white');
+        const modalEl = document.getElementById('appInfoModal');
+        if (!modalEl) {
+            console.error('Modal #appInfoModal not found. Please ensure it exists in your app.blade.php.');
+            return;
         }
 
-        const modalInstance = new bootstrap.Modal(modalElement);
-        modalInstance.show();
+        const modalTitle = modalEl.querySelector('.modal-title');
+        const modalBody = modalEl.querySelector('.modal-body');
+        const modalHeader = modalEl.querySelector('.modal-header');
+
+        if (modalTitle) modalTitle.textContent = title;
+        if (modalBody) modalBody.innerHTML = message; // innerHTML để cho phép HTML
+        if (modalHeader) {
+            // Xóa các class màu cũ
+            modalHeader.classList.remove('bg-success', 'bg-danger', 'bg-warning', 'bg-info', 'text-white', 'text-dark');
+            // Thêm class màu mới
+            switch (type) {
+                case 'success':
+                    modalHeader.classList.add('bg-success', 'text-white');
+                    break;
+                case 'error':
+                    modalHeader.classList.add('bg-danger', 'text-white');
+                    break;
+                case 'warning':
+                    modalHeader.classList.add('bg-warning', 'text-dark'); // text-dark cho nền vàng
+                    break;
+                case 'info':
+                    modalHeader.classList.add('bg-info', 'text-white');
+                    break;
+                default:
+                    modalHeader.classList.add('bg-light', 'text-dark');
+            }
+        }
+
+        const modal = new bootstrap.Modal(modalEl);
+        modal.show();
     };
 
     /**
-     * A.4. Thiết lập Form AJAX
-     * === PHIÊN BẢN MỚI: CHỈ HIỂN THỊ MODAL VỚI TIÊU ĐỀ LÀ LỖI CỤ THỂ ===
+     * A.4. Hiển thị Modal Xác Nhận Chung
+     * Điều khiển Bootstrap Modal #appConfirmModal trong file app.blade.php.
+     * @param {string} message - Nội dung thông báo xác nhận.
+     * @param {string} title - Tiêu đề của modal.
+     * @param {Function} onConfirm - Hàm sẽ được gọi khi người dùng xác nhận.
      */
-    window.setupAjaxForm = (formId, successCallback, errorCallback) => {
-        const form = document.getElementById(formId);
-        if (!form) return;
+    window.showAppConfirmModal = (message, title = 'Xác nhận', onConfirm = () => { }) => {
+        const modalEl = document.getElementById('appConfirmModal');
+        if (!modalEl) {
+            console.error('Modal #appConfirmModal not found. Please ensure it exists in your app.blade.php.');
+            return;
+        }
 
-        form.addEventListener('submit', async function (event) {
-            event.preventDefault();
-            window.showAppLoader();
+        const modalTitle = modalEl.querySelector('.modal-title');
+        const modalBody = modalEl.querySelector('.modal-body');
+        const confirmBtn = modalEl.querySelector('#appConfirmModalConfirmBtn'); // Nút xác nhận trong modal
 
-            // Xóa lỗi cũ nếu có (an toàn)
-            form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
-            form.querySelectorAll('.invalid-feedback').forEach(el => el.textContent = '');
+        if (modalTitle) modalTitle.textContent = title;
+        if (modalBody) modalBody.innerHTML = message;
 
-            try {
-                const formData = new FormData(form);
-                const response = await fetch(form.action, {
-                    method: 'POST',
-                    body: formData,
-                    headers: {
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                        'Accept': 'application/json'
-                    }
-                });
+        // Xóa listener cũ để tránh gọi hàm nhiều lần
+        // Tạo một bản sao nút để loại bỏ listener cũ
+        const oldConfirmBtn = confirmBtn.cloneNode(true);
+        confirmBtn.parentNode.replaceChild(oldConfirmBtn, confirmBtn);
 
-                const result = await response.json();
-
-                if (!response.ok) {
-                    if (response.status === 422 && result.errors) {
-                        // 1. Lấy thông báo lỗi ĐẦU TIÊN từ server
-                        const errorMessages = Object.values(result.errors).flat(); // Gom tất cả lỗi vào 1 mảng
-                        const specificErrorMessage = errorMessages.length > 0 ?
-                            errorMessages[0] :
-                            'Lỗi không xác định';
-
-                        // 2. Hiển thị modal với TIÊU ĐỀ là lỗi cụ thể, NỘI DUNG để trống
-                        window.showAppInfoModal('', 'error', specificErrorMessage);
-
-                        if (errorCallback) errorCallback(result);
-                        return;
-                    }
-
-                    throw new Error(result.message || 'Có lỗi hệ thống xảy ra.');
-                }
-
-                if (successCallback) {
-                    successCallback(result, form);
-                }
-
-            } catch (error) {
-                console.error(`Lỗi khi submit form ${formId}:`, error);
-                window.showAppInfoModal('Vui lòng thử lại sau giây lát.', 'error', error.message);
-                if (errorCallback) errorCallback(error);
-            } finally {
-                window.hideAppLoader();
+        // Gắn listener mới
+        oldConfirmBtn.addEventListener('click', () => {
+            onConfirm(); // Gọi hàm xác nhận được truyền vào
+            const modalInstance = bootstrap.Modal.getInstance(modalEl);
+            if (modalInstance) {
+                modalInstance.hide(); // Ẩn modal sau khi xác nhận
             }
         });
+
+        const modal = new bootstrap.Modal(modalEl);
+        modal.show();
     };
 
     /* ===============================================================
-     * B. HÀM ĐIỀU PHỐI (ORCHESTRATOR)
+     * B. CÁC HÀM KHỞI TẠO CỤ THỂ CHO TỪNG TRANG
      =============================================================== */
+
     function runPageSpecificInitializers() {
-        // Gọi hàm khởi tạo cho trang Đăng nhập/Đăng ký nếu tồn tại
+        // Hàm này chạy các hàm khởi tạo cho từng trang cụ thể
+        // Các hàm này cần được định nghĩa trong các tệp JS riêng của từng trang
+        // và được gán vào window để có thể truy cập ở đây.
+
         if (typeof window.initializeHomePage === 'function') {
             window.initializeHomePage();
         }
-        if (typeof window.initializeAuthPages === 'function') {
-            window.initializeAuthPages();
-        }
-        // Gọi hàm khởi tạo cho trang Tài khoản nếu tồn tại
         if (typeof window.initializeAccountPage === 'function') {
             window.initializeAccountPage();
         }
-
-        // =============================================================
-        //  THÊM LỆNH GỌI CHO TRANG DANH MỤC TẠI ĐÂY
-        // =============================================================
-        // Nếu hàm initializeCategoriesPage tồn tại (tức là file categories.js đã được tải),
-        // thì gọi nó.
         if (typeof window.initializeCategoriesPage === 'function') {
             window.initializeCategoriesPage();
         }
@@ -163,7 +143,6 @@
         if (typeof window.initializeProductDetailPage === 'function') {
             window.initializeProductDetailPage();
         }
-        // THÊM MỚI: Luôn gọi hàm xử lý giỏ hàng trên mọi trang
         if (typeof window.initializeCartHandler === 'function') {
             window.initializeCartHandler();
         }
@@ -173,15 +152,18 @@
         if (typeof window.initializeCheckoutPage === 'function') {
             window.initializeCheckoutPage();
         }
-
+        // Thêm các hàm khởi tạo trang khác của bạn vào đây nếu có
     }
 
     /* ===============================================================
      * C. ĐIỂM BẮT ĐẦU THỰC THI
      =============================================================== */
     document.addEventListener("DOMContentLoaded", () => {
+        // Hiển thị loader ngay khi DOM được tải
         window.showAppLoader();
+        // Chạy các hàm khởi tạo cụ thể của trang
         runPageSpecificInitializers();
+        // Ẩn loader sau khi tất cả các khởi tạo đã chạy
         window.hideAppLoader();
     });
 

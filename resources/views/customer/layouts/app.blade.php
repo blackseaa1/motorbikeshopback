@@ -82,6 +82,25 @@
             </div>
         </div>
     </div>
+    <div class="modal fade" id="appConfirmModal" tabindex="-1" aria-labelledby="appConfirmModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-dark"> {{-- Có thể điều chỉnh màu sắc --}}
+                    <h5 class="modal-title" id="appConfirmModalLabel">Xác nhận</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Bạn có chắc chắn muốn thực hiện hành động này?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="button" class="btn btn-danger" id="appConfirmModalConfirmBtn">Xác nhận</button> {{--
+                    Nút này cần ID --}}
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 
 </html>
