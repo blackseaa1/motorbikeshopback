@@ -1,4 +1,5 @@
-<div class="modal fade" id="deleteReviewModal" tabindex="-1" aria-labelledby="deleteReviewModalLabel" aria-hidden="true">
+<div class="modal fade" id="deleteReviewModal" tabindex="-1" aria-labelledby="deleteReviewModalLabel"
+    aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
@@ -6,7 +7,8 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                Bạn có chắc chắn muốn xóa đánh giá này của khách hàng "<strong id="customerNameForDelete"></strong>" về sản phẩm "<strong id="productNameForDelete"></strong>" không?
+                Bạn có chắc chắn muốn xóa đánh giá này của khách hàng "<strong id="customerNameForDelete"></strong>" về
+                sản phẩm "<strong id="productNameForDelete"></strong>" không?
                 Thao tác này không thể hoàn tác.
             </div>
             <div class="modal-footer">

@@ -23,6 +23,15 @@ class Review extends Model
     const STATUS_APPROVED = 'approved';
     const STATUS_REJECTED = 'rejected';
 
+    /**
+     * Thêm hằng số STATUSES kiểu mảng để sửa lỗi "Undefined constant".
+     */
+    public const STATUSES = [
+        self::STATUS_PENDING => 'Chờ duyệt',
+        self::STATUS_APPROVED => 'Đã duyệt',
+        self::STATUS_REJECTED => 'Từ chối',
+    ];
+
     protected $fillable = [
         'customer_id',
         'product_id',
