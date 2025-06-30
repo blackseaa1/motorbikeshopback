@@ -1,7 +1,65 @@
-// public/js/admin/profile.js
-
 function initializeProfilePage() {
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+    // Lấy các hàm helper toàn cục (đặc biệt là showToast)
+    // Hoặc định nghĩa fallback showToast nếu không có trong window
+    const showAppLoader = typeof window.showAppLoader === 'function' ? window.showAppLoader : () => console.log('Show Loader');
+    const hideAppLoader = typeof window.hideAppLoader === 'function' ? window.hideAppLoader : () => console.log('Hide Loader');
+    const showToast = typeof window.showToast === 'function' ? window.showToast : (msg, type) => {
+        // Fallback đơn giản nếu showToast không được định nghĩa toàn cục
+        const toastContainer = document.querySelector('.toast-container');
+        if (!toastContainer) {
+            console.error('Không tìm thấy .toast-container. Vui lòng thêm vào layout chính.');
+            alert(`${type}: ${msg}`); // Fallback sang alert nếu không có container
+            return;
+        }
+
+        const toastEl = document.createElement('div');
+        // Sử dụng các lớp Bootstrap Toast
+        toastEl.className = `toast align-items-center text-white bg-${type === 'success' ? 'success' : 'danger'} border-0`;
+        toastEl.setAttribute('role', 'alert');
+        toastEl.setAttribute('aria-live', 'assertive');
+        toastEl.setAttribute('aria-atomic', 'true');
+        toastEl.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">${msg}</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        `;
+        toastContainer.appendChild(toastEl); // Thêm vào container thay vì body
+
+        const toast = new bootstrap.Toast(toastEl, { delay: 3000 });
+        toast.show();
+        toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
+    };
+
+    // Hàm hiển thị lỗi validation dưới trường input
+    function displayValidationErrors(formElement, errors) {
+        // Clear previous errors first
+        formElement.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+        formElement.querySelectorAll('.invalid-feedback').forEach(el => el.textContent = '');
+
+        for (const fieldName in errors) {
+            if (errors.hasOwnProperty(fieldName)) {
+                let inputField = formElement.querySelector(`[name="${fieldName}"]`);
+
+                if (inputField) {
+                    inputField.classList.add('is-invalid');
+                    const errorDiv = inputField.nextElementSibling;
+                    if (errorDiv && errorDiv.classList.contains('invalid-feedback')) {
+                        errorDiv.textContent = errors[fieldName][0];
+                    } else {
+                        console.warn(`Không tìm thấy div .invalid-feedback cho trường: ${fieldName}`);
+                    }
+                } else {
+                    console.warn(`Không tìm thấy trường input cho lỗi: ${fieldName}`);
+                    // Fallback to toast for errors without a specific input field
+                    showToast(`Lỗi: ${fieldName} - ${errors[fieldName][0]}`, 'error');
+                }
+            }
+        }
+    }
+
 
     // --- Image preview for admin avatar ---
     // (admin_layout.js đã xử lý việc hiển thị ảnh xem trước chung qua initializeImagePreviews)
@@ -26,15 +84,11 @@ function initializeProfilePage() {
         avatarUpdateForm.addEventListener('submit', async function (event) {
             event.preventDefault();
             if (!adminAvatarInput.files || adminAvatarInput.files.length === 0) {
-                if (typeof window.showAppInfoModal === 'function') {
-                    window.showAppInfoModal('Vui lòng chọn một ảnh để tải lên.', 'warning', 'Chưa chọn ảnh');
-                } else {
-                    alert('Vui lòng chọn một ảnh để tải lên.');
-                }
+                showToast('Vui lòng chọn một ảnh để tải lên.', 'warning');
                 return;
             }
 
-            if (typeof window.showAppLoader === 'function') window.showAppLoader();
+            showAppLoader();
 
             const formData = new FormData(this); // FormData sẽ tự lấy file từ adminAvatarInput
             const actionUrl = this.action; // Lấy URL từ attribute action của form
@@ -52,12 +106,8 @@ function initializeProfilePage() {
                 const result = await response.json();
 
                 if (response.ok && result.success) {
-                    if (typeof window.hideAppLoader === 'function') window.hideAppLoader();
-                    if (typeof window.showAppInfoModal === 'function') {
-                        window.showAppInfoModal(result.message || 'Cập nhật avatar thành công!', 'success');
-                    } else {
-                        alert(result.message || 'Cập nhật avatar thành công!');
-                    }
+                    hideAppLoader();
+                    showToast(result.message || 'Cập nhật avatar thành công!', 'success');
                     if (result.avatar_url) {
                         const adminAvatarPreview = document.getElementById('adminAvatarPreview');
                         if (adminAvatarPreview) adminAvatarPreview.src = result.avatar_url;
@@ -73,18 +123,15 @@ function initializeProfilePage() {
                 } else {
                     // Xử lý lỗi validation từ server (nếu có)
                     if (response.status === 422 && result.errors && result.errors.avatar) {
-                        throw new Error(result.errors.avatar[0]);
+                        showToast(result.errors.avatar[0], 'error');
+                    } else {
+                        showToast(result.message || 'Có lỗi xảy ra khi cập nhật avatar.', 'error');
                     }
-                    throw new Error(result.message || 'Có lỗi xảy ra khi cập nhật avatar.');
                 }
             } catch (error) {
                 console.error('Lỗi cập nhật avatar:', error);
-                if (typeof window.hideAppLoader === 'function') window.hideAppLoader();
-                if (typeof window.showAppInfoModal === 'function') {
-                    window.showAppInfoModal(error.message, 'error');
-                } else {
-                    alert(error.message);
-                }
+                hideAppLoader();
+                showToast(error.message, 'error');
             }
         });
     }
@@ -157,7 +204,7 @@ function initializeProfilePage() {
     if (profileInfoForm) {
         profileInfoForm.addEventListener('submit', async function (event) {
             event.preventDefault();
-            if (typeof window.showAppLoader === 'function') window.showAppLoader();
+            showAppLoader();
 
             const formData = new FormData(this);
             const plainFormData = Object.fromEntries(formData.entries()); // Gửi JSON tiện hơn
@@ -176,12 +223,8 @@ function initializeProfilePage() {
                 const result = await response.json();
 
                 if (response.ok && result.success) {
-                    if (typeof window.hideAppLoader === 'function') window.hideAppLoader();
-                    if (typeof window.showAppInfoModal === 'function') {
-                        window.showAppInfoModal(result.message || 'Cập nhật thông tin thành công!', 'success');
-                    } else {
-                        alert(result.message || 'Cập nhật thông tin thành công!');
-                    }
+                    hideAppLoader();
+                    showToast(result.message || 'Cập nhật thông tin thành công!', 'success');
                     // Cập nhật tên hiển thị ở sidebar/topnav nếu có thay đổi
                     if (result.updated_admin_name) {
                         const adminNameDisplay = document.querySelector('.sidebar-footer .user-info span'); // Điều chỉnh selector nếu cần
@@ -192,30 +235,17 @@ function initializeProfilePage() {
                         }
                     }
                 } else if (response.status === 422 && result.errors) { // Validation errors
-                    if (typeof window.hideAppLoader === 'function') window.hideAppLoader();
-                    Object.keys(result.errors).forEach(field => {
-                        const inputField = this.querySelector(`[name="${field}"]`);
-                        if (inputField) {
-                            inputField.classList.add('is-invalid');
-                            let errorElement = inputField.parentElement.querySelector('.invalid-feedback');
-                            if (errorElement) errorElement.textContent = result.errors[field][0];
-                        }
-                    });
-                    if (typeof window.showAppInfoModal === 'function') {
-                        window.showAppInfoModal('Vui lòng kiểm tra lại thông tin nhập.', 'validation_error', 'Lỗi nhập liệu');
-                    }
+                    hideAppLoader();
+                    displayValidationErrors(profileInfoForm, result.errors);
+                    showToast('Vui lòng kiểm tra lại thông tin nhập.', 'error');
                 }
                 else {
-                    throw new Error(result.message || 'Có lỗi xảy ra khi cập nhật thông tin.');
+                    showToast(result.message || 'Có lỗi xảy ra khi cập nhật thông tin.', 'error');
                 }
             } catch (error) {
                 console.error('Lỗi cập nhật thông tin:', error);
-                if (typeof window.hideAppLoader === 'function') window.hideAppLoader();
-                if (typeof window.showAppInfoModal === 'function') {
-                    window.showAppInfoModal(error.message, 'error');
-                } else {
-                    alert(error.message);
-                }
+                hideAppLoader();
+                showToast(error.message, 'error');
             }
         });
     }
@@ -225,11 +255,15 @@ function initializeProfilePage() {
     if (changePasswordForm) {
         changePasswordForm.addEventListener('submit', async function (event) {
             event.preventDefault();
-            if (typeof window.showAppLoader === 'function') window.showAppLoader();
+            showAppLoader();
 
             const formData = new FormData(this);
             const plainFormData = Object.fromEntries(formData.entries());
             const actionUrl = this.action;
+
+            // Clear previous validation errors
+            changePasswordForm.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+            changePasswordForm.querySelectorAll('.invalid-feedback').forEach(el => el.textContent = '');
 
             try {
                 const response = await fetch(actionUrl, {
@@ -244,12 +278,8 @@ function initializeProfilePage() {
                 const result = await response.json();
 
                 if (response.ok && result.success) {
-                    if (typeof window.hideAppLoader === 'function') window.hideAppLoader();
-                    if (typeof window.showAppInfoModal === 'function') {
-                        window.showAppInfoModal(result.message || 'Thay đổi mật khẩu thành công!', 'success');
-                    } else {
-                        alert(result.message || 'Thay đổi mật khẩu thành công!');
-                    }
+                    hideAppLoader();
+                    showToast(result.message || 'Thay đổi mật khẩu thành công!', 'success');
                     this.reset(); // Xóa các trường trong form
                     if (requirementsList) { // Reset password requirements UI
                         requirementsList.querySelectorAll('li').forEach(item => {
@@ -257,30 +287,17 @@ function initializeProfilePage() {
                         });
                     }
                 } else if (response.status === 422 && result.errors) { // Validation errors
-                    if (typeof window.hideAppLoader === 'function') window.hideAppLoader();
-                    Object.keys(result.errors).forEach(field => {
-                        const inputField = this.querySelector(`[name="${field}"]`);
-                        if (inputField) {
-                            inputField.classList.add('is-invalid');
-                            let errorElement = inputField.parentElement.querySelector('.invalid-feedback'); // Hoặc inputField.nextElementSibling
-                            if (errorElement) errorElement.textContent = result.errors[field][0]; else console.warn(`No .invalid-feedback for ${field}`);
-                        }
-                    });
-                    if (typeof window.showAppInfoModal === 'function') {
-                        window.showAppInfoModal('Vui lòng kiểm tra lại thông tin nhập.', 'validation_error', 'Lỗi nhập liệu');
-                    }
+                    hideAppLoader();
+                    displayValidationErrors(changePasswordForm, result.errors);
+                    showToast('Vui lòng kiểm tra lại thông tin nhập.', 'error');
                 }
                 else {
-                    throw new Error(result.message || 'Có lỗi xảy ra khi thay đổi mật khẩu.');
+                    showToast(result.message || 'Có lỗi xảy ra khi thay đổi mật khẩu.', 'error');
                 }
             } catch (error) {
                 console.error('Lỗi thay đổi mật khẩu:', error);
-                if (typeof window.hideAppLoader === 'function') window.hideAppLoader();
-                if (typeof window.showAppInfoModal === 'function') {
-                    window.showAppInfoModal(error.message, 'error');
-                } else {
-                    alert(error.message);
-                }
+                hideAppLoader();
+                showToast(error.message, 'error');
             }
         });
     }

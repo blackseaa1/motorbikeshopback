@@ -109,7 +109,7 @@
                                     <div class="tab-pane fade show active" id="settings" role="tabpanel"
                                         aria-labelledby="settings-tab-link">
                                         <form class="form-horizontal" action="{{ route('admin.profile.updateInfo') }}"
-                                            method="POST">
+                                            method="POST" id="profileInfoForm"> {{-- THÊM ID CHO FORM --}}
                                             @csrf
                                             <input type="hidden" name="_form_id" value="updateInfo">
                                             <div class="mb-3 row">
@@ -129,10 +129,11 @@
                                                 <label for="inputEmail" class="col-sm-3 col-form-label">Email <span
                                                         class="text-danger">*</span></label>
                                                 <div class="col-sm-9">
+                                                    {{-- THÊM THUỘC TÍNH READONLY VÀO ĐÂY --}}
                                                     <input type="email"
                                                         class="form-control @error('email', 'updateInfo') is-invalid @enderror"
                                                         id="inputEmail" name="email" placeholder="Email"
-                                                        value="{{ old('email', $admin->email) }}" required>
+                                                        value="{{ old('email', $admin->email) }}" required readonly>
                                                     @error('email', 'updateInfo')
                                                         <div class="invalid-feedback">{{ $message }}</div>
                                                     @enderror
@@ -163,8 +164,8 @@
 
                                     <div class="tab-pane fade" id="changePassword" role="tabpanel"
                                         aria-labelledby="changePassword-tab-link">
-                                        <form class="form-horizontal" action="{{ route('admin.profile.changePassword') }}"
-                                            method="POST">
+                                        <form class="form-horizontal" id="changePasswordForm" action="{{ route('admin.profile.changePassword') }}"
+                                            method="POST"> {{-- THÊM ID CHO FORM --}}
                                             @csrf
                                             <input type="hidden" name="_form_id" value="changePassword">
                                             <div class="mb-3 row">

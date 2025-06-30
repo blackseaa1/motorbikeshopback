@@ -146,6 +146,81 @@
         modal.show();
     };
 
+    /**
+     * A.5. Hàm helper gửi form AJAX chung.
+     * @param {string} formId - ID của form HTML.
+     * @param {Function} onSuccess - Callback khi request thành công. Nhận (result, formElement).
+     * @param {Function} [onError] - Callback khi request thất bại. Nhận (error, formElement).
+     * @param {string} [methodOverride] - 'PUT', 'PATCH', 'DELETE' (nếu form dùng POST + _method).
+     */
+    window.setupAjaxForm = (formId, onSuccess, onError = (error, form) => {
+        window.showAppInfoModal(error.message || 'Có lỗi xảy ra trong quá trình xử lý.', 'error');
+    }, methodOverride = null) => {
+        const form = document.getElementById(formId);
+        if (!form) {
+            console.warn(`Form with ID "${formId}" not found for AJAX setup.`);
+            return;
+        }
+
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        if (!csrfToken) {
+            console.error('CSRF Token not found for AJAX form submission.');
+            return;
+        }
+
+        form.addEventListener('submit', async function (event) {
+            event.preventDefault();
+            window.showAppLoader(); // Show loader
+
+            // Clear previous validation errors
+            form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+            form.querySelectorAll('.invalid-feedback').forEach(el => el.textContent = '');
+
+            const formData = new FormData(this);
+            if (methodOverride) {
+                formData.append('_method', methodOverride);
+            }
+
+            try {
+                const response = await fetch(this.action, {
+                    method: 'POST', // Luôn là POST khi dùng FormData và _method
+                    headers: {
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json',
+                        // Không đặt 'Content-Type': 'multipart/form-data' khi dùng FormData, trình duyệt sẽ tự động đặt.
+                        // Nếu gửi JSON, bạn cần đặt 'Content-Type': 'application/json' và JSON.stringify(data).
+                    },
+                    body: formData,
+                });
+
+                const result = await response.json();
+
+                if (response.ok) { // Status codes 200-299
+                    onSuccess(result, this);
+                } else if (response.status === 422 && result.errors) { // Validation errors
+                    for (const fieldName in result.errors) {
+                        const inputField = this.querySelector(`[name="${fieldName}"]`);
+                        if (inputField) {
+                            inputField.classList.add('is-invalid');
+                            const errorDiv = inputField.nextElementSibling;
+                            if (errorDiv && errorDiv.classList.contains('invalid-feedback')) {
+                                errorDiv.textContent = result.errors[fieldName][0];
+                            }
+                        }
+                    }
+                    window.showAppInfoModal('Vui lòng kiểm tra lại thông tin nhập liệu.', 'error', 'Lỗi nhập liệu');
+                } else { // Other errors
+                    throw new Error(result.message || `Lỗi HTTP: ${response.status}`);
+                }
+            } catch (error) {
+                console.error(`AJAX Form Submission Error for ${formId}:`, error);
+                onError(error, this);
+            } finally {
+                window.hideAppLoader(); // Hide loader
+            }
+        });
+    };
+
 
     /* ===============================================================
      * B. CÁC HÀM KHỞI TẠO CỤ THỂ CHO TỪNG TRANG
