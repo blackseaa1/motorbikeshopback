@@ -27,6 +27,7 @@
                             <div class="d-grid">
                                 <button type="submit" class="btn btn-primary">Tra cứu đơn hàng</button>
                             </div>
+                            <p class="text-center mt-4">(Lưu ý đối với khách hàng đã có tài khoản vui lòng đăng nhập để sử dụng tra cứu đơn hàng của của tài khoản)</p>
                         </form>
                     </div>
                 </div>

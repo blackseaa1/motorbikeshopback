@@ -9,14 +9,19 @@
             </a>
             {{-- Form tìm kiếm toàn cầu cho desktop --}}
             {{-- ĐÃ SỬA: Xóa mx-4 và thêm flex-grow-1 vào input-group để ô tìm kiếm mở rộng hơn --}}
-            <div class="d-none d-md-flex flex-grow-1 mx-4">
+            <div class="d-none d-md-flex flex-grow-1 mx-4 position-relative"> {{-- Thêm position-relative --}}
                 <form class="input-group flex-grow-1" action="{{ route('global.search') }}" method="GET">
-                    <input type="text" class="form-control" name="query"
-                        placeholder="Tìm kiếm sản phẩm, thương hiệu, bài blog..." value="{{ request('query') }}">
+                    <input type="text" class="form-control" name="query" id="global-search-input-desktop" {{-- Thêm ID
+                        --}} placeholder="Tìm kiếm sản phẩm, thương hiệu, bài blog..." value="{{ request('query') }}">
                     <button class="btn btn-primary" type="submit">
                         <i class="bi bi-search"></i>
                     </button>
                 </form>
+                {{-- Dropdown tìm kiếm cho Desktop --}}
+                <div id="search-suggestions-desktop" class="list-group position-absolute w-100 shadow-lg"
+                    style="z-index: 1000; top: 100%; display: none; background-color: #fff; border-radius: 0.5rem; overflow: hidden;">
+                    {{-- Search suggestions will be loaded here by JavaScript --}}
+                </div>
             </div>
 
             {{-- ĐÃ SỬA: Thêm ms-auto để đẩy navbar-toggler sang phải --}}
@@ -131,13 +136,18 @@
         </div>
     </nav>
     {{-- Form tìm kiếm toàn cầu cho mobile (hiển thị khi màn hình nhỏ) --}}
-    <div class="d-md-none bg-light p-3">
+    <div class="d-md-none bg-light p-3 position-relative"> {{-- Thêm position-relative --}}
         <form class="input-group" action="{{ route('global.search') }}" method="GET">
-            <input type="text" class="form-control" name="query" placeholder="Tìm kiếm sản phẩm..."
-                value="{{ request('query') }}">
+            <input type="text" class="form-control" name="query" id="global-search-input-mobile" {{-- Thêm ID --}}
+                placeholder="Tìm kiếm sản phẩm..." value="{{ request('query') }}">
             <button class="btn btn-primary" type="submit">
                 <i class="bi bi-search"></i>
             </button>
         </form>
+        {{-- Dropdown tìm kiếm cho Mobile --}}
+        <div id="search-suggestions-mobile" class="list-group position-absolute w-100 shadow-lg"
+            style="z-index: 1000; top: 100%; display: none; background-color: #fff; border-radius: 0.5rem; overflow: hidden;">
+            {{-- Search suggestions will be loaded here by JavaScript --}}
+        </div>
     </div>
 </header>

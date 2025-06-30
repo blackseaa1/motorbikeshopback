@@ -66,9 +66,10 @@ use App\Http\Controllers\PaymentController;
 // == CUSTOMER FACING ROUTES (FRONT-END)
 // =========================================================================
 Route::middleware(['web'])->group(function () {
-
     // --- CÁC TRANG CÔNG KHAI & CHUNG ---
     Route::get('/search', [SearchController::class, 'index'])->name('global.search');
+    // NEW: API endpoint for search suggestions
+    Route::get('/search/suggestions', [SearchController::class, 'getSuggestions'])->name('search.suggestions');
     Route::get('/', [HomeController::class, 'index'])->name('home');
     Route::get('/contact', [HomeController::class, 'contact'])->name('contact.index');
     Route::post('/contact', [HomeController::class, 'submitContactForm'])->name('contact.submit');
