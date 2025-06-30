@@ -81,7 +81,7 @@
                 </div>
 
                 <div class="d-flex justify-content-center">
-                    {{ $orders->links('vendor.pagination.bootstrap-5') }} {{-- Sử dụng phân trang Bootstrap 5 --}}
+                    {{ $orders->links('customer.vendor.pagination') }} {{-- Sử dụng phân trang Bootstrap 5 --}}
                 </div>
             @endif
         </div>

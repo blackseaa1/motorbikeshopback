@@ -19,7 +19,8 @@
         alt="{{ $post->title }}"></a>
       <div class="card-body">
       <p class="text-muted">Đăng ngày {{ $post->created_at->format('d/m/Y') }} bởi
-        {{ $post->author->name ?? 'Admin' }}</p>
+        {{ $post->author->name ?? 'Admin' }}
+      </p>
       <h2 class="card-title h4"><a href="{{ route('blog.show', $post) }}"
         class="text-decoration-none text-dark">{{ $post->title }}</a></h2>
       <p class="card-text">{{ Str::limit(strip_tags($post->content), 150) }}</p>
@@ -31,12 +32,10 @@
       Không tìm thấy bài viết nào phù hợp.
       </div>
     @endforelse
-
-      <div class="d-flex justify-content-center">
-        {{ $posts->links() }}
+      <div class="d-flex justify-content-center mt-4">
+        {{ $posts->links('customer.vendor.pagination') }}
       </div>
       </div>
-
       @include('customer.blog.partials._sidebar', ['recentPosts' => $recentPosts])
 
     </div>

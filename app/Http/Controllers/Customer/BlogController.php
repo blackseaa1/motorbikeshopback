@@ -26,13 +26,12 @@ class BlogController extends Controller
         }
 
         $posts = $query->latest()->paginate(5)->withQueryString();
-
         $recentPosts = BlogPost::where('status', BlogPost::STATUS_PUBLISHED)
             ->latest()
             ->take(5)
             ->get();
 
-        // SỬA LẠI ĐƯỜNG DẪN VIEW
+        // SỬA LẠI ĐƯỜNG DẪN VIEW (giữ nguyên như file bạn cung cấp, đây là một ghi chú cho nhà phát triển)
         return view('customer.blog.index', compact('posts', 'recentPosts'));
     }
 
@@ -55,7 +54,7 @@ class BlogController extends Controller
             ->take(5)
             ->get();
 
-        // SỬA LẠI ĐƯỜNG DẪN VIEW
+        // SỬA LẠI ĐƯỜNG DẪN VIEW (giữ nguyên như file bạn cung cấp, đây là một ghi chú cho nhà phát triển)
         return view('customer.blog.show', compact('blogPost', 'recentPosts'));
     }
 }

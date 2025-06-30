@@ -101,10 +101,21 @@
             if (!targetLink || !targetLink.href) return;
 
             e.preventDefault();
-            const url = targetLink.href;
-            const newUrl = `${window.productsPageUrl}${new URL(url).search}`;
-            window.history.pushState({ path: newUrl }, '', newUrl);
-            fetchProducts(url);
+
+            // Lấy URL đầy đủ từ liên kết phân trang
+            const fullUrl = new URL(targetLink.href);
+
+            // Cập nhật URL trên thanh địa chỉ của trình duyệt
+            const newBrowserUrl = `${window.productsPageUrl}${fullUrl.search}`;
+            window.history.pushState({ path: newBrowserUrl }, '', newBrowserUrl);
+
+            // Lấy chỉ các tham số truy vấn từ URL phân trang
+            const params = fullUrl.search;
+
+            // Xây dựng URL API với các tham số phân trang
+            const apiUrl = `${window.productsApiUrl}${params}`; // ĐÃ SỬA: Đảm bảo gọi API endpoint
+
+            fetchProducts(apiUrl); // Gọi hàm fetchProducts với URL API
         });
 
         // *** THAY ĐỔI MỚI: Kích hoạt tìm kiếm sản phẩm ban đầu khi trang tải nếu có tham số trong URL ***

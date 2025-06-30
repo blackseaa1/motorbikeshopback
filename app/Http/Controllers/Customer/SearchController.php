@@ -4,10 +4,10 @@ namespace App\Http\Controllers\Customer;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Models\Product; // Import Product model
-use App\Models\Brand; // Import Brand model
-use App\Models\BlogPost; // Import BlogPost model
-use App\Models\Review; // Import Review model (để tính review count/avg cho sản phẩm)
+use App\Models\Product;
+use App\Models\Brand;
+use App\Models\BlogPost;
+use App\Models\Review;
 
 class SearchController extends Controller
 {
@@ -23,35 +23,35 @@ class SearchController extends Controller
         $results = [];
 
         if ($query) {
-            // Tìm kiếm trong Sản phẩm
+            // Tìm kiếm và phân trang trong Sản phẩm
             $products = Product::where('status', Product::STATUS_ACTIVE)
-                ->where(function($q) use ($query) {
+                ->where(function ($q) use ($query) {
                     $q->where('name', 'like', '%' . $query . '%')
-                      ->orWhere('description', 'like', '%' . $query . '%');
+                        ->orWhere('description', 'like', '%' . $query . '%');
                 })
-                ->withCount(['reviews' => function ($q) { // Tải số lượng reviews
+                ->withCount(['reviews' => function ($q) {
                     $q->where('status', Review::STATUS_APPROVED);
                 }])
-                ->withAvg(['reviews' => function ($q) { // Tải điểm review trung bình
+                ->withAvg(['reviews' => function ($q) {
                     $q->where('status', Review::STATUS_APPROVED);
                 }], 'rating')
-                ->limit(10) // Giới hạn số lượng kết quả cho mỗi loại
-                ->get();
+                ->paginate(6, ['*'], 'products_page') // Phân trang 6 sản phẩm/trang, dùng 'products_page' làm tên tham số trang
+                ->withQueryString(); // Giữ lại các tham số truy vấn khác
 
-            // Tìm kiếm trong Thương hiệu
+            // Tìm kiếm và phân trang trong Thương hiệu
             $brands = Brand::where('status', Brand::STATUS_ACTIVE)
                 ->where('name', 'like', '%' . $query . '%')
-                ->limit(5)
-                ->get();
+                ->paginate(5, ['*'], 'brands_page') // Phân trang 5 thương hiệu/trang, dùng 'brands_page'
+                ->withQueryString(); // Giữ lại các tham số truy vấn khác
 
-            // Tìm kiếm trong Bài Blog
+            // Tìm kiếm và phân trang trong Bài Blog
             $blogPosts = BlogPost::where('status', BlogPost::STATUS_PUBLISHED)
-                ->where(function($q) use ($query) {
+                ->where(function ($q) use ($query) {
                     $q->where('title', 'like', '%' . $query . '%')
-                      ->orWhere('content', 'like', '%' . $query . '%');
+                        ->orWhere('content', 'like', '%' . $query . '%');
                 })
-                ->limit(5)
-                ->get();
+                ->paginate(4, ['*'], 'blog_posts_page') // Phân trang 4 bài blog/trang, dùng 'blog_posts_page'
+                ->withQueryString(); // Giữ lại các tham số truy vấn khác
 
             $results = [
                 'products' => $products,

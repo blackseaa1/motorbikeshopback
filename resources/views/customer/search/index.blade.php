@@ -16,47 +16,30 @@
         @else
             {{-- Kết quả Sản phẩm --}}
             <div class="mb-5">
-                <h3 class="mb-3">Sản phẩm ({{ $results['products']->count() }})</h3>
+                <h3 class="mb-3">Sản phẩm ({{ $results['products']->total() }})</h3> {{-- Dùng .total() thay vì .count() cho paginator --}}
                 @if($results['products']->isNotEmpty())
                     <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
                         @foreach ($results['products'] as $product)
                             <div class="col">
                                 <div class="card h-100 shadow-sm product-card">
                                     <a href="{{ route('products.show', $product->id) }}" class="text-decoration-none text-dark">
-                                        @if($product->thumbnail_url)
-                                            <img src="{{ $product->thumbnail_url }}" class="card-img-top" alt="{{ $product->name }}" style="height: 200px; object-fit: cover;">
+                                        @if($product->images->isNotEmpty())
+                                            <img src="{{ $product->images->first()->url }}" class="card-img-top" alt="{{ $product->name }}">
                                         @else
-                                            <img src="https://placehold.co/200x200/EFEFEF/AAAAAA&text=No+Image" class="card-img-top" alt="No Image" style="height: 200px; object-fit: cover;">
+                                            <img src="https://placehold.co/400x300/EFEFEF/AAAAAA&text=No+Image" class="card-img-top" alt="No Image">
                                         @endif
                                         <div class="card-body">
                                             <h5 class="card-title">{{ $product->name }}</h5>
-                                            <p class="card-text text-muted mb-1">{{ number_format($product->price) }} ₫</p>
-                                            @if($product->reviews_count > 0)
-                                                <div class="d-flex align-items-center">
-                                                    <div class="text-warning me-1">
-                                                        @for ($i = 0; $i < round($product->reviews_avg_rating); $i++)
-                                                            <i class="bi bi-star-fill small"></i>
-                                                        @endfor
-                                                        @for ($i = round($product->reviews_avg_rating); $i < 5; $i++)
-                                                            <i class="bi bi-star small"></i>
-                                                        @endfor
-                                                    </div>
-                                                    <small class="text-muted">({{ $product->reviews_count }} đánh giá)</small>
-                                                </div>
-                                            @else
-                                                <small class="text-muted">Chưa có đánh giá</small>
-                                            @endif
+                                            <p class="card-text text-danger">{{ number_format($product->price) }} ₫</p>
                                         </div>
                                     </a>
-                                    <div class="card-footer bg-transparent border-top-0">
-                                        <a href="{{ route('products.show', $product->id) }}" class="btn btn-primary btn-sm w-100">Xem chi tiết</a>
-                                    </div>
                                 </div>
                             </div>
                         @endforeach
                     </div>
-                    <div class="text-end mt-3">
-                        <a href="{{ route('products.index', ['search' => $query]) }}" class="btn btn-outline-primary">Xem tất cả sản phẩm</a>
+                    {{-- Thêm phân trang cho sản phẩm --}}
+                    <div class="d-flex justify-content-center mt-4">
+                        {{ $results['products']->links('customer.vendor.pagination', ['pageName' => 'products_page']) }}
                     </div>
                 @else
                     <p class="text-muted">Không tìm thấy sản phẩm nào.</p>
@@ -65,33 +48,32 @@
 
             {{-- Kết quả Thương hiệu --}}
             <div class="mb-5">
-                <h3 class="mb-3">Thương hiệu ({{ $results['brands']->count() }})</h3>
+                <h3 class="mb-3">Thương hiệu ({{ $results['brands']->total() }})</h3> {{-- Dùng .total() cho paginator --}}
                 @if($results['brands']->isNotEmpty())
                     <ul class="list-group">
                         @foreach ($results['brands'] as $brand)
                             <li class="list-group-item d-flex justify-content-between align-items-center">
-                                <a href="{{ route('products.index', ['brands[]' => $brand->id]) }}" class="text-decoration-none text-primary fw-bold">
-                                    {{ $brand->name }}
-                                </a>
-                                <span class="badge bg-primary rounded-pill">{{ $brand->products_count ?? 'N/A' }} sản phẩm</span>
+                                <a href="{{ route('products.index', ['brand_id' => $brand->id]) }}" class="text-decoration-none">{{ $brand->name }}</a>
+                                <span class="badge bg-primary rounded-pill">{{ $brand->products_count ?? 0 }}</span>
                             </li>
                         @endforeach
                     </ul>
-                    <div class="text-end mt-3">
-                        <a href="{{ route('products.index') }}" class="btn btn-outline-primary">Xem tất cả thương hiệu</a>
+                    {{-- Thêm phân trang cho thương hiệu --}}
+                    <div class="d-flex justify-content-center mt-4">
+                        {{ $results['brands']->links('customer.vendor.pagination', ['pageName' => 'brands_page']) }}
                     </div>
                 @else
                     <p class="text-muted">Không tìm thấy thương hiệu nào.</p>
                 @endif
             </div>
 
-            {{-- Kết quả Bài Blog --}}
+            {{-- Kết quả Blog --}}
             <div class="mb-5">
-                <h3 class="mb-3">Bài Blog ({{ $results['blogPosts']->count() }})</h3>
+                <h3 class="mb-3">Bài Blog ({{ $results['blogPosts']->total() }})</h3> {{-- Dùng .total() cho paginator --}}
                 @if($results['blogPosts']->isNotEmpty())
                     <div class="list-group">
                         @foreach ($results['blogPosts'] as $blogPost)
-                            <a href="{{ route('blog.show', $blogPost->id) }}" class="list-group-item list-group-item-action d-flex flex-column flex-md-row align-items-md-center">
+                            <a href="{{ route('blog.show', $blogPost->id) }}" class="list-group-item list-group-item-action d-flex align-items-center mb-2">
                                 @if($blogPost->thumbnail_url)
                                     <img src="{{ $blogPost->thumbnail_url }}" alt="{{ $blogPost->title }}" class="img-thumbnail me-md-3 mb-2 mb-md-0" style="width: 120px; height: 90px; object-fit: cover;">
                                 @else
@@ -105,14 +87,14 @@
                             </a>
                         @endforeach
                     </div>
-                    <div class="text-end mt-3">
-                        <a href="{{ route('blog.index') }}" class="btn btn-outline-primary">Xem tất cả bài blog</a>
+                    {{-- Thêm phân trang cho blog posts --}}
+                    <div class="d-flex justify-content-center mt-4">
+                        {{ $results['blogPosts']->links('customer.vendor.pagination', ['pageName' => 'blog_posts_page']) }}
                     </div>
                 @else
                     <p class="text-muted">Không tìm thấy bài blog nào.</p>
                 @endif
             </div>
-
         @endif
     </div>
 @endsection

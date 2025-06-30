@@ -41,47 +41,70 @@ class ShopController extends Controller
                     ->orWhere('description', 'like', '%' . $search . '%');
             });
         }
-        // HẾT THÊM: Tìm kiếm sản phẩm
 
 
-        $selectedCategories = $request->input('categories', []);
-        if ($category && $category->exists) {
-            // Đảm bảo ID của category từ route cũng được thêm vào selectedCategories
-            // Chỉ thêm nếu nó chưa tồn tại trong mảng
-            if (!in_array($category->id, $selectedCategories)) {
-                $selectedCategories[] = $category->id;
+        // Lọc theo danh mục
+        if ($category) {
+            $query->where('category_id', $category->id);
+        } elseif ($request->has('categories')) {
+            $query->whereIn('category_id', $request->input('categories'));
+        }
+
+        // Lọc theo khoảng giá
+        if ($minPrice = $request->input('min_price')) {
+            $query->where('price', '>=', $minPrice);
+        }
+        if ($maxPrice = $request->input('max_price')) {
+            $query->where('price', '<=', $maxPrice);
+        }
+
+        // Lọc theo thương hiệu sản phẩm
+        if ($brandId = $request->input('brand_id')) {
+            $query->where('brand_id', $brandId);
+        }
+
+        // Lọc theo thương hiệu xe và mẫu xe
+        if ($vehicleBrandId = $request->input('vehicle_brand_id')) {
+            $query->whereHas('vehicleModels.vehicleBrand', function ($q) use ($vehicleBrandId) {
+                $q->where('id', $vehicleBrandId);
+            });
+        }
+        if ($vehicleModelId = $request->input('vehicle_model_id')) {
+            $query->whereHas('vehicleModels', function ($q) use ($vehicleModelId) {
+                $q->where('id', $vehicleModelId);
+            });
+        }
+
+        // Sắp xếp
+        if ($sortBy = $request->input('sort_by')) {
+            switch ($sortBy) {
+                case 'price_asc':
+                    $query->orderBy('price', 'asc');
+                    break;
+                case 'price_desc':
+                    $query->orderBy('price', 'desc');
+                    break;
+                case 'name_asc':
+                    $query->orderBy('name', 'asc');
+                    break;
+                case 'name_desc':
+                    $query->orderBy('name', 'desc');
+                    break;
+                case 'latest':
+                default:
+                    $query->latest();
+                    break;
             }
-        }
-        if (!empty($selectedCategories)) {
-            $query->whereIn('category_id', $selectedCategories);
-        }
-
-        if ($request->filled('brands')) {
-            $query->whereIn('brand_id', $request->input('brands'));
-        }
-
-        $selectedVehicleBrand = $request->input('vehicle_brand_id');
-        $selectedVehicleModel = $request->input('vehicle_model_id');
-
-        // Áp dụng bộ lọc Dòng xe nếu có
-        if ($selectedVehicleBrand) {
-            $query->whereHas('vehicleModels.vehicleBrand', function ($q) use ($selectedVehicleBrand) {
-                $q->where('vehicle_brands.id', $selectedVehicleBrand);
-            });
-        }
-
-        // Áp dụng bộ lọc Mẫu xe nếu có (sẽ tinh chỉnh thêm nếu Dòng xe cũng được chọn)
-        if ($selectedVehicleModel) {
-            $query->whereHas('vehicleModels', function ($q) use ($selectedVehicleModel) {
-                $q->where('vehicle_models.id', $selectedVehicleModel);
-            });
+        } else {
+            $query->latest(); // Mặc định sắp xếp theo mới nhất
         }
 
         return $query;
     }
 
+
     /**
-     * Hiển thị trang liệt kê tất cả sản phẩm với bộ lọc nâng cao.
+     * Hiển thị trang cửa hàng với danh sách sản phẩm.
      *
      * @param Request $request
      * @param Category|null $category
@@ -89,35 +112,20 @@ class ShopController extends Controller
      */
     public function index(Request $request, Category $category = null)
     {
-        // Điều chỉnh request để thêm category ID từ route vào input nếu có
-        if ($category && $category->exists) {
-            $currentCategories = $request->input('categories', []);
-            if (!in_array($category->id, $currentCategories)) {
-                $currentCategories[] = $category->id;
-            }
-            $request->merge(['categories' => $currentCategories]);
-        }
+        $products = $this->getFilteredProductsQuery($request, $category)->latest()->paginate(10)->withQueryString(); // Thay đổi thành 10 sản phẩm mỗi trang
+        $categories = Category::all();
+        $brands = Brand::all();
+        $vehicleBrands = VehicleBrand::all();
+        $vehicleModels = VehicleModel::all(); // Thêm dòng này để truyền tất cả vehicleModels
 
-        $query = $this->getFilteredProductsQuery($request, $category);
-        $products = $query->latest()->paginate(12)->withQueryString();
-
-        // --- Lấy dữ liệu cho các bộ lọc bên sidebar ---
-        $categories = Category::where('status', Category::STATUS_ACTIVE)->orderBy('name')->get();
-        $brands = Brand::where('status', Brand::STATUS_ACTIVE)->orderBy('name')->get();
-        $vehicleBrands = VehicleBrand::where('status', VehicleBrand::STATUS_ACTIVE)
-            ->with(['vehicleModels' => function ($query) {
-                $query->where('status', VehicleModel::STATUS_ACTIVE)->orderBy('name');
-            }])
-            ->orderBy('name')
-            ->get();
-
-        return view('customer.shops.index', [
-            'products' => $products,
-            'categories' => $categories,
-            'brands' => $brands,
-            'vehicleBrands' => $vehicleBrands,
-            'request' => $request, // Truyền request đã được điều chỉnh
-        ]);
+        return view('customer.shops.index', compact(
+            'products',
+            'categories',
+            'brands',
+            'vehicleBrands',
+            'vehicleModels',
+            'request' // Đảm bảo $request được truyền để giữ lại trạng thái form
+        ));
     }
 
     /**
@@ -129,11 +137,11 @@ class ShopController extends Controller
     public function getProductsApi(Request $request)
     {
         $query = $this->getFilteredProductsQuery($request);
-        $products = $query->latest()->paginate(12)->withQueryString();
+        $products = $query->latest()->paginate(10)->withQueryString(); // Thay đổi thành 10 sản phẩm mỗi trang
 
         return response()->json([
             'products_html' => view('customer.shops.partials.product_list', ['products' => $products])->render(),
-            'pagination_html' => $products->links()->toHtml(),
+            'pagination_html' => $products->links('customer.vendor.pagination')->toHtml(),
             'total' => $products->total()
         ]);
     }
