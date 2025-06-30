@@ -1,3 +1,4 @@
+
 @extends('customer.layouts.app')
 
 @section('title', 'Giỏ hàng của bạn')
@@ -8,26 +9,35 @@
             {{-- Cột bên trái: Danh sách sản phẩm trong giỏ --}}
             <div class="col-lg-8">
                 <h2 class="mb-4">Giỏ hàng</h2>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="select-all-items">
+                        <label class="form-check-label" for="select-all-items">Chọn tất cả</label>
+                    </div>
+                    <button class="btn btn-danger btn-sm" id="delete-selected-items" disabled>
+                        <i class="bi bi-trash"></i> Xóa đã chọn
+                    </button>
+                </div>
                 <div id="cart-items-container">
-                    {{-- File partial _cart_items.blade.php sẽ được nạp vào đây --}}
+                    {{-- File partial _cart_items.blade.php will be loaded here --}}
                     @include('customer.cart.partials._cart_items', ['cartItems' => $cartDetails['items']])
                 </div>
             </div>
 
             {{-- Cột bên phải: Tóm tắt và các tùy chọn thanh toán --}}
             <div class="col-lg-4">
-                {{-- Bọc phần tóm tắt trong container ID để JS có thể cập nhật --}}
+                {{-- Wrap summary section in container ID for JS to update --}}
                 <div id="cart-summary-container">
                     <div class="card shadow-sm" style="top: 20px;">
                         <div class="card-body">
                             <h5 class="card-title mb-4">Tóm tắt đơn hàng</h5>
 
                             {{-- =============================================================== --}}
-                            {{-- == PHÂN CHIA GIAO DIỆN CHO KHÁCH VÀ USER ĐÃ ĐĂNG NHẬP == --}}
+                            {{-- == INTERFACE DIVISION FOR GUESTS AND LOGGED-IN USERS == --}}
                             {{-- =============================================================== --}}
 
                             @auth('customer')
-                                {{-- GIAO DIỆN CHO USER ĐÃ ĐĂNG NHẬP --}}
+                                {{-- INTERFACE FOR LOGGED-IN USERS --}}
                                 @php
                                     $customer = Auth::guard('customer')->user();
                                     $defaultAddress = $customer->defaultAddress;
@@ -48,7 +58,7 @@
                                         toán</a>
                                 </div>
                             @else
-                                {{-- GIAO DIỆN CHO KHÁCH VÃNG LAI (CHƯA ĐĂNG NHẬP) --}}
+                                {{-- INTERFACE FOR GUEST USERS (NOT LOGGED IN) --}}
 
                                 <ul class="list-group list-group-flush">
                                     <li class="list-group-item d-flex justify-content-between fs-5">
@@ -64,7 +74,7 @@
                                     lưu thông tin giỏ hàng.
                                 </div>
                                 <div class="d-grid mt-3">
-                                    {{-- Nút này sẽ đưa cả khách vãng lai đến trang checkout --}}
+                                    {{-- This button will take even guest users to the checkout page --}}
                                     <a href="{{ route('checkout.index') }}" class="btn btn-primary btn-lg">Tiến hành thanh
                                         toán</a>
                                 </div>
@@ -79,6 +89,6 @@
 @endsection
 
 @push('scripts')
-    {{-- JS cho thư viện bootstrap-select --}}
+    {{-- JS for bootstrap-select library --}}
     <script src="{{ asset('assets_customer/js/cart.js') }}" defer></script>
 @endpush

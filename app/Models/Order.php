@@ -124,7 +124,7 @@ class Order extends Model
     // Accessors for computed properties
 
     /**
-     * SỬA ĐỔI: Accessor để định dạng ID thành 6 chữ số có số 0 ở đầu.
+     * Accessor để định dạng ID thành 6 chữ số có số 0 ở đầu.
      */
     public function getFormattedIdAttribute(): string
     {
@@ -156,18 +156,8 @@ class Order extends Model
 
     public function getStatusTextAttribute(): string
     {
-        return match ($this->status) {
-            self::STATUS_PENDING => 'Chờ xử lý',
-            self::STATUS_PROCESSING => 'Đang xử lý',
-            self::STATUS_APPROVED => 'Đã duyệt',
-            self::STATUS_SHIPPED => 'Đã giao vận chuyển',
-            self::STATUS_DELIVERED => 'Đã giao hàng',
-            self::STATUS_COMPLETED => 'Hoàn thành',
-            self::STATUS_CANCELLED => 'Đã hủy',
-            self::STATUS_RETURNED => 'Đã trả hàng',
-            self::STATUS_FAILED => 'Thất bại',
-            default => 'Không xác định',
-        };
+        // Sử dụng mảng STATUSES đã định nghĩa để lấy tên trạng thái thân thiện
+        return self::STATUSES[$this->status] ?? 'Không xác định';
     }
 
     public function getStatusBadgeClassAttribute(): string
@@ -194,6 +184,7 @@ class Order extends Model
         if ($this->shipping_address_line) {
             $addressParts[] = $this->shipping_address_line;
         }
+        // Kiểm tra xem mối quan hệ có được tải không trước khi truy cập
         if ($this->relationLoaded('ward') && $this->ward) {
             $addressParts[] = $this->ward->name;
         }

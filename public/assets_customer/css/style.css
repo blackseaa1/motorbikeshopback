@@ -393,3 +393,17 @@ img[loading="lazy"] {
   padding: 1.2rem;
   background-size: 50% 50%;
 }
+
+/* CSS để ẩn nút mũi tên lên và xuống trong input type="number" */
+
+/* For Chrome, Safari, Edge, Opera */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* For Firefox */
+input[type="number"] {
+  -moz-appearance: textfield;
+}

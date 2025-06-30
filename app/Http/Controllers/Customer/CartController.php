@@ -117,4 +117,21 @@ class CartController extends Controller
         $this->cartManager->remove($validated['product_id']);
         return $this->getFullCartDetailsResponse(); // Xóa ở trang cart nên cần full response
     }
+
+    /**
+     * API: Xóa nhiều sản phẩm khỏi giỏ hàng.
+     */
+    public function removeMultiple(Request $request)
+    {
+        $validated = $request->validate([
+            'product_ids' => 'required|array',
+            'product_ids.*' => 'exists:products,id', // Ensure each product ID exists
+        ]);
+
+        foreach ($validated['product_ids'] as $productId) {
+            $this->cartManager->remove($productId);
+        }
+
+        return $this->getFullCartDetailsResponse();
+    }
 }

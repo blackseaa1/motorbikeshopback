@@ -226,8 +226,8 @@
                                 </li>
                                 <li class="list-group-item d-flex justify-content-between fs-5 border-top pt-3">
                                     <strong>Tổng cộng</strong>
-                                    <strong id="summary-grand-total"
-                                        class="text-danger">{{ number_format($cartDetails['grand_total'] ?? 0) }} ₫</strong>
+                                 <strong id="summary-grand-total"
+                                        class="text-danger">{{ number_format($cartDetails['grand_total'] ?? 0, 0, ',', '.') }} ₫</strong>
                                 </li>
                             </ul>
 

@@ -8,6 +8,7 @@ use App\Models\DeliveryService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException; // Đảm bảo import ValidationException
+use Carbon\Carbon; // Import Carbon for date comparisons
 
 class CartManager
 {
@@ -175,7 +176,7 @@ class CartManager
         }
 
         $promotionInfo = $this->getPromotionInfo();
-        $shippingFee = 0;
+        $shippingFee = 0; // Currently hardcoded to 0 for "Miễn phí vận chuyển"
 
         $discountAmount = 0;
         if ($promotionInfo) {
@@ -183,6 +184,11 @@ class CartManager
 
             if ($calculatedDiscount > 0) {
                 $discountAmount = $calculatedDiscount;
+                // NEW LOGIC: Cap the discount amount to prevent negative grand total
+                // Discount should not exceed the current subtotal (since shipping is 0)
+                if ($discountAmount > $subtotal) {
+                    $discountAmount = $subtotal;
+                }
             } else {
                 // Nếu mã không hợp lệ hoặc không có giảm giá, xóa khỏi session
                 $this->clearPromotion();

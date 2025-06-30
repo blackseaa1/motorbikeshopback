@@ -137,6 +137,7 @@ Route::middleware(['web'])->group(function () {
         Route::post('/add', 'add')->name('add');
         Route::post('/update', 'update')->name('update');
         Route::post('/remove', 'remove')->name('remove');
+        Route::post('/remove-multiple', [CartController::class, 'removeMultiple']);
         Route::post('/update-summary', 'updateSummary')->name('updateSummary');
     });
 
@@ -351,3 +352,26 @@ Route::prefix('api')->name('api.')->group(function () {
         Route::get('/products', [CustomerShopController::class, 'getProductsApi'])->name('products.index');
     });
 });
+// Thêm vào cuối file routes/web.php
+
+use App\Mail\OrderConfirmation;
+use App\Models\Order;
+
+// Route::get('/test-email', function () {
+//     // Lấy một đơn hàng bất kỳ để test, hoặc thay 94 bằng ID đơn hàng bạn muốn test
+//     $order = Order::find(94);
+
+//     if (!$order) {
+//         return "Không tìm thấy đơn hàng với ID 94.";
+//     }
+
+//     // Tải các mối quan hệ cần thiết giống như trong Controller
+//     $order->load(['customer', 'province', 'district', 'ward', 'items.product', 'paymentMethod']);
+
+//     // Tạo một đối tượng Mailable
+//     $mailable = new OrderConfirmation($order);
+
+//     // **DÒNG QUAN TRỌNG NHẤT**
+//     // Render nội dung của email và hiển thị nó ra màn hình
+//     return $mailable->render();
+// });

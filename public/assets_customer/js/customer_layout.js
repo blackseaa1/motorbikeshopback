@@ -1,3 +1,4 @@
+// blackseaa1/motorbikeshop/motorbikeshop-0b35a37b31bf4b9b69dc80f5b881813a9422bec0/public/assets_customer/js/customer_layout.js
 /**
  * ===================================================================
  * customer_layout.js - PHIÊN BẢN HOÀN CHỈNH
@@ -56,7 +57,7 @@
         if (modalBody) modalBody.innerHTML = message; // innerHTML để cho phép HTML
         if (modalHeader) {
             // Xóa các class màu cũ
-            modalHeader.classList.remove('bg-success', 'bg-danger', 'bg-warning', 'bg-info', 'text-white', 'text-dark');
+            modalHeader.classList.remove('bg-success', 'bg-danger', 'bg-warning', 'bg-info', 'text-white', 'text-dark', 'bg-light');
             // Thêm class màu mới
             switch (type) {
                 case 'success':
@@ -70,6 +71,9 @@
                     break;
                 case 'info':
                     modalHeader.classList.add('bg-info', 'text-white');
+                    break;
+                case 'danger': // Added for confirm modal specifically
+                    modalHeader.classList.add('bg-danger', 'text-white');
                     break;
                 default:
                     modalHeader.classList.add('bg-light', 'text-dark');
@@ -85,9 +89,10 @@
      * Điều khiển Bootstrap Modal #appConfirmModal trong file app.blade.php.
      * @param {string} message - Nội dung thông báo xác nhận.
      * @param {string} title - Tiêu đề của modal.
+     * @param {string} type - 'success', 'error', 'warning', 'info', 'danger' (để thay đổi màu header).
      * @param {Function} onConfirm - Hàm sẽ được gọi khi người dùng xác nhận.
      */
-    window.showAppConfirmModal = (message, title = 'Xác nhận', onConfirm = () => { }) => {
+    window.showAppConfirmModal = (message, title = 'Xác nhận', type = 'info', onConfirm = () => { }) => {
         const modalEl = document.getElementById('appConfirmModal');
         if (!modalEl) {
             console.error('Modal #appConfirmModal not found. Please ensure it exists in your app.blade.php.');
@@ -96,28 +101,51 @@
 
         const modalTitle = modalEl.querySelector('.modal-title');
         const modalBody = modalEl.querySelector('.modal-body');
+        const modalHeader = modalEl.querySelector('.modal-header'); // Get modal header
         const confirmBtn = modalEl.querySelector('#appConfirmModalConfirmBtn'); // Nút xác nhận trong modal
 
         if (modalTitle) modalTitle.textContent = title;
         if (modalBody) modalBody.innerHTML = message;
 
-        // Xóa listener cũ để tránh gọi hàm nhiều lần
-        // Tạo một bản sao nút để loại bỏ listener cũ
+        // Apply header styling based on type
+        if (modalHeader) {
+            modalHeader.classList.remove('bg-success', 'bg-danger', 'bg-warning', 'bg-info', 'text-white', 'text-dark', 'bg-light');
+            switch (type) {
+                case 'success':
+                    modalHeader.classList.add('bg-success', 'text-white');
+                    break;
+                case 'error': // Alias for danger in confirm modal
+                case 'danger':
+                    modalHeader.classList.add('bg-danger', 'text-white');
+                    break;
+                case 'warning':
+                    modalHeader.classList.add('bg-warning', 'text-dark');
+                    break;
+                case 'info':
+                    modalHeader.classList.add('bg-info', 'text-white');
+                    break;
+                default:
+                    modalHeader.classList.add('bg-light', 'text-dark');
+            }
+        }
+
+        // Remove old listener to prevent multiple calls
         const oldConfirmBtn = confirmBtn.cloneNode(true);
         confirmBtn.parentNode.replaceChild(oldConfirmBtn, confirmBtn);
 
-        // Gắn listener mới
+        // Attach new listener
         oldConfirmBtn.addEventListener('click', () => {
-            onConfirm(); // Gọi hàm xác nhận được truyền vào
+            onConfirm(); // Call the passed confirmation function
             const modalInstance = bootstrap.Modal.getInstance(modalEl);
             if (modalInstance) {
-                modalInstance.hide(); // Ẩn modal sau khi xác nhận
+                modalInstance.hide(); // Hide modal after confirmation
             }
         });
 
         const modal = new bootstrap.Modal(modalEl);
         modal.show();
     };
+
 
     /* ===============================================================
      * B. CÁC HÀM KHỞI TẠO CỤ THỂ CHO TỪNG TRANG

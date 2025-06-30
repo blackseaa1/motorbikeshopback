@@ -133,7 +133,8 @@ class CheckoutController extends Controller
                 return back()->with('error', 'Phương thức thanh toán không hợp lệ.')->withInput();
             }
 
-            $initialStatus = Order::STATUS_PENDING; // Trạng thái ban đầu của đơn hàng.
+            // Luôn đặt trạng thái ban đầu là PENDING
+            $initialStatus = Order::STATUS_PENDING;
 
             // Tạo bản ghi đơn hàng mới trong cơ sở dữ liệu.
             $order = Order::create([
@@ -174,6 +175,8 @@ class CheckoutController extends Controller
             try {
                 $customerEmail = $customer->email ?? $shippingAddressInfo['email'];
                 if ($customerEmail) {
+                    // Tải các mối quan hệ cần thiết cho email
+                    $order->load(['customer', 'province', 'district', 'ward', 'items.product']);
                     Mail::to($customerEmail)->send(new OrderConfirmation($order));
                     Log::info('Order confirmation email sent to: ' . $customerEmail . ' for order #' . $order->id);
                 } else {
@@ -183,8 +186,12 @@ class CheckoutController extends Controller
                 Log::error('Failed to send order confirmation email for order #' . $order->id . ': ' . $e->getMessage());
             }
 
-            // Chuyển hướng người dùng dựa trên phương thức thanh toán đã chọn.
-            if ($paymentMethod->code === 'cod') {
+            // Chuyển hướng người dùng dựa trên tổng giá trị đơn hàng hoặc phương thức thanh toán đã chọn.
+            if ($totalPrice == 0) {
+                // Nếu tổng giá trị đơn hàng là 0, chuyển hướng thẳng đến trang xác nhận đơn hàng mà không qua cổng thanh toán
+                return redirect()->route($customer ? 'account.orders.show' : 'guest.order.show', $order->id)
+                    ->with('success', 'Đặt hàng thành công! Đơn hàng của bạn đã được xử lý.');
+            } else if ($paymentMethod->code === 'cod') {
                 return redirect()->route($customer ? 'account.orders.show' : 'guest.order.show', $order->id)
                     ->with('success', 'Đặt hàng thành công! Cảm ơn bạn đã mua hàng. Đơn hàng sẽ được xử lý khi nhận hàng.');
             } else if ($paymentMethod->code === 'momo') {
