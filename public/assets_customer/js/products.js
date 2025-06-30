@@ -43,24 +43,28 @@
         if (reviewForm) {
             // Check review status on page load (e.g., if admin rejected a previous review)
             const currentReviewStatus = reviewForm.dataset.reviewStatus; // Assuming data-review-status attribute
-            if (currentReviewStatus === 'rejected') {
+
+            // Ẩn form và hiển thị thông báo nếu đã có đánh giá (pending, rejected, approved)
+            if (currentReviewStatus) { // Nếu có bất kỳ trạng thái nào (không phải rỗng)
                 if (reviewFormContainer) {
-                    reviewFormContainer.style.display = 'none'; // Hide the form
+                    reviewFormContainer.style.display = 'none'; // Ẩn form
                 }
                 if (reviewStatusMessage) {
-                    reviewStatusMessage.innerHTML = '<div class="alert alert-warning">Đánh giá trước đó của bạn đã bị từ chối. Vui lòng liên hệ bộ phận hỗ trợ nếu bạn muốn gửi lại đánh giá.</div>';
-                    reviewStatusMessage.style.display = 'block';
-                }
-            } else if (currentReviewStatus === 'pending') {
-                if (reviewFormContainer) {
-                    reviewFormContainer.style.display = 'none'; // Hide the form
-                }
-                if (reviewStatusMessage) {
-                    reviewStatusMessage.innerHTML = '<div class="alert alert-info">Đánh giá của bạn đang chờ phê duyệt. Vui lòng đợi quản trị viên xem xét.</div>';
+                    let messageHtml = '';
+                    if (currentReviewStatus === 'rejected') {
+                        messageHtml = '<div class="alert alert-warning">Đánh giá trước đó của bạn đã bị từ chối. Vui lòng liên hệ bộ phận hỗ trợ nếu bạn muốn gửi lại đánh giá.</div>';
+                    } else if (currentReviewStatus === 'pending') {
+                        messageHtml = '<div class="alert alert-info">Đánh giá của bạn đang chờ phê duyệt. Vui lòng đợi quản trị viên xem xét.</div>';
+                    } else if (currentReviewStatus === 'approved') { // Thêm trạng thái đã duyệt
+                        messageHtml = '<div class="alert alert-success">Bạn đã gửi đánh giá cho sản phẩm này. Cảm ơn bạn!</div>';
+                    } else { // Các trạng thái khác (nếu có)
+                        messageHtml = '<div class="alert alert-info">Bạn đã gửi đánh giá cho sản phẩm này.</div>';
+                    }
+                    reviewStatusMessage.innerHTML = messageHtml;
                     reviewStatusMessage.style.display = 'block';
                 }
             } else {
-                // Show the form if no special status or status allows submission
+                // Hiển thị form nếu chưa có đánh giá nào được gửi
                 if (reviewFormContainer) {
                     reviewFormContainer.style.display = 'block';
                 }
@@ -72,17 +76,6 @@
 
             reviewForm.addEventListener('submit', function (e) {
                 e.preventDefault();
-
-                // Client-side validation for phone number (assuming an input with name="phone_number")
-                const phoneNumberInput = this.querySelector('input[name="phone_number"]');
-                if (phoneNumberInput) {
-                    const phoneNumber = phoneNumberInput.value.trim();
-                    if (phoneNumber.length !== 10 || !/^\d{10}$/.test(phoneNumber)) {
-                        // Changed message to "Bạn cần nhập đủ 10 kí tự"
-                        window.showAppInfoModal('Bạn cần nhập đủ 10 kí tự.', 'error', 'Lỗi Nhập Liệu!');
-                        return; // Stop submission
-                    }
-                }
 
                 window.showAppLoader(); // Hiện loading overlay
 
@@ -110,8 +103,7 @@
                             // Reset lại các ngôi sao
                             document.querySelectorAll('.rating-stars label').forEach(label => label.style.color = '#ddd');
 
-                            // If a new review is submitted successfully, you might want to hide the form
-                            // and show a pending message, or refresh the review list.
+                            // Khi gửi đánh giá thành công, ẩn form và hiển thị thông báo chờ duyệt
                             if (reviewFormContainer) {
                                 reviewFormContainer.style.display = 'none';
                             }
@@ -124,18 +116,13 @@
                             // Lỗi validation
                             let errorMessages = [];
                             for (const field in body.errors) {
-                                // Check for specific phone number error, if backend sends it
-                                if (field === 'phone_number') { // Use the actual name of your phone number input field
-                                    errorMessages.push(`Số điện thoại: ${body.errors[field].join(', ')}`);
-                                } else {
-                                    body.errors[field].forEach(error => {
-                                        errorMessages.push(error);
-                                    });
-                                }
+                                body.errors[field].forEach(error => {
+                                    errorMessages.push(error);
+                                });
                             }
                             // Join all error messages with newline characters
                             const finalErrorMessage = 'Lỗi Dữ Liệu!\n' + errorMessages.join('\n');
-                            window.showAppInfoModal(finalErrorMessage, 'error', 'Lỗi Dữ Liệu!'); // Changed type to 'error' and passed a plain string
+                            window.showAppInfoModal(finalErrorMessage, 'error', 'Lỗi Dữ Liệu!');
                         } else {
                             // Các lỗi khác
                             window.showAppInfoModal(body.message || 'Có lỗi không xác định xảy ra.', 'error');
@@ -143,6 +130,7 @@
                     })
                     .catch(error => {
                         console.error('Error:', error);
+                        // Đây là lỗi khi không thể kết nối đến máy chủ
                         window.showAppInfoModal('Không thể kết nối đến máy chủ, vui lòng thử lại sau.', 'error');
                     })
                     .finally(() => {
