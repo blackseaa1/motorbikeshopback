@@ -82,17 +82,18 @@
                                     <tr>
                                         <td><strong>#{{ $order->id }}</strong></td>
                                         <td>
-                                            {{-- Hiển thị thông tin khách hàng hoặc khách vãng lai --}}
-                                            @if($order->customer)
+                                            {{-- Hiển thị loại khách hàng và tên khách hàng từ guest_name --}}
+                                            @if($order->customer_id)
                                                 <i class="bi bi-person-check-fill text-success me-1"
                                                     title="Khách hàng có tài khoản"></i>
-                                                <span>{{ $order->customer->name }}</span>
                                             @else
                                                 <i class="bi bi-person-circle text-muted me-1" title="Khách vãng lai"></i>
-                                                <span>{{ $order->shipping_name }}</span>
                                             @endif
+                                            <span>{{ $order->guest_name }}</span> {{-- Sử dụng guest_name --}}
                                             <br>
-                                            <small class="text-muted">{{ $order->shipping_email ?? 'N/A' }}</small>
+                                            <small class="text-muted">{{ $order->guest_phone ?? 'N/A' }}</small> {{-- Sử dụng guest_phone --}}
+                                            <br>
+                                            <small class="text-muted">{{ $order->guest_email ?? 'N/A' }}</small> {{-- Sử dụng guest_email --}}
                                         </td>
                                         <td class="text-end"><strong class="text-danger">{{ number_format($order->total_price) }}
                                                 ₫</strong></td>
@@ -128,7 +129,7 @@
                     </div>
                     {{-- Pagination Links --}}
                     <div class="mt-3 d-flex justify-content-center">
-                        {{ $orders->withQueryString()->links() }}
+                        {{ $orders->withQueryString()->links('admin.vendor.pagination') }}
                     </div>
                 @endif
             </div>
@@ -142,11 +143,11 @@
         'deliveryServices' => $deliveryServices,
         'promotions' => $promotions,
         'orderStatuses' => $orderStatuses,
-        // 'allProductsForJs' => $allProductsForJs
+        'paymentMethods' => $paymentMethods
     ])
     @include('admin.sales.order.modals.view_order_modal')
     @include('admin.sales.order.modals.update_order_modal', ['orderStatuses' => $orderStatuses, 'deliveryServices' => $deliveryServices])
-                @include('admin.sales.order.modals.delete_order_modal')
+    @include('admin.sales.order.modals.delete_order_modal')
 
 @endsection
 

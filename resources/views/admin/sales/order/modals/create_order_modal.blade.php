@@ -225,6 +225,17 @@
                                     <div class="invalid-feedback" id="error-delivery_service_id"></div>
                                 </div>
                                 <div class="mb-3">
+                                    <label for="payment_method_id_create" class="form-label">Phương thức thanh toán
+                                        <span class="text-danger">*</span></label>
+                                    <select class="form-select" id="payment_method_id_create" name="payment_method_id">
+                                        <option value="">Chọn phương thức</option>
+                                        @foreach($paymentMethods as $method)
+                                            <option value="{{ $method->id }}">{{ $method->name }}</option>
+                                        @endforeach
+                                    </select>
+                                    <div class="invalid-feedback" id="error-payment_method_id"></div>
+                                </div>
+                                <div class="mb-3">
                                     <label for="promotion_id_create" class="form-label">Mã khuyến mãi</label>
                                     <select class="form-select" id="promotion_id_create" name="promotion_id">
                                         <option value="">Không áp dụng</option>
@@ -284,7 +295,6 @@
 {{-- Template ẩn cho một dòng sản phẩm mới. JS sẽ dùng cái này để tạo dòng mới --}}
 <template id="product-row-template">
     @include('admin.sales.order.partials.product_item_row', [
-        // 'allProductsForJs' => $allProductsForJs,
         'formIdentifier' => 'createOrderForm'
     ])
 </template>

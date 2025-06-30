@@ -15,9 +15,23 @@
 
 {{-- 2. NỘI DUNG HTML CỦA TRANG --}}
 @section('content')
-    <div class="content-header mb-4">
-        <h1><i class="bi bi-globe-americas me-2"></i>Quản lý Đơn vị Hành chính</h1>
+    <div class="content-header">
+        <div class="container-fluid">
+            <div class="row mb-2">
+                <div class="col-sm-6">
+                    <h1><i class="bi bi-globe-americas me-2"></i>Quản lý Đơn vị Hành chính</h1>
+                </div>
+                <div class="col-sm-6">
+                    <ol class="breadcrumb float-sm-end">
+                        <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dashboard</a></li>
+                        <li class="breadcrumb-item">Hệ thống</li>
+                        <li class="breadcrumb-item active">Quản lý Đơn vị Hành chính</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
     </div>
+
 
     <div class="container-fluid">
         {{-- Hiển thị thông báo thành công/thất bại --}}
@@ -37,7 +51,7 @@
         {{-- ================================================= --}}
         {{-- BỔ SUNG LẠI CARD IMPORT ĐÃ THIẾU --}}
         {{-- ================================================= --}}
-        <div class="card mb-4">
+        {{-- <div class="card mb-4">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h2 class="h5 mb-0"><i class="bi bi-upload me-1"></i>Import Dữ liệu Excel</h2>
                 <div>
@@ -46,7 +60,7 @@
                     </button>
                 </div>
             </div>
-        </div>
+        </div> --}}
 
         {{-- Card chứa các Tab Tỉnh/Huyện/Xã --}}
         <div class="card mb-4">

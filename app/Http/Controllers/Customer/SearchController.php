@@ -114,9 +114,6 @@ class SearchController extends Controller
                 ];
             }
 
-            // Tìm kiếm Thương hiệu
-            // LƯU Ý QUAN TRỌNG: Route 'customer.shop.brand' KHÔNG CÓ TRONG ĐOẠN MÃ web.php BẠN CUNG CẤP.
-            // BẠN CẦN ĐỊNH NGHĨA ROUTE NÀY TRONG web.php ĐỂ TRÁNH LỖI 'Route not defined'.
             $brands = Brand::where('status', Brand::STATUS_ACTIVE)
                 ->where('name', 'like', '%' . $query . '%')
                 ->select('id', 'name', 'logo_url')
@@ -127,7 +124,7 @@ class SearchController extends Controller
                     'id' => $brand->id,
                     'name' => $brand->name,
                     'image' => asset('storage/' . $brand->logo_url),
-                    'url' => route('customer.shop.brand', $brand->id), // Vẫn còn nguy cơ lỗi nếu route này không tồn tại
+                    'url' => route('customer.shop.brand', $brand->id),
                 ];
             }
 
@@ -142,7 +139,7 @@ class SearchController extends Controller
                     'id' => $blogPost->id,
                     'name' => $blogPost->title,
                     'image' => asset('storage/' . $blogPost->image_url),
-                    'url' => route('blog.show', $blogPost->id), // ĐÃ SỬA ĐỂ KHỚP VỚI 'blog.show'
+                    'url' => route('blog.show', $blogPost->id), 
                 ];
             }
         }

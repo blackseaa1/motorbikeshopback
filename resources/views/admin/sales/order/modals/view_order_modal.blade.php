@@ -9,7 +9,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                {{-- Giao diện xem chi tiết thông thường --}}
+                {{-- Normal view interface --}}
                 <div id="order-view-content">
                     <div class="row">
                         <div class="col-md-6">
@@ -21,7 +21,8 @@
                             </p>
                             <p class="mb-1"><strong>Loại khách hàng:</strong> <span id="viewDetailCustomerType"></span>
                             </p>
-                            <p class="mb-1"><strong>Tên khách hàng:</strong> <span id="viewDetailCustomerName"></span>
+                            {{-- Use guest_name, guest_phone, guest_email from Order model --}}
+                            <p class="mb-1"><strong>Tên người nhận:</strong> <span id="viewDetailCustomerName"></span>
                             </p>
                             <p class="mb-1"><strong>Điện thoại:</strong> <span id="viewDetailCustomerPhone"></span></p>
                             <p class="mb-1"><strong>Email:</strong> <span id="viewDetailCustomerEmail"></span></p>
@@ -80,9 +81,9 @@
                     </div>
                 </div>
 
-                {{-- MẪU HÓA ĐƠN ĐỂ IN (ẨN ĐI MẶC ĐỊNH) --}}
+                {{-- INVOICE TEMPLATE FOR PRINTING (HIDDEN BY DEFAULT) --}}
                 <div id="invoice-print-template" style="display: none;">
-                    {{-- CSS và HTML cho hóa đơn in --}}
+                    {{-- CSS and HTML for the printable invoice --}}
                     <div class="invoice-box">
                         <table>
                             <tr class="top">
@@ -132,7 +133,7 @@
                                 <td style="width: 25%;" class="text-right">Giá</td>
                             </tr>
                             <tbody id="print-items-body">
-                                {{-- Các dòng sản phẩm sẽ được chèn vào đây bằng JS --}}
+                                {{-- Product rows will be inserted here by JS --}}
                             </tbody>
                             <tr class="heading">
                                 <td colspan="3">Tổng kết</td>

@@ -13,7 +13,7 @@ use App\Models\Promotion;
 use App\Models\Province;
 use App\Models\District;
 use App\Models\Ward;
-use App\Models\PaymentMethod;
+use App\Models\PaymentMethod; // Import PaymentMethod model
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -32,7 +32,7 @@ class OrderController extends Controller
      */
     public function index(Request $request): View
     {
-        $query = Order::with(['customer', 'deliveryService'])->latest();
+        $query = Order::with(['customer', 'deliveryService', 'paymentMethod'])->latest(); // Eager load paymentMethod
 
         if ($request->filled('status') && $request->status !== 'all') {
             $query->where('status', $request->status);
@@ -43,28 +43,26 @@ class OrderController extends Controller
             $query->where(function ($q) use ($searchTerm) {
                 $q->where('id', 'like', "%{$searchTerm}%")
                     ->orWhereHas('customer', fn($subQ) => $subQ->where('name', 'like', "%{$searchTerm}%"))
-                    ->orWhere('shipping_name', 'like', "%{$searchTerm}%");
+                    ->orWhere('shipping_name', 'like', "%{$searchTerm}%") // Tìm kiếm theo guest_name
+                    ->orWhere('shipping_email', 'like', "%{$searchTerm}%") // Tìm kiếm theo guest_email
+                    ->orWhere('shipping_phone', 'like', "%{$searchTerm}%"); // Tìm kiếm theo guest_phone
             });
         }
 
+        // Sử dụng pagination.blade.php để phân trang
         $orders = $query->paginate(config('admin.pagination.per_page', 10))->withQueryString();
 
         // Tải sẵn dữ liệu cho các modal
         $customers = Customer::where('status', Customer::STATUS_ACTIVE)->orderBy('name')->get(['id', 'name', 'email']);
         $provinces = Province::orderBy('name')->get(['id', 'name']);
         $deliveryServices = DeliveryService::where('status', DeliveryService::STATUS_ACTIVE)->get(['id', 'name', 'shipping_fee']);
-        $paymentMethods = PaymentMethod::where('status', 'active')->get(); // <-- THÊM DÒNG NÀY
+        // Chỉ lấy phương thức thanh toán COD và Bank Transfer
+        $paymentMethods = PaymentMethod::whereIn('code', ['cod', 'bank_transfer'])->where('status', 'active')->get();
         $promotions = Promotion::where('status', Promotion::STATUS_MANUAL_ACTIVE)
             ->where(fn($q) => $q->whereNull('end_date')->orWhere('end_date', '>', now()))
             ->get();
         $orderStatuses = Order::STATUSES;
 
-        // **BẮT ĐẦU THAY ĐỔI**: Tải danh sách sản phẩm KÈM HÌNH ẢNH ĐẦU TIÊN
-        $allProductsForJs = Product::where('status', Product::STATUS_ACTIVE)
-            ->with('firstImage') // Eager load quan hệ 'firstImage'
-            ->orderBy('name')
-            ->get();
-        // dd($allProductsForJs);
         return view('admin.sales.order.orders', compact(
             'orders',
             'customers',
@@ -78,7 +76,8 @@ class OrderController extends Controller
 
     /**
      * Lưu một đơn hàng mới được tạo từ admin panel.
-     */ public function store(Request $request): JsonResponse
+     */
+    public function store(Request $request): JsonResponse
     {
         $validator = $this->validateOrderRequest($request);
 
@@ -89,7 +88,7 @@ class OrderController extends Controller
 
         DB::beginTransaction();
         try {
-            // **THAY ĐỔI**: Tách riêng logic xử lý địa chỉ mới
+            // Logic xử lý địa chỉ mới cho khách hàng có sẵn
             if ($validated['shipping_address_option'] === 'new' && $validated['customer_type'] === 'existing') {
                 $newAddress = CustomerAddress::create([
                     'customer_id'    => $validated['customer_id'],
@@ -113,7 +112,7 @@ class OrderController extends Controller
             $this->assignCustomerAndAddress($order, $validated);
 
             $order->fill([
-                'payment_method'      => 'cod',
+                'payment_method_id'   => $validated['payment_method_id'], // Sử dụng payment_method_id từ request
                 'status'              => $validated['status'],
                 'notes'               => $validated['notes'],
                 'delivery_service_id' => $validated['delivery_service_id'],
@@ -147,7 +146,8 @@ class OrderController extends Controller
      */
     public function show(Order $order): JsonResponse
     {
-        $order->load(['customer', 'deliveryService', 'province', 'district', 'ward', 'promotion', 'items.product']);
+        // Thêm eager loading cho paymentMethod
+        $order->load(['customer', 'deliveryService', 'province', 'district', 'ward', 'promotion', 'items.product', 'paymentMethod']);
         return response()->json($order);
     }
 
@@ -201,11 +201,12 @@ class OrderController extends Controller
 
         DB::beginTransaction();
         try {
+            // Hoàn trả số lượng sản phẩm và lượt sử dụng khuyến mãi nếu đơn hàng đã được duyệt
             if ($order->status === Order::STATUS_APPROVED) {
                 $this->handleStockAndPromotionOnStatusChange($order, Order::STATUS_APPROVED, Order::STATUS_CANCELLED);
             }
 
-            // Sử dụng delete() để xóa tất cả các OrderItem liên quan
+            // Xóa tất cả các mục đơn hàng (order items) liên quan
             $order->items()->delete();
             $order->delete();
 
@@ -217,6 +218,7 @@ class OrderController extends Controller
             return response()->json(['success' => false, 'message' => 'Không thể xóa đơn hàng. Vui lòng thử lại.'], 500);
         }
     }
+
     /**
      * API: Lấy danh sách sản phẩm để sử dụng trong modal tạo đơn hàng.
      * Trả về dữ liệu JSON tinh gọn để JavaScript xử lý.
@@ -245,6 +247,7 @@ class OrderController extends Controller
 
         return response()->json($productsData);
     }
+
     /**
      * API: Tính toán tóm tắt đơn hàng (subtotal, shipping, discount, total)
      * dựa trên dữ liệu gửi từ frontend (items, delivery_service, promotion).
@@ -311,7 +314,7 @@ class OrderController extends Controller
     {
         $rules = [
             'customer_type'         => ['required', Rule::in(['existing', 'guest'])],
-            'shipping_address_option' => ['required', Rule::in(['existing', 'new'])], // Thêm lựa chọn địa chỉ
+            'shipping_address_option' => ['required', Rule::in(['existing', 'new'])],
             'items'                 => ['required', 'array', 'min:1'],
             'items.*.product_id'    => ['required', 'integer', 'exists:products,id'],
             'items.*.quantity'      => ['required', 'integer', 'min:1'],
@@ -319,6 +322,10 @@ class OrderController extends Controller
             'promotion_id'          => ['nullable', 'integer', 'exists:promotions,id'],
             'status'                => ['required', Rule::in(array_keys(Order::STATUSES))],
             'notes'                 => ['nullable', 'string', 'max:1000'],
+            'payment_method_id'     => ['required', 'integer', Rule::exists('payment_methods', 'id')->where(function ($query) {
+                // Chỉ cho phép COD và Bank Transfer
+                $query->whereIn('code', ['cod', 'bank_transfer']);
+            })],
         ];
 
         $customerType = $request->input('customer_type');
@@ -359,9 +366,9 @@ class OrderController extends Controller
             $order->customer_id = $validatedData['customer_id'];
 
             // Sao chép thông tin vào các cột tương ứng của đơn hàng
-            $order->guest_name = $address->full_name;
-            $order->guest_phone = $address->phone;
-            $order->guest_email = $address->customer->email;
+            $order->shipping_name = $address->full_name; // Sử dụng shipping_name
+            $order->shipping_phone = $address->phone;   // Sử dụng shipping_phone
+            $order->shipping_email = $address->customer->email; // Sử dụng shipping_email
             $order->province_id = $address->province_id;
             $order->district_id = $address->district_id;
             $order->ward_id = $address->ward_id;
@@ -372,9 +379,9 @@ class OrderController extends Controller
             $order->customer_id = null;
 
             // Gán thông tin từ form của khách vãng lai
-            $order->guest_name = $validatedData['guest_name'];
-            $order->guest_phone = $validatedData['guest_phone'];
-            $order->guest_email = $validatedData['guest_email'];
+            $order->shipping_name = $validatedData['guest_name']; // Sử dụng shipping_name
+            $order->shipping_phone = $validatedData['guest_phone']; // Sử dụng shipping_phone
+            $order->shipping_email = $validatedData['guest_email']; // Sử dụng shipping_email
             $order->province_id = $validatedData['guest_province_id'];
             $order->district_id = $validatedData['guest_district_id'];
             $order->ward_id = $validatedData['guest_ward_id'];
@@ -384,7 +391,7 @@ class OrderController extends Controller
         }
     }
 
-    private function calculateOrderTotals(array $items, ?int $deliveryServiceId, ?int $promotionId): array // Đã thêm '?' cho int
+    private function calculateOrderTotals(array $items, ?int $deliveryServiceId, ?int $promotionId): array
     {
         $subtotal = 0;
         $productIds = array_column($items, 'product_id');
@@ -400,11 +407,12 @@ class OrderController extends Controller
         }
 
         $shippingFee = 0;
-        if ($deliveryServiceId) { // CHỈ TÌM DỊCH VỤ VẬN CHUYỂN NẾU ID ĐƯỢC CUNG CẤP
-            $deliveryService = DeliveryService::findOrFail($deliveryServiceId);
-            $shippingFee = $deliveryService->shipping_fee;
+        if ($deliveryServiceId) {
+            $deliveryService = DeliveryService::find($deliveryServiceId); // Dùng find thay vì findOrFail để tránh exception nếu ID không tồn tại
+            if ($deliveryService) {
+                $shippingFee = $deliveryService->shipping_fee;
+            }
         }
-
 
         $discountAmount = 0;
         $validPromotionId = null;
@@ -422,10 +430,11 @@ class OrderController extends Controller
             'subtotal' => $subtotal,
             'shipping_fee' => $shippingFee,
             'discount_amount' => $discountAmount,
-            'grand_total' => max(0, $grandTotal),
+            'grand_total' => max(0, $grandTotal), // Đảm bảo tổng cộng không âm
             'promotion_id' => $validPromotionId,
         ];
     }
+
     private function syncOrderItems(Order $order, array $items): void
     {
         $productIds = array_column($items, 'product_id');
@@ -455,15 +464,23 @@ class OrderController extends Controller
     {
         $order->load('items.product', 'promotion');
 
+        // Khi trạng thái chuyển sang Đã duyệt (Approved)
         if ($oldStatus !== Order::STATUS_APPROVED && $newStatus === Order::STATUS_APPROVED) {
             foreach ($order->items as $item) {
-                if ($item->product) $item->product->decrement('stock_quantity', $item->quantity);
+                if ($item->product) {
+                    $item->product->decrement('stock_quantity', $item->quantity);
+                }
             }
-            $order->promotion?->increment('uses_count');
-        } elseif ($oldStatus === Order::STATUS_APPROVED && ($newStatus === Order::STATUS_CANCELLED || $newStatus === Order::STATUS_RETURNED)) {
+            $order->promotion?->increment('uses_count'); // Tăng lượt sử dụng khuyến mãi
+        }
+        // Khi trạng thái chuyển từ Đã duyệt sang Đã hủy hoặc Đã trả hàng
+        elseif ($oldStatus === Order::STATUS_APPROVED && ($newStatus === Order::STATUS_CANCELLED || $newStatus === Order::STATUS_RETURNED)) {
             foreach ($order->items as $item) {
-                if ($item->product) $item->product->increment('stock_quantity', $item->quantity);
+                if ($item->product) {
+                    $item->product->increment('stock_quantity', $item->quantity);
+                }
             }
+            // Giảm lượt sử dụng khuyến mãi nếu có và lớn hơn 0
             if ($order->promotion && $order->promotion->uses_count > 0) {
                 $order->promotion->decrement('uses_count');
             }
