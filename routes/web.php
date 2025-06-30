@@ -68,8 +68,7 @@ use App\Http\Controllers\PaymentController;
 Route::middleware(['web'])->group(function () {
     // --- CÁC TRANG CÔNG KHAI & CHUNG ---
     Route::get('/search', [SearchController::class, 'index'])->name('global.search');
-    // NEW: API endpoint for search suggestions
-    Route::get('/search/suggestions', [SearchController::class, 'getSuggestions'])->name('search.suggestions');
+    Route::get('/search/autocomplete', [SearchController::class, 'autocompleteSearch'])->name('customer.search.autocomplete');
     Route::get('/', [HomeController::class, 'index'])->name('home');
     Route::get('/contact', [HomeController::class, 'contact'])->name('contact.index');
     Route::post('/contact', [HomeController::class, 'submitContactForm'])->name('contact.submit');
