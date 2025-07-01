@@ -2,9 +2,10 @@
 <div class="modal fade" id="deleteBrandModal" tabindex="-1" aria-labelledby="deleteBrandModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
+            {{-- CHỈNH SỬA: Đảm bảo method là POST và loại bỏ @method('DELETE') --}}
             <form id="deleteBrandForm" method="POST">
                 @csrf
-                @method('DELETE')
+                {{-- ĐÃ XÓA: @method('DELETE') --}} {{-- Dòng này là nguyên nhân gây lỗi --}}
                 <div class="modal-header bg-danger text-white">
                     <h5 class="modal-title" id="deleteBrandModalLabel"><i class="bi bi-trash-fill me-2"></i>Xác nhận Xóa
                         Thương hiệu</h5>

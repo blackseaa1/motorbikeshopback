@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Storage; // Thêm use Storage
+use Illuminate\Database\Eloquent\Builder; // Import Builder
 
 class Brand extends Model
 {
@@ -12,10 +12,21 @@ class Brand extends Model
 
     protected $table = 'brands';
 
-    // Định nghĩa các hằng số cho trạng thái
+    // --- CONSTANTS ---
     const STATUS_ACTIVE = 'active';
     const STATUS_INACTIVE = 'inactive';
 
+    // Hằng số cho các tùy chọn lọc/sắp xếp
+    const FILTER_STATUS_ALL = 'all';
+    const FILTER_STATUS_ACTIVE_ONLY = 'active_only';
+    const FILTER_STATUS_INACTIVE_ONLY = 'inactive_only';
+
+    const SORT_BY_LATEST = 'latest';
+    const SORT_BY_OLDEST = 'oldest';
+    const SORT_BY_NAME_ASC = 'name_asc';
+    const SORT_BY_NAME_DESC = 'name_desc';
+
+    // --- ATTRIBUTES ---
     protected $fillable = [
         'name',
         'description',
@@ -24,58 +35,93 @@ class Brand extends Model
     ];
 
     /**
-     * SỬA ĐỔI 1: Thêm mảng $appends.
-     * Các accessor trong mảng này sẽ được tự động thêm vào khi model
-     * được chuyển đổi thành array hoặc JSON.
-     * @var array
+     * Các thuộc tính ảo sẽ được thêm vào khi model được chuyển đổi thành array/JSON.
      */
-    protected $appends = ['logo_full_url'];
+    protected $appends = [
+        'logo_full_url',
+        'status_text',
+        'status_badge_class'
+    ];
+
+    //======================================================================
+    // RELATIONSHIPS
+    //======================================================================
 
     /**
-     * SỬA ĐỔI 2: Thêm Accessor để lấy URL đầy đủ của logo.
-     * Giúp tập trung logic xử lý URL vào Model.
-     *
-     * @return string
-     */
-    public function getLogoFullUrlAttribute()
-    {
-        // Lấy giá trị gốc từ DB, tránh vòng lặp vô hạn
-        $logoPath = $this->attributes['logo_url'];
-
-        if ($logoPath && Storage::disk('public')->exists($logoPath)) {
-            return Storage::url($logoPath);
-        }
-        // Trả về ảnh mặc định nếu không có logo
-        return 'https://placehold.co/100x100/EFEFEF/AAAAAA&text=LOGO';
-    }
-
-
-    /**
-     * Các sản phẩm thuộc thương hiệu này.
+     * Lấy tất cả sản phẩm thuộc về thương hiệu này.
      */
     public function products()
     {
         return $this->hasMany(Product::class, 'brand_id');
     }
 
+    //======================================================================
+    // ACCESSORS
+    //======================================================================
+
     /**
-     * Scope để chỉ lấy các thương hiệu đang hoạt động.
+     * Lấy URL đầy đủ của logo, trả về ảnh mặc định nếu không có.
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @return string
      */
-    public function scopeActive($query)
+    public function getLogoFullUrlAttribute(): string
     {
-        return $query->where('status', self::STATUS_ACTIVE);
+        return $this->logo_url ? asset('storage/' . $this->logo_url) : asset('assets_admin/img/default-logo.png');
     }
+
+    /**
+     * Lấy văn bản mô tả trạng thái (ví dụ: 'Hoạt động', 'Đã ẩn').
+     *
+     * @return string
+     */
+    public function getStatusTextAttribute(): string
+    {
+        return $this->isActive() ? 'Hoạt động' : 'Đã ẩn';
+    }
+
+    /**
+     * Lấy lớp CSS cho badge trạng thái (ví dụ: 'bg-success', 'bg-secondary').
+     *
+     * @return string
+     */
+    public function getStatusBadgeClassAttribute(): string
+    {
+        return $this->isActive() ? 'bg-success' : 'bg-secondary';
+    }
+
+    //======================================================================
+    // SCOPES & HELPERS
+    //======================================================================
 
     /**
      * Kiểm tra xem thương hiệu có đang hoạt động không.
      *
      * @return bool
      */
-    public function isActive()
+    public function isActive(): bool
     {
         return $this->status === self::STATUS_ACTIVE;
+    }
+
+    /**
+     * Scope để chỉ lấy các thương hiệu đang hoạt động.
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeActive(Builder $query): Builder
+    {
+        return $query->where('status', self::STATUS_ACTIVE);
+    }
+
+    /**
+     * Scope để chỉ lấy các thương hiệu đang ẩn.
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeInactive(Builder $query): Builder
+    {
+        return $query->where('status', self::STATUS_INACTIVE);
     }
 }

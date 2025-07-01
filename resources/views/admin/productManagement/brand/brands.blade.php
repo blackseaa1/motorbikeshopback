@@ -25,101 +25,86 @@
         {{-- Main Content --}}
         <section class="content">
             <div class="container-fluid">
-                <div class="card mb-4">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h2 class="h5 mb-0"><i class="bi bi-list-ul me-2"></i>Danh sách Thương hiệu</h2>
+                <div class="card mb-4 shadow-sm"> {{-- Thêm shadow-sm để đồng bộ --}}
+                    <div class="card-header bg-light d-flex justify-content-between align-items-center"> {{-- Thêm bg-light --}}
+                        <h2 class="h5 mb-0 text-primary"><i class="bi bi-list-ul me-2"></i>Danh sách Thương hiệu</h2> {{-- Thêm text-primary --}}
                         <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal"
                             data-bs-target="#createBrandModal">
                             <i class="bi bi-plus-circle-fill me-1"></i> Tạo Thương hiệu mới
                         </button>
                     </div>
                     <div class="card-body">
-                        @if ($brands->isEmpty())
-                            <div class="alert alert-info" role="alert">
-                                <i class="bi bi-info-circle me-2"></i>Hiện chưa có thương hiệu nào.
+                        {{-- Hàng điều khiển: Tìm kiếm, Lọc, Sắp xếp và Hành động hàng loạt --}}
+                        <div class="row g-3 mb-3 align-items-center">
+                            {{-- Thanh tìm kiếm --}}
+                            <div class="col-md-4 col-lg-3">
+                                <div class="input-group">
+                                    <input type="text" id="brandSearchInput" class="form-control form-control-sm"
+                                        placeholder="Tìm kiếm tên, mô tả...">
+                                    <button class="btn btn-outline-secondary btn-sm" type="button" id="brandSearchBtn">
+                                        <i class="bi bi-search"></i>
+                                    </button>
+                                </div>
                             </div>
-                        @else
-                            <div class="table-responsive">
-                                <table class="table table-hover align-middle">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th scope="col" style="width: 5%;">STT</th>
-                                            <th scope="col" style="width: 10%;" class="text-center">Logo</th>
-                                            <th scope="col" style="width: 25%;">Tên Thương hiệu</th>
-                                            <th scope="col">Mô tả</th>
-                                            <th scope="col" style="width: 10%;" class="text-center">Trạng thái</th>
-                                            <th scope="col" class="text-center" style="width: 25%;">Hành động</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach ($brands as $brand)
-                                            <tr id="brand-row-{{ $brand->id }}"
-                                                class="{{ !$brand->isActive() ? 'row-inactive' : '' }}">
-                                                {{-- Sử dụng accessor 'logo_full_url' đã được tối ưu --}}
-                                                <td>{{ $loop->iteration + $brands->firstItem() - 1 }}</td> {{-- Sửa STT cho đúng với
-                                                phân trang --}}
-                                                <td class="text-center">
-                                                    <img src="{{ $brand->logo_full_url }}" alt="{{ $brand->name }}"
-                                                        class="img-thumbnail"
-                                                        style="width: 50px; height: 50px; object-fit: contain;">
-                                                </td>
-                                                <td>{{ $brand->name }}</td>
-                                                <td>{{ Str::limit($brand->description, 60) ?? 'Không có mô tả' }}</td>
-                                                <td class="text-center status-cell" id="brand-status-{{ $brand->id }}">
-                                                    @if ($brand->isActive())
-                                                        <span class="badge bg-success">Hoạt động</span>
-                                                    @else
-                                                        <span class="badge bg-secondary">Đã ẩn</span>
-                                                    @endif
-                                                </td>
-                                                <td class="text-center action-buttons">
-                                                    {{-- Sử dụng accessor 'logo_full_url' đã được tối ưu --}}
-                                                    <button type="button" class="btn btn-sm btn-success btn-view-brand"
-                                                        data-bs-toggle="modal" data-bs-target="#viewBrandModal"
-                                                        data-id="{{ $brand->id }}" data-name="{{ $brand->name }}"
-                                                        data-description="{{ $brand->description ?? '' }}"
-                                                        data-status="{{ $brand->status }}"
-                                                        data-logo-url="{{ $brand->logo_full_url }}"
-                                                        data-created-at="{{ $brand->created_at->format('H:i:s d/m/Y') }}"
-                                                        data-updated-at="{{ $brand->updated_at->format('H:i:s d/m/Y') }}"
-                                                        data-update-url="{{ route('admin.productManagement.brands.update', $brand->id) }}"
-                                                        title="Xem chi tiết">
-                                                        <i class="bi bi-eye-fill"></i>
-                                                    </button>
-                                                    {{-- Thay đổi class của button dựa trên trạng thái của brand --}}
-                                                    <button type="button"
-                                                        class="btn btn-sm toggle-status-btn {{ $brand->isActive() ? 'btn-outline-secondary' : 'btn-danger' }}"
-                                                        data-id="{{ $brand->id }}"
-                                                        data-url="{{ route('admin.productManagement.brands.toggleStatus', $brand->id) }}"
-                                                        title="{{ $brand->isActive() ? 'Ẩn thương hiệu này' : 'Hiển thị thương hiệu này' }}">
-                                                        <i class="bi bi-power"></i>
-                                                    </button>
-                                                    <button type="button" class="btn btn-sm btn-info btn-edit-brand"
-                                                        data-bs-toggle="modal" data-bs-target="#updateBrandModal"
-                                                        data-id="{{ $brand->id }}" data-name="{{ $brand->name }}"
-                                                        data-description="{{ $brand->description ?? '' }}"
-                                                        data-status="{{ $brand->status }}"
-                                                        data-logo-url="{{ $brand->logo_full_url }}"
-                                                        data-update-url="{{ route('admin.productManagement.brands.update', $brand->id) }}"
-                                                        title="Cập nhật">
-                                                        <i class="bi bi-pencil-square"></i>
-                                                    </button>
-                                                    <button type="button" class="btn btn-sm btn-danger btn-delete-brand"
-                                                        data-bs-toggle="modal" data-bs-target="#deleteBrandModal"
-                                                        data-id="{{ $brand->id }}" data-name="{{ $brand->name }}"
-                                                        data-delete-url="{{ route('admin.productManagement.brands.destroy', $brand->id) }}"
-                                                        title="Xóa">
-                                                        <i class="bi bi-trash-fill"></i>
-                                                    </button>
 
-                                                </td>
-                                            </tr>
-                                        @endforeach
-                                    </tbody>
-                                </table>
+                            {{-- Bộ lọc --}}
+                            <div class="col-md-4 col-lg-3">
+                                <select id="brandFilterSelect" class="form-select form-select-sm">
+                                    <option value="all">Tất cả trạng thái</option>
+                                    <option value="active_only">Hoạt động</option>
+                                    <option value="inactive_only">Đã ẩn</option>
+                                </select>
                             </div>
-                            {{-- Hiển thị link phân trang --}}
-                            <div class="mt-3 d-flex justify-content-end">
+
+                            {{-- Sắp xếp --}}
+                            <div class="col-md-4 col-lg-3">
+                                <select id="brandSortSelect" class="form-select form-select-sm">
+                                    <option value="latest">Mới nhất</option>
+                                    <option value="oldest">Cũ nhất</option>
+                                    <option value="name_asc">Tên (A-Z)</option>
+                                    <option value="name_desc">Tên (Z-A)</option>
+                                </select>
+                            </div>
+
+                            {{-- Nút hành động hàng loạt --}}
+                            <div class="col-12 col-lg-3 text-lg-end">
+                                <button class="btn btn-danger btn-sm me-2 mb-2 mb-lg-0" id="bulkDeleteBtn" disabled
+                                    data-bs-toggle="modal" data-bs-target="#deleteBrandModal">
+                                    <i class="bi bi-trash-fill me-1"></i> Xóa (<span id="selectedCountDelete">0</span>)
+                                </button>
+                                <button class="btn btn-info btn-sm mb-2 mb-lg-0" id="bulkToggleStatusBtn" disabled data-bs-toggle="modal"
+                                    data-bs-target="#bulkToggleStatusModal">
+                                    <i class="bi bi-arrow-repeat me-1"></i> Trạng thái (<span
+                                        id="selectedCountToggle">0</span>)
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th scope="col" style="width:3%"> {{-- Tăng width cho checkbox --}}
+                                            <input type="checkbox" id="selectAllBrands"> {{-- ID khác để tránh xung đột --}}
+                                        </th>
+                                        <th scope="col" style="width:5%">STT</th>
+                                        <th scope="col" style="width: 10%;" class="text-center">Logo</th>
+                                        <th scope="col" style="width: 20%;">Tên Thương hiệu</th> {{-- Giảm width --}}
+                                        <th scope="col">Mô tả</th>
+                                        <th scope="col" style="width: 10%;" class="text-center">Trạng thái</th>
+                                        <th scope="col" class="text-center" style="width: 15%;">Hành động</th> {{-- Giảm width --}}
+                                    </tr>
+                                </thead>
+                                <tbody id="brands-table-body"> {{-- Đổi ID --}}
+                                    {{-- Dữ liệu sẽ được tải ở đây bởi Controller và AJAX --}}
+                                    @include('admin.productManagement.brand.partials._brand_table_rows', ['brands' => $brands])
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {{-- Hiển thị link phân trang --}}
+                        @if ($brands->hasPages())
+                            <div class="mt-3 d-flex justify-content-center" id="pagination-links">
                                 {{ $brands->links() }}
                             </div>
                         @endif
@@ -134,31 +119,11 @@
     @include('admin.productManagement.brand.modals.update_brand_modal')
     @include('admin.productManagement.brand.modals.delete_brand_modal')
     @include('admin.productManagement.brand.modals.view_brand_modal')
+    {{-- NEW: Modal for Bulk Toggle Status --}}
+    @include('admin.productManagement.brand.modals.modal_bulk_toggle_status')
 
 @endsection
 
 @push('scripts')
     <script src="{{ asset('assets_admin/js/brand_manager.js') }}"></script>
-    {{--
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            // Khởi tạo tất cả các xử lý JS cho trang này
-            if (typeof initializeBrandPage === 'function') {
-                initializeBrandPage();
-            } else {
-                console.error('Lỗi: Hàm initializeBrandsPage() không được tìm thấy trong brand_manager.js.');
-            }
-
-            // Script để mở lại modal "Create" nếu có lỗi validation từ server
-            @if ($errors -> any() && old('_form_marker') === 'create_brand')
-                const createModalElement = document.getElementById('createBrandModal');
-            if (createModalElement) {
-                const createModalInstance = new bootstrap.Modal(createModalElement);
-                if (createModalInstance) {
-                    createModalInstance.show();
-                }
-            }
-            @endif
-        });
-    </script> --}}
 @endpush

@@ -258,8 +258,24 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::post('/bulk-destroy', 'bulkDestroy')->name('bulkDestroy'); // NEW bulk destroy
                 Route::post('/bulk-toggle-status', 'bulkToggleStatus')->name('bulkToggleStatus'); // NEW bulk toggle status
             });
-            Route::resource('brands', BrandController::class)->except(['create', 'edit', 'show']);
-            Route::post('brands/{brand}/toggle-status', [BrandController::class, 'toggleStatus'])->name('brands.toggleStatus');
+            // Brands
+            Route::controller(BrandController::class)->prefix('brands')->name('brands.')->group(function () {
+                // **ĐẶT CÁC CUSTOM ROUTES (NON-RESOURCE-MODEL-BOUND) LÊN TRƯỚC**
+                // Các route này không nhận tham số ID động từ URL segment
+                Route::post('bulk-destroy', 'bulkDestroy')->name('bulkDestroy');
+                Route::post('bulk-toggle-status', 'bulkToggleStatus')->name('bulkToggleStatus');
+
+                // Standard CRUD routes
+                Route::get('/', 'index')->name('index'); // brands.index
+                Route::post('/', 'store')->name('store'); // brands.store
+
+                // Các route có tham số model {brand}
+                // (Laravel sẽ chỉ cố gắng match {brand} nếu các route trên không khớp)
+                Route::get('{brand}', 'show')->name('show'); // brands.show
+                Route::put('{brand}', 'update')->name('update'); // brands.update
+                Route::delete('{brand}', 'destroy')->name('destroy'); // brands.destroy
+                Route::post('{brand}/toggle-status', 'toggleStatus')->name('toggleStatus'); // brands.toggleStatus
+            });
             Route::get('vehicles', [VehicleManagementController::class, 'index'])->name('vehicle.index');
             Route::resource('vehicle-brands', VehicleBrandController::class)->except(['index', 'create', 'edit', 'show'])->names('vehicleBrands');
             Route::post('vehicle-brands/{vehicle_brand}/toggle-status', [VehicleBrandController::class, 'toggleStatus'])->name('vehicleBrands.toggleStatus');
