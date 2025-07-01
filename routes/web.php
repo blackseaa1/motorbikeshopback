@@ -276,11 +276,34 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::delete('{brand}', 'destroy')->name('destroy'); // brands.destroy
                 Route::post('{brand}/toggle-status', 'toggleStatus')->name('toggleStatus'); // brands.toggleStatus
             });
+            // Vehicle Management
             Route::get('vehicles', [VehicleManagementController::class, 'index'])->name('vehicle.index');
-            Route::resource('vehicle-brands', VehicleBrandController::class)->except(['index', 'create', 'edit', 'show'])->names('vehicleBrands');
-            Route::post('vehicle-brands/{vehicle_brand}/toggle-status', [VehicleBrandController::class, 'toggleStatus'])->name('vehicleBrands.toggleStatus');
-            Route::resource('vehicle-models', VehicleModelController::class)->except(['index', 'create', 'edit', 'show'])->names('vehicleModels');
-            Route::post('vehicle-models/{vehicle_model}/toggle-status', [VehicleModelController::class, 'toggleStatus'])->name('vehicleModels.toggleStatus');
+
+            // Vehicle Brands (sub-module of vehicle management)
+            Route::controller(VehicleBrandController::class)->prefix('vehicle-brands')->name('vehicleBrands.')->group(function () {
+                // Bulk actions MUST come before singular resource routes
+                Route::post('bulk-destroy', 'bulkDestroy')->name('bulkDestroy');
+                Route::post('bulk-toggle-status', 'bulkToggleStatus')->name('bulkToggleStatus');
+                // Standard CRUD routes (excluding index as it's part of VehicleManagementController@index)
+                Route::post('/', 'store')->name('store');
+                Route::get('{vehicleBrand}', 'show')->name('show'); // For view/edit modal data fetching
+                Route::put('{vehicleBrand}', 'update')->name('update');
+                Route::delete('{vehicleBrand}', 'destroy')->name('destroy');
+                Route::post('{vehicleBrand}/toggle-status', 'toggleStatus')->name('toggleStatus');
+            });
+
+            // Vehicle Models (sub-module of vehicle management)
+            Route::controller(VehicleModelController::class)->prefix('vehicle-models')->name('vehicleModels.')->group(function () {
+                // Bulk actions MUST come before singular resource routes
+                Route::post('bulk-destroy', 'bulkDestroy')->name('bulkDestroy');
+                Route::post('bulk-toggle-status', 'bulkToggleStatus')->name('bulkToggleStatus');
+                // Standard CRUD routes (excluding index as it's part of VehicleManagementController@index)
+                Route::post('/', 'store')->name('store');
+                Route::get('{vehicleModel}', 'show')->name('show'); // For view/edit modal data fetching
+                Route::put('{vehicleModel}', 'update')->name('update');
+                Route::delete('{vehicleModel}', 'destroy')->name('destroy');
+                Route::post('{vehicleModel}/toggle-status', 'toggleStatus')->name('toggleStatus');
+            });
             Route::get('inventory', [InventoryController::class, 'index'])->name('inventory.index');
 
             // API routes for Inventory page

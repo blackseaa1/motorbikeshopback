@@ -1,4 +1,4 @@
-{{-- Create VehicleBrand Modal --}}
+{{-- Create VehicleBrand Modal (giữ nguyên) --}}
 <div class="modal fade" id="createVehicleBrandModal" tabindex="-1" aria-labelledby="createVehicleBrandModalLabel"
     aria-hidden="true">
     <div class="modal-dialog modal-lg">
@@ -18,8 +18,6 @@
                                 class="text-danger">*</span></label>
                         <input type="text" class="form-control @error('name', '_form_marker') is-invalid @enderror"
                             id="vbNameCreate" name="name" value="{{ old('name') }}" required>
-                        {{-- Div lỗi cho AJAX validation (nếu cần, vì form này đang submit truyền thống) --}}
-                        {{-- <div class="invalid-feedback" id="vbNameCreateError"></div> --}}
                         @error('name', '_form_marker')<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>
                     <div class="mb-3">
@@ -67,13 +65,12 @@
     </div>
 </div>
 
-{{-- Update VehicleBrand Modal --}}
+{{-- Update VehicleBrand Modal (giữ nguyên, đã có @method('PUT')) --}}
 <div class="modal fade" id="updateVehicleBrandModal" tabindex="-1" aria-labelledby="updateVehicleBrandModalLabel"
     aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <form id="updateVehicleBrandForm" method="POST" enctype="multipart/form-data"> {{-- action sẽ được JS đặt
-                --}}
+            <form id="updateVehicleBrandForm" method="POST" enctype="multipart/form-data">
                 @csrf
                 @method('PUT')
                 <div class="modal-header">
@@ -99,8 +96,7 @@
                                 <label for="vbLogoUpdate" class="form-label">Logo mới (để trống nếu không đổi):</label>
                                 <input type="file" class="form-control" id="vbLogoUpdate" name="logo_url"
                                     accept="image/*">
-                                <div class="invalid-feedback" id="vbLogoUrlUpdateError"></div> {{-- Đảm bảo ID này tồn
-                                tại và JS nhắm đúng --}}
+                                <div class="invalid-feedback" id="vbLogoUrlUpdateError"></div>
                             </div>
                         </div>
                         <div class="col-md-6 text-center">
@@ -129,14 +125,14 @@
     </div>
 </div>
 
-{{-- Delete VehicleBrand Modal --}}
+{{-- Delete VehicleBrand Modal (ĐÃ SỬA @method('DELETE')) --}}
 <div class="modal fade" id="deleteVehicleBrandModal" tabindex="-1" aria-labelledby="deleteVehicleBrandModalLabel"
     aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
-            <form id="deleteVehicleBrandForm" method="POST"> {{-- action sẽ được JS đặt --}}
+            <form id="deleteVehicleBrandForm" method="POST"> {{-- Đặt method="POST" --}}
                 @csrf
-                @method('DELETE')
+                {{-- ĐÃ XÓA: @method('DELETE') --}} {{-- Loại bỏ dòng này --}}
                 <div class="modal-header bg-danger text-white">
                     <h5 class="modal-title" id="deleteVehicleBrandModalLabel"><i class="bi bi-trash-fill me-2"></i>Xác
                         nhận Xóa Hãng xe</h5>
@@ -151,7 +147,7 @@
                             <label for="adminPasswordDeleteVehicleBrand" class="form-label">Nhập Mật khẩu Xóa Chung:<span
                                     class="text-danger">*</span></label>
                             <input type="password" class="form-control" id="adminPasswordDeleteVehicleBrand"
-                                name="admin_password_delete_vehicle_brand" required autocomplete="new-password">
+                                name="deletion_password" required autocomplete="new-password"> {{-- Đổi name --}}
                             <div class="invalid-feedback" id="adminPasswordDeleteVehicleBrandError"></div>
                         </div>
                     @endif
@@ -167,7 +163,7 @@
     </div>
 </div>
 
-{{-- View VehicleBrand Modal --}}
+{{-- View VehicleBrand Modal (giữ nguyên) --}}
 <div class="modal fade" id="viewVehicleBrandModal" tabindex="-1" aria-labelledby="viewVehicleBrandModalLabel"
     aria-hidden="true">
     <div class="modal-dialog modal-lg">

@@ -4,7 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Storage; // Thêm use Storage
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Database\Eloquent\Builder; // Import Builder
 
 class VehicleBrand extends Model
 {
@@ -15,6 +16,16 @@ class VehicleBrand extends Model
     const STATUS_ACTIVE = 'active';
     const STATUS_INACTIVE = 'inactive';
 
+    // Hằng số cho các tùy chọn lọc/sắp xếp (NEW)
+    const FILTER_STATUS_ALL = 'all';
+    const FILTER_STATUS_ACTIVE_ONLY = 'active_only';
+    const FILTER_STATUS_INACTIVE_ONLY = 'inactive_only';
+
+    const SORT_BY_LATEST = 'latest';
+    const SORT_BY_OLDEST = 'oldest';
+    const SORT_BY_NAME_ASC = 'name_asc';
+    const SORT_BY_NAME_DESC = 'name_desc';
+
     protected $fillable = [
         'name',
         'description',
@@ -22,10 +33,6 @@ class VehicleBrand extends Model
         'status',
     ];
 
-    /**
-     * SỬA ĐỔI 1: Thêm $appends để tự động thêm accessor vào JSON.
-     * @var array
-     */
     protected $appends = [
         'logo_full_url',
         'status_text',
@@ -46,21 +53,15 @@ class VehicleBrand extends Model
     // ACCESSORS
     //======================================================================
 
-    /**
-     * SỬA ĐỔI 2: Accessor để lấy URL đầy đủ của logo.
-     */
-    public function getLogoFullUrlAttribute()
+    public function getLogoFullUrlAttribute(): string
     {
         $logoPath = $this->attributes['logo_url'];
         if ($logoPath && Storage::disk('public')->exists($logoPath)) {
             return Storage::url($logoPath);
         }
-        return 'https://placehold.co/100x100/EFEFEF/AAAAAA&text=LOGO';
+        return asset('assets_admin/img/default-logo.png'); // Fallback default image
     }
 
-    /**
-     * SỬA ĐỔI 3: Thêm các Accessor cho trạng thái.
-     */
     public function getStatusTextAttribute(): string
     {
         return $this->isActive() ? 'Hoạt động' : 'Đã ẩn';
@@ -72,16 +73,27 @@ class VehicleBrand extends Model
     }
 
     //======================================================================
-    // SCOPES & HELPERS
+    // SCOPES & HELPERS (NEW)
     //======================================================================
 
-    public function scopeActive($query)
+    public function isActive(): bool
+    {
+        return $this->status === self::STATUS_ACTIVE;
+    }
+
+    /**
+     * Scope để chỉ lấy các thương hiệu đang hoạt động.
+     */
+    public function scopeActive(Builder $query): Builder
     {
         return $query->where('status', self::STATUS_ACTIVE);
     }
 
-    public function isActive()
+    /**
+     * Scope để chỉ lấy các thương hiệu đang ẩn.
+     */
+    public function scopeInactive(Builder $query): Builder
     {
-        return $this->status === self::STATUS_ACTIVE;
+        return $query->where('status', self::STATUS_INACTIVE);
     }
 }

@@ -1,4 +1,4 @@
-{{-- Create Vehicle Model Modal --}}
+{{-- Create Vehicle Model Modal (giữ nguyên) --}}
 <div class="modal fade" id="createVehicleModelModal" tabindex="-1" aria-labelledby="createVehicleModelModalLabel"
     aria-hidden="true">
     <div class="modal-dialog modal-lg">
@@ -68,12 +68,12 @@
     </div>
 </div>
 
-{{-- Update Vehicle Model Modal --}}
+{{-- Update Vehicle Model Modal (giữ nguyên, đã có @method('PUT')) --}}
 <div class="modal fade" id="updateVehicleModelModal" tabindex="-1" aria-labelledby="updateVehicleModelModalLabel"
     aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <form id="updateVehicleModelForm" method="POST"> {{-- action sẽ được JS đặt --}}
+            <form id="updateVehicleModelForm" method="POST">
                 @csrf
                 @method('PUT')
                 <div class="modal-header">
@@ -129,14 +129,14 @@
     </div>
 </div>
 
-{{-- Delete Vehicle Model Modal --}}
+{{-- Delete Vehicle Model Modal (ĐÃ SỬA @method('DELETE')) --}}
 <div class="modal fade" id="deleteVehicleModelModal" tabindex="-1" aria-labelledby="deleteVehicleModelModalLabel"
     aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
-            <form id="deleteVehicleModelForm" method="POST"> {{-- action sẽ được JS đặt --}}
+            <form id="deleteVehicleModelForm" method="POST"> {{-- Đặt method="POST" --}}
                 @csrf
-                @method('DELETE')
+                {{-- ĐÃ XÓA: @method('DELETE') --}} {{-- Loại bỏ dòng này --}}
                 <div class="modal-header bg-danger text-white">
                     <h5 class="modal-title" id="deleteVehicleModelModalLabel"><i class="bi bi-trash-fill me-2"></i>Xác
                         nhận Xóa Dòng xe</h5>
@@ -151,7 +151,7 @@
                             <label for="adminPasswordDeleteVehicleModel" class="form-label">Nhập Mật khẩu Xóa Chung:<span
                                     class="text-danger">*</span></label>
                             <input type="password" class="form-control" id="adminPasswordDeleteVehicleModel"
-                                name="admin_password_delete_vehicle_model" required autocomplete="new-password">
+                                name="deletion_password" required autocomplete="new-password"> {{-- Đổi name --}}
                             <div class="invalid-feedback" id="adminPasswordDeleteVehicleModelError"></div>
                         </div>
                     @endif
@@ -167,7 +167,7 @@
     </div>
 </div>
 
-{{-- View VehicleModel Modal --}}
+{{-- View VehicleModel Modal (giữ nguyên) --}}
 <div class="modal fade" id="viewVehicleModelModal" tabindex="-1" aria-labelledby="viewVehicleModelModalLabel"
     aria-hidden="true">
     <div class="modal-dialog modal-lg">
