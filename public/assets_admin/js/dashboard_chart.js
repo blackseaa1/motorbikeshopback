@@ -39,7 +39,7 @@ async function initializeDashboardChart() {
                 labels: chartData.labels, // Dữ liệu labels từ API
                 datasets: [{
                     label: 'Doanh Thu (Triệu VNĐ)',
-                    data: chartData.data, // Dữ liệu doanh thu từ API
+                    data: chartData.datasets[0].data,
                     borderColor: 'rgba(24, 144, 255, 1)',
                     backgroundColor: 'rgba(24, 144, 255, 0.1)',
                     tension: 0.3,
