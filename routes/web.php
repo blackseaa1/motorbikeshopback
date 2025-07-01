@@ -207,6 +207,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::middleware(['auth:admin', 'check.user.status:admin', 'password.changed', 'admin.hasrole'])->group(function () {
         Route::get('/', fn() => redirect()->route('admin.dashboard'));
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+        Route::get('/dashboard/revenue-data', [DashboardController::class, 'getRevenueChartData'])->name('dashboard.revenueData');
 
         // --- Module: Quản lý Nội dung (Content Management) ---
         Route::prefix('content')->name('content.')->group(function () {
@@ -257,6 +258,12 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::resource('vehicle-models', VehicleModelController::class)->except(['index', 'create', 'edit', 'show'])->names('vehicleModels');
             Route::post('vehicle-models/{vehicle_model}/toggle-status', [VehicleModelController::class, 'toggleStatus'])->name('vehicleModels.toggleStatus');
             Route::get('inventory', [InventoryController::class, 'index'])->name('inventory.index');
+
+            // API routes for Inventory page
+            Route::prefix('api/products')->name('api.products.')->group(function () {
+                Route::get('/{product}/details', [ProductController::class, 'getProductDetailsApi'])->name('details');
+                Route::put('/{product}/update-stock', [ProductController::class, 'updateStockQuantity'])->name('updateStock');
+            });
         });
 
         // --- Module: Quản lý Hồ sơ cá nhân (Profile Management) ---
@@ -270,6 +277,13 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // --- Module: Báo cáo (Reports) ---
         Route::get('reports', [ReportsController::class, 'index'])->name('reports');
 
+        // Add new API routes for reports
+        Route::prefix('reports/api')->name('reports.api.')->group(function () {
+            Route::get('/daily-revenue', [ReportsController::class, 'getDailyRevenue'])->name('dailyRevenue');
+            Route::get('/monthly-revenue', [ReportsController::class, 'getMonthlyRevenue'])->name('monthlyRevenue');
+            Route::get('/low-stock-products', [ReportsController::class, 'getLowStockProducts'])->name('lowStockProducts');
+            Route::get('/best-selling-products', [ReportsController::class, 'getBestSellingProducts'])->name('bestSellingProducts');
+        });
         // Sales Management
         Route::prefix('sales')->name('sales.')->group(function () {
             // == ROUTES CHO ĐƠN HÀNG (ORDERS) ==
@@ -327,12 +341,20 @@ Route::prefix('admin')->name('admin.')->group(function () {
         });
     });
     // --- BẮT ĐẦU: THÊM CÁC API NỘI BỘ CHO ADMIN ---
+    // Các API này có thể được truy cập từ bất kỳ đâu trong Admin Panel
     Route::prefix('api')->name('api.')->group(function () {
         // API tìm kiếm sản phẩm để thêm vào đơn hàng
         Route::get('/products', [ProductController::class, 'searchProductsApi'])->name('products.search.api');
         // API lấy danh sách địa chỉ của một khách hàng
         Route::get('/customers/{customer}/addresses', [CustomerAccountController::class, 'getAddressesApi'])->name('customers.addresses.api');
         Route::post('/sales/orders/calculate-summary', [OrderController::class, 'calculateOrderSummaryApi'])->name('admin.orders.calculateSummary');
+
+        // Note: The product details and update stock APIs are now under 'admin.productManagement.api.products.'
+        // So, the routes below are redundant if they are also defined under 'admin.productManagement.api.products.'
+        // If you intend for them to be globally accessible under 'admin.api.', keep them here.
+        // Otherwise, remove them from here to avoid route conflicts or ambiguity.
+        // Route::get('/products/{product}/details', [ProductController::class, 'getProductDetailsApi'])->name('products.details.api');
+        // Route::put('/products/{product}/update-stock', [ProductController::class, 'updateStockQuantity'])->name('products.updateStockQuantity');
     });
     // --- KẾT THÚC: THÊM CÁC API NỘI BỘ CHO ADMIN ---
 });
@@ -346,13 +368,18 @@ Route::prefix('api')->name('api.')->group(function () {
     Route::get('/provinces/{province}/districts', [GeographyApiController::class, 'getDistrictsByProvince'])->name('provinces.districts');
     Route::get('/districts/{district}/wards', [GeographyApiController::class, 'getWardsByDistrict'])->name('districts.wards');
     Route::get('/products/all-for-order', [OrderController::class, 'getProductsForOrderCreation'])->name('api.orders.products-for-creation')->middleware('auth:admin');
+    // Note: The product details and update stock APIs are now under 'admin.productManagement.api.products.'
+    // So, the routes below are redundant if they are also defined under 'admin.productManagement.api.products.'
+    // If you intend for them to be globally accessible under 'api.', keep them here.
+    // Otherwise, remove them from here to avoid route conflicts or ambiguity.
+    // Route::get('/products/{product}/details', [ProductController::class, 'getProductDetailsApi'])->name('products.details.api');
+    // Route::put('/products/{product}/update-stock', [ProductController::class, 'updateStockQuantity'])->name('products.updateStockQuantity');
     // --- CUSTOMER API ---
     Route::prefix('customer')->name('customer.')->group(function () {
         // API để lấy danh sách sản phẩm (có lọc, phân trang) cho front-end
         Route::get('/products', [CustomerShopController::class, 'getProductsApi'])->name('products.index');
     });
 });
-// Thêm vào cuối file routes/web.php
 
 use App\Mail\OrderConfirmation;
 use App\Models\Order;
@@ -367,9 +394,6 @@ use App\Models\Order;
 
 //     // Tải các mối quan hệ cần thiết giống như trong Controller
 //     $order->load(['customer', 'province', 'district', 'ward', 'items.product', 'paymentMethod']);
-
-//     // Tạo một đối tượng Mailable
-//     $mailable = new OrderConfirmation($order);
 
 //     // **DÒNG QUAN TRỌNG NHẤT**
 //     // Render nội dung của email và hiển thị nó ra màn hình

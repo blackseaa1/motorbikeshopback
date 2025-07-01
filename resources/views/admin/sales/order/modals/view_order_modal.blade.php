@@ -19,9 +19,10 @@
                             <p class="mb-1"><strong>Ngày tạo:</strong> <span id="viewDetailOrderCreatedAt"></span></p>
                             <p class="mb-1"><strong>Trạng thái:</strong> <span id="viewDetailOrderStatusBadge"></span>
                             </p>
+                            {{-- This line distinguishes customer type, which can be kept as it provides useful info --}}
                             <p class="mb-1"><strong>Loại khách hàng:</strong> <span id="viewDetailCustomerType"></span>
                             </p>
-                            {{-- Use guest_name, guest_phone, guest_email from Order model --}}
+                            {{-- Use guest_name, guest_phone, guest_email from Order model as they now hold data for both types --}}
                             <p class="mb-1"><strong>Tên người nhận:</strong> <span id="viewDetailCustomerName"></span>
                             </p>
                             <p class="mb-1"><strong>Điện thoại:</strong> <span id="viewDetailCustomerPhone"></span></p>
@@ -156,7 +157,7 @@
                             </tr>
                         </table>
                         <div class="invoice-footer">
-                            Cảm ơn quý khách đã tin tưởng và mua sắm tại Motorbike Shop!
+                            Cảm ơn quý khách đã tin tưởng và mua sắm tại Motorbike Shop!\n
                         </div>
                     </div>
                 </div>

@@ -68,6 +68,10 @@
                         <li class="nav-item"><a
                                 class="nav-link {{ request()->routeIs('admin.productManagement.vehicle.*') ? 'active-submenu' : '' }}"
                                 href="{{ route('admin.productManagement.vehicle.index') }}">Hãng xe & Dòng xe</a></li>
+                        {{-- Thêm mục Tồn kho --}}
+                        <li class="nav-item"><a
+                                class="nav-link {{ request()->routeIs('admin.productManagement.inventory.*') ? 'active-submenu' : '' }}"
+                                href="{{ route('admin.productManagement.inventory.index') }}">Tồn kho</a></li>
                     </ul>
                 </li>
             @endif

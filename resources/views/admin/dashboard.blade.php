@@ -15,12 +15,15 @@
                         <div class="d-flex justify-content-between align-items-center mb-1">
                             <div>
                                 <h5 class="card-title">Tổng Sản Phẩm</h5>
-                                <p class="card-text-large">1,250</p>
+                                {{-- Link to Product Management --}}
+                                <a href="{{ route('admin.productManagement.products.index') }}" class="text-decoration-none text-dark">
+                                    <p class="card-text-large">{{ number_format($totalProducts) }}</p>
+                                </a>
                             </div>
                             <i class="bi bi-boxes summary-icon icon-info"></i>
                         </div>
                         <p class="card-text-small mt-2 mb-0"><span class="text-success"><i
-                                    class="bi bi-plus-circle-fill"></i> 25 mới</span> tuần này</p>
+                                    class="bi bi-plus-circle-fill"></i> {{ number_format($newProductsThisWeek) }} mới</span> tuần này</p>
                     </div>
                 </div>
             </div>
@@ -30,11 +33,14 @@
                         <div class="d-flex justify-content-between align-items-center mb-1">
                             <div>
                                 <h5 class="card-title">Đơn Hàng Mới</h5>
-                                <p class="card-text-large">32</p>
+                                {{-- Link to Orders Management, filtered by pending status --}}
+                                <a href="{{ route('admin.sales.orders.index', ['status' => \App\Models\Order::STATUS_PENDING]) }}" class="text-decoration-none text-dark">
+                                    <p class="card-text-large">{{ number_format($newOrdersThisWeek) }}</p>
+                                </a>
                             </div>
                             <i class="bi bi-cart-check-fill summary-icon icon-success"></i>
                         </div>
-                        <p class="card-text-small mt-2 mb-0"><span class="text-primary">5 đang chờ xử lý</span></p>
+                        <p class="card-text-small mt-2 mb-0"><span class="text-primary">{{ number_format($pendingOrders) }} đang chờ xử lý</span></p>
                     </div>
                 </div>
             </div>
@@ -44,12 +50,22 @@
                         <div class="d-flex justify-content-between align-items-center mb-1">
                             <div>
                                 <h5 class="card-title">Doanh Thu (Tháng)</h5>
-                                <p class="card-text-large">150.7M</p>
+                                {{-- Link to Reports page --}}
+                                <a href="{{ route('admin.reports') }}" class="text-decoration-none text-dark">
+                                    <p class="card-text-large">{{ number_format($monthlyRevenue) }}đ</p>
+                                </a>
                             </div>
                             <i class="bi bi-cash-coin summary-icon icon-primary"></i>
                         </div>
-                        <p class="card-text-small mt-2 mb-0"><span class="text-success"><i
-                                    class="bi bi-arrow-up-short"></i>12.5%</span> so với tháng trước</p>
+                        <p class="card-text-small mt-2 mb-0">
+                            @if($revenueComparison > 0)
+                                <span class="text-success"><i class="bi bi-arrow-up-short"></i>{{ number_format($revenueComparison, 1) }}%</span> so với tháng trước
+                            @elseif($revenueComparison < 0)
+                                <span class="text-danger"><i class="bi bi-arrow-down-short"></i>{{ number_format(abs($revenueComparison), 1) }}%</span> so với tháng trước
+                            @else
+                                <span class="text-muted">Không đổi</span> so với tháng trước
+                            @endif
+                        </p>
                     </div>
                 </div>
             </div>
@@ -59,11 +75,12 @@
                         <div class="d-flex justify-content-between align-items-center mb-1">
                             <div>
                                 <h5 class="card-title">Sắp Hết Hàng</h5>
-                                <p class="card-text-large">18</p>
+                                <p class="card-text-large">{{ number_format($lowStockProductsCount) }}</p>
                             </div>
                             <i class="bi bi-exclamation-triangle-fill summary-icon icon-danger"></i>
                         </div>
-                        <p class="card-text-small mt-2 mb-0"><a href="#" class="text-decoration-none">Xem chi tiết</a></p>
+                        {{-- Link to Inventory page --}}
+                        <p class="card-text-small mt-2 mb-0"><a href="{{ route('admin.productManagement.inventory.index') }}" class="text-decoration-none">Xem chi tiết</a></p>
                     </div>
                 </div>
             </div>
@@ -90,52 +107,44 @@
                     <div class="card mb-4">
                         <div class="card-header">Sản Phẩm Bán Chạy Nhất</div>
                         <ul class="list-group list-group-flush">
-                            <li class="list-group-item">
-                                <img src="https://placehold.co/40x40/E9EEF7/6C757D?text=Pô+A" alt="Pô Akrapovič Titan R1"
-                                    onerror="this.src='https://placehold.co/40x40/grey/white?text=Img'">
-                                <div class="product-info">
-                                    Pô Akrapovič Titan R1
-                                    <small>Đã bán: 150</small>
-                                </div>
-                                <span class="badge bg-success-subtle text-success-emphasis rounded-pill">Hot</span>
-                            </li>
-                            <li class="list-group-item">
-                                <img src="https://placehold.co/40x40/E9EEF7/6C757D?text=Nón+A" alt="Nón Fullface AGV K3 SV"
-                                    onerror="this.src='https://placehold.co/40x40/grey/white?text=Img'">
-                                <div class="product-info">
-                                    Nón Fullface AGV K3 SV
-                                    <small>Đã bán: 120</small>
-                                </div>
-                            </li>
-                            <li class="list-group-item">
-                                <img src="https://placehold.co/40x40/E9EEF7/6C757D?text=Đèn+L" alt="Đèn Trợ Sáng L4X Plus"
-                                    onerror="this.src='https://placehold.co/40x40/grey/white?text=Img'">
-                                <div class="product-info">
-                                    Đèn Trợ Sáng L4X Plus
-                                    <small>Đã bán: 95</small>
-                                </div>
-                            </li>
+                            @forelse($bestSellingProducts as $product)
+                                <li class="list-group-item">
+                                    <img src="{{ $product->thumbnail_url }}" alt="{{ $product->name }}"
+                                        class="product-thumbnail-img"
+                                        onerror="this.src='https://placehold.co/40x40/grey/white?text=Img'">
+                                    <div class="product-info">
+                                        {{ $product->name }}
+                                        <small>Đã bán: {{ number_format($product->total_quantity_sold) }}</small>
+                                    </div>
+                                    {{-- You can add a badge based on sales quantity if needed --}}
+                                    {{-- <span class="badge bg-success-subtle text-success-emphasis rounded-pill">Hot</span> --}}
+                                </li>
+                            @empty
+                                <li class="list-group-item text-muted">Không có sản phẩm bán chạy nào.</li>
+                            @endforelse
                         </ul>
                     </div>
                     <div class="card recent-orders-card">
                         <div class="card-header">Đơn Hàng Gần Đây</div>
                         <ul class="list-group list-group-flush">
-                            <li class="list-group-item">
-                                <i class="bi bi-receipt-cutoff fs-4 text-primary me-2"></i>
-                                <div class="product-info">
-                                    Đơn #DHX0572 - Nguyễn Văn An
-                                    <small>Tổng: 2.550.000đ</small>
-                                </div>
-                                <span class="badge bg-warning-subtle text-warning-emphasis order-status">Chờ xử lý</span>
-                            </li>
-                            <li class="list-group-item">
-                                <i class="bi bi-truck fs-4 text-success me-2"></i>
-                                <div class="product-info">
-                                    Đơn #DHX0571 - Trần Thị Bích
-                                    <small>Tổng: 850.000đ</small>
-                                </div>
-                                <span class="badge bg-success-subtle text-success-emphasis order-status">Đã giao</span>
-                            </li>
+                            @forelse($recentOrders as $order)
+                                <li class="list-group-item">
+                                    @if($order->status === \App\Models\Order::STATUS_COMPLETED || $order->status === \App\Models\Order::STATUS_DELIVERED)
+                                        <i class="bi bi-truck fs-4 text-success me-2"></i>
+                                    @elseif($order->status === \App\Models\Order::STATUS_PENDING || $order->status === \App\Models\Order::STATUS_PROCESSING)
+                                        <i class="bi bi-receipt-cutoff fs-4 text-warning me-2"></i>
+                                    @else
+                                        <i class="bi bi-receipt-cutoff fs-4 text-muted me-2"></i>
+                                    @endif
+                                    <div class="product-info">
+                                        Đơn #{{ $order->id }} - {{ $order->guest_name }}
+                                        <small>Tổng: {{ number_format($order->total_price) }}đ</small>
+                                    </div>
+                                    <span class="badge {{ $order->status_badge_class }} order-status">{{ $order->status_text }}</span>
+                                </li>
+                            @empty
+                                <li class="list-group-item text-muted">Không có đơn hàng gần đây nào.</li>
+                            @endforelse
                         </ul>
                     </div>
                 </div>
@@ -146,7 +155,8 @@
     <section class="recent-products-section mt-2 d-none" aria-labelledby="recentProductsHeading">
         <div class="d-flex justify-content-between align-items-center mb-3 mt-4">
             <h2 class="section-title" id="recentProductsHeading">Sản Phẩm Mới Thêm</h2>
-            <a href="#" class="btn btn-sm btn-primary"><i class="bi bi-plus-lg"></i> Thêm Sản Phẩm Mới</a>
+            {{-- Fixed the route name from admin.product_management.products.index to admin.productManagement.products.index --}}
+            <a href="{{ route('admin.productManagement.products.index') }}" class="btn btn-sm btn-primary"><i class="bi bi-plus-lg"></i> Thêm Sản Phẩm Mới</a>
         </div>
         <div class="recent-products-table-wrapper">
             <div class="table-responsive">
@@ -164,61 +174,30 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr>
-                            <td><input type="checkbox" class="form-check-input"
-                                    aria-label="Select Pô Độ SC Project S1 Titan"></td>
-                            <td><img src="https://placehold.co/60x60/E9EEF7/6C757D?text=Pô+SC"
-                                    alt="Pô Độ SC Project S1 Titan" class="product-thumbnail-img"
-                                    onerror="this.src='https://placehold.co/60x60/grey/white?text=Img'"></td>
-                            <td>Pô Độ SC Project S1 Titan</td>
-                            <td>Phụ tùng pô xe</td>
-                            <td>3.500.000đ</td>
-                            <td><span class="badge bg-warning-subtle text-warning-emphasis">Chờ duyệt</span></td>
-                            <td>
-                                <button class="btn btn-sm btn-action" title="Sửa sản phẩm"
-                                    aria-label="Sửa sản phẩm Pô Độ SC Project S1 Titan"><i
-                                        class="bi bi-pencil-square"></i></button>
-                                <button class="btn btn-sm btn-action text-danger" title="Xóa sản phẩm"
-                                    aria-label="Xóa sản phẩm Pô Độ SC Project S1 Titan"><i class="bi bi-trash"></i></button>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td><input type="checkbox" class="form-check-input" aria-label="Select Găng Tay Scoyco MC09">
-                            </td>
-                            <td><img src="https://placehold.co/60x60/E9EEF7/6C757D?text=Găng" alt="Găng Tay Scoyco MC09"
-                                    class="product-thumbnail-img"
-                                    onerror="this.src='https://placehold.co/60x60/grey/white?text=Img'"></td>
-                            <td>Găng Tay Scoyco MC09</td>
-                            <td>Đồ bảo hộ</td>
-                            <td>650.000đ</td>
-                            <td><span class="badge bg-success-subtle text-success-emphasis">Đã đăng</span></td>
-                            <td>
-                                <button class="btn btn-sm btn-action" title="Sửa sản phẩm"
-                                    aria-label="Sửa sản phẩm Găng Tay Scoyco MC09"><i
-                                        class="bi bi-pencil-square"></i></button>
-                                <button class="btn btn-sm btn-action text-danger" title="Xóa sản phẩm"
-                                    aria-label="Xóa sản phẩm Găng Tay Scoyco MC09"><i class="bi bi-trash"></i></button>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td><input type="checkbox" class="form-check-input"
-                                    aria-label="Select Nhớt Motul 300V Factory Line 10W40"></td>
-                            <td><img src="https://placehold.co/60x60/E9EEF7/6C757D?text=Nhớt"
-                                    alt="Nhớt Motul 300V Factory Line 10W40" class="product-thumbnail-img"
-                                    onerror="this.src='https://placehold.co/60x60/grey/white?text=Img'"></td>
-                            <td>Nhớt Motul 300V Factory Line 10W40</td>
-                            <td>Dầu nhớt & Phụ gia</td>
-                            <td>480.000đ</td>
-                            <td><span class="badge bg-success-subtle text-success-emphasis">Đã đăng</span></td>
-                            <td>
-                                <button class="btn btn-sm btn-action" title="Sửa sản phẩm"
-                                    aria-label="Sửa sản phẩm Nhớt Motul 300V Factory Line 10W40"><i
-                                        class="bi bi-pencil-square"></i></button>
-                                <button class="btn btn-sm btn-action text-danger" title="Xóa sản phẩm"
-                                    aria-label="Xóa sản phẩm Nhớt Motul 300V Factory Line 10W40"><i
-                                        class="bi bi-trash"></i></button>
-                            </td>
-                        </tr>
+                        @forelse($latestProducts as $product)
+                            <tr>
+                                <td><input type="checkbox" class="form-check-input"
+                                        aria-label="Select {{ $product->name }}"></td>
+                                <td><img src="{{ $product->thumbnail_url }}"
+                                        alt="{{ $product->name }}" class="product-thumbnail-img"
+                                        onerror="this.src='https://placehold.co/60x60/grey/white?text=Img'"></td>
+                                <td>{{ $product->name }}</td>
+                                <td>{{ $product->category->name ?? 'N/A' }}</td>
+                                <td>{{ number_format($product->price) }}đ</td>
+                                <td><span class="badge {{ $product->status_badge_class }}">{{ $product->status_text }}</span></td>
+                                <td>
+                                    <button class="btn btn-sm btn-action" title="Sửa sản phẩm"
+                                        aria-label="Sửa sản phẩm {{ $product->name }}"><i
+                                            class="bi bi-pencil-square"></i></button>
+                                    <button class="btn btn-sm btn-action text-danger" title="Xóa sản phẩm"
+                                        aria-label="Xóa sản phẩm {{ $product->name }}"><i class="bi bi-trash"></i></button>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="7" class="text-center text-muted">Không có sản phẩm mới nào được thêm gần đây.</td>
+                            </tr>
+                        @endforelse
                     </tbody>
                 </table>
             </div>
@@ -232,4 +211,4 @@
 @push('scripts')
     {{-- Chỉ tải script biểu đồ ở trang này --}}
     <script src="{{ asset('assets_admin/js/dashboard_chart.js') }}"></script>
-    
+@endpush

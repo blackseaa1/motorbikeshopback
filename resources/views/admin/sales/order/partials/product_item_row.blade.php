@@ -1,12 +1,12 @@
 @php
     // Sử dụng biến $index được truyền vào hoặc một placeholder.
-    $rowIndex = $index ?? 'NEW_ROW_INDEX'; 
+    $rowIndex = $index ?? 'NEW_ROW_INDEX';
 @endphp
 
 <div class="card card-body mb-3 product-item-row" data-row-index="{{ $rowIndex }}">
     <div class="row g-3 align-items-center">
         <div class="col-md-2 d-flex justify-content-center">
-            {{-- SỬA LỖI TẠI ĐÂY: Thêm class "product-image" --}}
+            {{-- SỬA LỖI TẠY ĐÂY: Thêm class "product-image" --}}
             <img src="https://placehold.co/400x400/EFEFEF/AAAAAA&text=Product" alt="Ảnh sản phẩm"
                 class="img-fluid rounded border product-thumbnail product-image"
                 style="width: 80px; height: 80px; object-fit: contain;">
@@ -27,9 +27,17 @@
 
                 <div class="col-6 col-lg-2">
                     <label for="quantity_{{ $rowIndex }}" class="form-label mb-1">Số lượng</label>
-                    {{-- Đặt tên (name) cho input và hardcode giá trị ban đầu là 1 --}}
-                    <input type="number" class="form-control quantity-input" id="quantity_{{ $rowIndex }}"
-                        name="items[{{ $rowIndex }}][quantity]" min="1" value="1" required>
+                    <div class="input-group">
+                        <button type="button" class="btn btn-outline-secondary btn-sm quantity-minus-btn" tabindex="-1">
+                            <i class="bi bi-dash"></i>
+                        </button>
+                        {{-- Đặt tên (name) cho input và hardcode giá trị ban đầu là 1 --}}
+                        <input type="number" class="form-control quantity-input text-center" id="quantity_{{ $rowIndex }}"
+                            name="items[{{ $rowIndex }}][quantity]" min="1" value="1" required>
+                        <button type="button" class="btn btn-outline-secondary btn-sm quantity-plus-btn" tabindex="-1">
+                            <i class="bi bi-plus"></i>
+                        </button>
+                    </div>
                 </div>
                 <div class="col-6 col-lg-3">
                     <label class="form-label mb-1">Thành tiền</label>

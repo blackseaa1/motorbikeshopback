@@ -15,7 +15,8 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Database\QueryException;
-use Illuminate\Http\JsonResponse;
+use Illuminate\Http\JsonResponse; // Đảm bảo đã import JsonResponse
+use Illuminate\View\View; // Đảm bảo đã import View
 
 class ProductController extends Controller
 {
@@ -95,14 +96,58 @@ class ProductController extends Controller
     }
 
     /**
-     * Lấy thông tin chi tiết của một sản phẩm.
-     * Sử dụng Route-Model Binding, Laravel sẽ tự động tìm sản phẩm.
-     * Để nó tìm được sản phẩm trong thùng rác, cần thêm ->withTrashed() ở file routes.
+     * Lấy thông tin chi tiết của một sản phẩm và hiển thị trên trang.
+     * Phương thức này dùng để hiển thị trang chi tiết sản phẩm đầy đủ.
+     * @param Product $product
+     * @return View
      */
-    public function show(Product $product)
+    public function show(Product $product): View
     {
         $product->load('category', 'brand', 'vehicleModels', 'images');
+        return view('admin.productManagement.product.show', compact('product'));
+    }
+
+    /**
+     * API: Lấy thông tin chi tiết của một sản phẩm dưới dạng JSON.
+     * Được sử dụng bởi modal "Xem chi tiết" trên trang tồn kho.
+     * @param Product $product
+     * @return JsonResponse
+     */
+    public function getProductDetailsApi(Product $product): JsonResponse
+    {
+        // Tải các mối quan hệ cần thiết để hiển thị trong modal
+        $product->load('category', 'brand', 'vehicleModels.vehicleBrand', 'images');
+
+        // Trả về sản phẩm dưới dạng JSON. Laravel sẽ tự động chuyển đổi các accessors.
         return response()->json($product);
+    }
+
+    /**
+     * API: Cập nhật số lượng tồn kho của một sản phẩm.
+     * @param Request $request
+     * @param Product $product
+     * @return JsonResponse
+     */
+    public function updateStockQuantity(Request $request, Product $product): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'stock_quantity' => 'required|integer|min:0', // Đảm bảo số lượng là số nguyên không âm
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'message' => 'Dữ liệu không hợp lệ.', 'errors' => $validator->errors()], 422);
+        }
+
+        try {
+            $product->stock_quantity = $request->input('stock_quantity');
+            $product->save();
+
+            // Trả về phản hồi thành công cùng số lượng mới
+            return response()->json(['success' => true, 'message' => 'Cập nhật tồn kho thành công!', 'new_stock' => $product->stock_quantity]);
+        } catch (\Exception $e) {
+            Log::error("Lỗi khi cập nhật tồn kho Sản phẩm (ID: {$product->id}): " . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Không thể cập nhật tồn kho. Vui lòng thử lại.'], 500);
+        }
     }
 
     /**

@@ -21,12 +21,12 @@
             <div class="card-body">
                 <form action="{{ route('admin.sales.orders.index') }}" method="GET" class="form-search">
                     <div class="row g-3">
-                        <div class="col-md-5">
+                        <div class="col-md-4">
                             <label for="search" class="form-label">Tìm kiếm</label>
                             <input type="text" id="search" name="search" class="form-control"
                                 placeholder="ID, Tên khách hàng, Email, SĐT..." value="{{ request('search') }}">
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <label for="status" class="form-label">Trạng thái</label>
                             <select id="status" name="status" class="form-select">
                                 <option value="all">Tất cả trạng thái</option>
@@ -38,12 +38,21 @@
                                 @endforeach
                             </select>
                         </div>
-                        <div class="col-md-3 d-flex align-items-end">
+                        <div class="col-md-3">
+                            <label for="sort_by" class="form-label">Sắp xếp theo</label>
+                            <select id="sort_by" name="sort_by" class="form-select">
+                                <option value="latest" {{ request('sort_by') == 'latest' ? 'selected' : '' }}>Mới nhất
+                                </option>
+                                <option value="oldest" {{ request('sort_by') == 'oldest' ? 'selected' : '' }}>Cũ nhất</option>
+                                {{-- "Xử lý theo độ ưu tiên" would require additional fields/logic in DB --}}
+                            </select>
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
                             <button type="submit" class="btn btn-secondary me-2">
                                 <i class="bi bi-search me-1"></i>Lọc
                             </button>
                             {{-- Nút xóa lọc chỉ hiển thị khi có bộ lọc được áp dụng --}}
-                            @if (request('search') || (request()->filled('status') && request('status') != 'all'))
+                            @if (request('search') || (request()->filled('status') && request('status') != 'all') || request()->filled('sort_by'))
                                 <a href="{{ route('admin.sales.orders.index') }}" class="btn btn-outline-secondary">
                                     <i class="bi bi-x-circle me-1"></i>Xóa lọc
                                 </a>
@@ -89,11 +98,12 @@
                                             @else
                                                 <i class="bi bi-person-circle text-muted me-1" title="Khách vãng lai"></i>
                                             @endif
-                                            <span>{{ $order->guest_name }}</span> {{-- Sử dụng guest_name --}}
+                                            {{-- Use shipping_name, shipping_phone, shipping_email from the order itself --}}
+                                            <span>{{ $order->guest_name }}</span>
                                             <br>
-                                            <small class="text-muted">{{ $order->guest_phone ?? 'N/A' }}</small> {{-- Sử dụng guest_phone --}}
+                                            <small class="text-muted">{{ $order->guest_phone ?? 'N/A' }}</small>
                                             <br>
-                                            <small class="text-muted">{{ $order->guest_email ?? 'N/A' }}</small> {{-- Sử dụng guest_email --}}
+                                            <small class="text-muted">{{ $order->guest_email ?? 'N/A' }}</small>
                                         </td>
                                         <td class="text-end"><strong class="text-danger">{{ number_format($order->total_price) }}
                                                 ₫</strong></td>
@@ -147,7 +157,7 @@
     ])
     @include('admin.sales.order.modals.view_order_modal')
     @include('admin.sales.order.modals.update_order_modal', ['orderStatuses' => $orderStatuses, 'deliveryServices' => $deliveryServices])
-    @include('admin.sales.order.modals.delete_order_modal')
+        @include('admin.sales.order.modals.delete_order_modal')
 
 @endsection
 

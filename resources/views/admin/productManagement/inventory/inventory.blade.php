@@ -1,199 +1,170 @@
 @extends('admin.layouts.app')
 
-@section('title', 'Inventory') @section('content')
-    <header class="content-header">
-        <h1><i class="bi bi-list-check me-2"></i>Hàng Tồn Kho</h1>
-    </header>
-    <div class="container-fluid">
-        <div class="card mb-4">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h2 class="h5 mb-0"><i class="bi bi-box-seam me-2"></i>Quản lý Tồn kho Sản phẩm</h2>
-                {{-- Nút này có thể dẫn đến chức năng nhập kho hoặc các hành động kho khác --}}
-                {{-- <button class="btn btn-success btn-sm">
-                    <i class="bi bi-plus-circle-fill me-1"></i> Nhập kho mới
-                </button> --}}
+@section('title', 'Quản lý Tồn Kho')
+
+@section('content')
+    <div id="adminInventoryPage">
+        <header class="content-header">
+            <h1><i class="bi bi-box-seam me-2"></i>Quản lý Tồn Kho</h1>
+        </header>
+
+        <div class="card mt-4 shadow-sm">
+            <div class="card-header bg-light">
+                <h2 class="h5 mb-0 text-primary"><i class="bi bi-funnel me-2"></i>Sản phẩm sắp hết hàng</h2>
             </div>
             <div class="card-body">
-                {{-- Bộ lọc (Tùy chọn) --}}
-                <form method="GET" action="#" class="mb-3"> {{-- Action # tạm thời --}}
-                    <div class="row g-3 align-items-end">
-                        <div class="col-md-4">
-                            <label for="filterProductName" class="form-label">Tên sản phẩm:</label>
-                            <input type="text" class="form-control form-control-sm" id="filterProductName"
-                                name="product_name" value="{{-- request('product_name') --}}">
-                        </div>
-                        <div class="col-md-3">
-                            <label for="filterCategory" class="form-label">Danh mục:</label>
-                            <select class="form-select form-select-sm" id="filterCategory" name="category_id">
-                                <option value="">Tất cả danh mục</option>
-                                {{-- Lặp qua $categories từ controller --}}
-                                {{-- @foreach($categories as $category) --}}
-                                {{-- <option value="{{ $category->id }}">{{ $category->name }}</option> --}}
-                                {{-- @endforeach --}}
-                                <option value="1">Phụ tùng</option>
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <label for="filterStockStatus" class="form-label">Trạng thái tồn kho:</label>
-                            <select class="form-select form-select-sm" id="filterStockStatus" name="stock_status">
-                                <option value="">Tất cả</option>
-                                <option value="in_stock">Còn hàng</option>
-                                <option value="low_stock">Sắp hết hàng</option>
-                                <option value="out_of_stock">Hết hàng</option>
-                            </select>
-                        </div>
-                        <div class="col-md-2">
-                            <button type="submit" class="btn btn-primary btn-sm w-100">Lọc</button>
-                        </div>
+                @if ($lowStockProducts->isEmpty())
+                    <div class="alert alert-info mb-0" role="alert">
+                        <i class="bi bi-info-circle-fill me-2"></i>Không có sản phẩm nào sắp hết hàng.
                     </div>
-                </form>
-
-                <div class="table-responsive">
-                    <table class="table table-hover table-striped">
-                        <thead class="table-light">
-                            <tr>
-                                <th scope="col">ID SP</th>
-                                <th scope="col">Ảnh</th>
-                                <th scope="col">Tên Sản phẩm</th>
-                                <th scope="col">Danh mục</th>
-                                <th scope="col" class="text-center">Số lượng tồn</th>
-                                <th scope="col" class="text-center">Trạng thái</th>
-                                <th scope="col" class="text-center">Hành động</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {{-- Dữ liệu mẫu - Bạn sẽ lặp qua $products từ controller ở đây --}}
-                            <tr>
-                                <td>1</td>
-                                <td><img src="https://placehold.co/50x50/EFEFEF/AAAAAA&text=SP" alt="Ảnh SP"
-                                        class="img-thumbnail" style="width: 50px; height: 50px; object-fit: contain;"></td>
-                                <td>Dầu nhớt ABC</td>
-                                <td>Phụ tùng</td>
-                                <td class="text-center">100</td>
-                                <td class="text-center"><span class="badge bg-success">Còn hàng</span></td>
-                                <td class="text-center">
-                                    <button class="btn btn-info btn-sm btn-action" data-bs-toggle="modal"
-                                        data-bs-target="#updateStockModal" {{-- Thêm các data-* attribute để truyền dữ liệu
-                                        sản phẩm vào modal --}} data-product-id="1" data-product-name="Dầu nhớt ABC"
-                                        data-current-stock="100" title="Cập nhật số lượng">
-                                        <i class="bi bi-pencil-fill"></i>
-                                    </button>
-                                    <a href="#" class="btn btn-secondary btn-sm btn-action" title="Xem lịch sử kho">
-                                        {{-- Giả sử route là admin.productManagement.inventory.history với product_id --}}
-                                        <i class="bi bi-clock-history"></i>
-                                    </a>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>2</td>
-                                <td><img src="https://placehold.co/50x50/EFEFEF/AAAAAA&text=SP" alt="Ảnh SP"
-                                        class="img-thumbnail" style="width: 50px; height: 50px; object-fit: contain;"></td>
-                                <td>Lốp xe Michelin XYZ</td>
-                                <td>Lốp xe</td>
-                                <td class="text-center">5</td>
-                                <td class="text-center"><span class="badge bg-warning text-dark">Sắp hết hàng</span></td>
-                                <td class="text-center">
-                                    <button class="btn btn-info btn-sm btn-action" data-bs-toggle="modal"
-                                        data-bs-target="#updateStockModal" data-product-id="2"
-                                        data-product-name="Lốp xe Michelin XYZ" data-current-stock="5"
-                                        title="Cập nhật số lượng">
-                                        <i class="bi bi-pencil-fill"></i>
-                                    </button>
-                                    <a href="#" class="btn btn-secondary btn-sm btn-action" title="Xem lịch sử kho">
-                                        <i class="bi bi-clock-history"></i>
-                                    </a>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>3</td>
-                                <td><img src="https://placehold.co/50x50/EFEFEF/AAAAAA&text=SP" alt="Ảnh SP"
-                                        class="img-thumbnail" style="width: 50px; height: 50px; object-fit: contain;"></td>
-                                <td>Bugi NGK</td>
-                                <td>Phụ tùng</td>
-                                <td class="text-center">0</td>
-                                <td class="text-center"><span class="badge bg-danger">Hết hàng</span></td>
-                                <td class="text-center">
-                                    <button class="btn btn-info btn-sm btn-action" data-bs-toggle="modal"
-                                        data-bs-target="#updateStockModal" data-product-id="3" data-product-name="Bugi NGK"
-                                        data-current-stock="0" title="Cập nhật số lượng">
-                                        <i class="bi bi-pencil-fill"></i>
-                                    </button>
-                                    <a href="#" class="btn btn-secondary btn-sm btn-action" title="Xem lịch sử kho">
-                                        <i class="bi bi-clock-history"></i>
-                                    </a>
-                                </td>
-                            </tr>
-                            {{-- Kết thúc lặp --}}
-                        </tbody>
-                    </table>
-                </div>
-                {{-- Phân trang (sẽ cần logic backend) --}}
-                {{-- <div class="mt-3">
-                    {{ $products->links() }}
-                </div> --}}
+                @else
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th scope="col" style="width: 10%;">Hình Ảnh</th>
+                                    <th scope="col" style="width: 30%;">Tên Sản Phẩm</th>
+                                    <th scope="col" style="width: 15%;">Danh Mục</th>
+                                    <th scope="col" style="width: 15%;">Thương Hiệu</th>
+                                    <th scope="col" class="text-center" style="width: 10%;">Tồn Kho</th>
+                                    <th scope="col" class="text-end" style="width: 10%;">Giá Bán</th>
+                                    <th scope="col" class="text-center" style="width: 10%;">Hành Động</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($lowStockProducts as $product)
+                                    <tr>
+                                        <td>
+                                            <img src="{{ $product->thumbnail_url }}" alt="{{ $product->name }}"
+                                                class="img-fluid rounded border"
+                                                style="width: 60px; height: 60px; object-fit: contain;"
+                                                onerror="this.src='https://placehold.co/60x60/grey/white?text=Img'">
+                                        </td>
+                                        <td>{{ $product->name }}</td>
+                                        <td>{{ $product->category->name ?? 'N/A' }}</td>
+                                        <td>{{ $product->brand->name ?? 'N/A' }}</td>
+                                        <td class="text-center">
+                                            {{-- Display only the stock quantity --}}
+                                            <span class="badge bg-danger">{{ $product->stock_quantity }}</span>
+                                            {{-- Removed inline input and +/- buttons --}}
+                                        </td>
+                                        <td class="text-end">{{ number_format($product->price) }}đ</td>
+                                        <td class="text-center">
+                                            {{-- Button to view product details via modal --}}
+                                            <button type="button" class="btn btn-info btn-sm view-product-details-btn"
+                                                data-bs-toggle="modal" data-bs-target="#viewProductDetailsModal"
+                                                data-id="{{ $product->id }}" title="Xem chi tiết">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                            {{-- Button to open quantity update modal --}}
+                                            <button type="button" class="btn btn-success btn-sm open-update-quantity-modal-btn"
+                                                data-bs-toggle="modal" data-bs-target="#updateQuantityModal"
+                                                data-id="{{ $product->id }}" title="Cập nhật số lượng">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                    {{-- Pagination Links --}}
+                    <div class="mt-3 d-flex justify-content-center">
+                        {{ $lowStockProducts->links('admin.vendor.pagination') }}
+                    </div>
+                @endif
             </div>
         </div>
     </div>
 
-    {{-- Modal Cập nhật số lượng tồn kho --}}
-    <div class="modal fade" id="updateStockModal" tabindex="-1" aria-labelledby="updateStockModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
+    {{-- Modal for Viewing Product Details --}}
+    <div class="modal fade" id="viewProductDetailsModal" tabindex="-1" aria-labelledby="viewProductDetailsModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
             <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="updateStockModalLabel"><i class="bi bi-box-arrow-in-down me-2"></i>Cập nhật
-                        Số lượng Tồn kho</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="viewProductDetailsModalLabel"><i class="bi bi-eye me-2"></i>Chi Tiết Sản
+                        Phẩm: <span id="viewProductName"></span></h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                        aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <form id="updateStockForm"> {{-- Bỏ action, method nếu chỉ dựng giao diện --}}
-                        <input type="hidden" id="updateStockProductId" name="product_id">
-                        <div class="mb-3">
-                            <label class="form-label">Sản phẩm:</label>
-                            <p><strong id="updateStockProductName">Dầu nhớt ABC</strong></p>
+                    <div class="row">
+                        <div class="col-md-5 text-center">
+                            <img id="viewProductImage" src="https://placehold.co/300x300/EFEFEF/AAAAAA&text=Product"
+                                alt="Product Image" class="img-fluid rounded border mb-3"
+                                style="max-height: 250px; object-fit: contain;">
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label">Số lượng tồn hiện tại:</label>
-                            <p><strong id="updateStockCurrentQuantity">100</strong></p>
+                        <div class="col-md-7">
+                            <p class="mb-1"><strong>ID:</strong> <span id="viewProductId"></span></p>
+                            <p class="mb-1"><strong>Tên:</strong> <span id="viewProductNameDetail"></span></p>
+                            <p class="mb-1"><strong>Giá:</strong> <span id="viewProductPrice"></span></p>
+                            <p class="mb-1"><strong>Tồn kho:</strong> <span id="viewProductStock"></span></p>
+                            <p class="mb-1"><strong>Danh mục:</strong> <span id="viewProductCategory"></span></p>
+                            <p class="mb-1"><strong>Thương hiệu:</strong> <span id="viewProductBrand"></span></p>
+                            <p class="mb-1"><strong>Trạng thái:</strong> <span id="viewProductStatusBadge"></span></p>
                         </div>
+                    </div>
+                    <hr>
+                    <h6>Mô tả:</h6>
+                    <p id="viewProductDescription" class="text-muted"></p>
+                    <hr>
+                    <h6>Thông số kỹ thuật:</h6>
+                    <p id="viewProductSpecifications" class="text-muted"></p>
+                    <hr>
+                    <h6>Dòng xe tương thích:</h6>
+                    <div id="viewProductVehicleModels" class="d-flex flex-wrap gap-2">
+                        <span class="text-muted">Đang tải...</span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                    {{-- This link still goes to the full edit page for comprehensive edits --}}
+                    <a id="viewProductEditLink" href="#" class="btn btn-warning"><i
+                            class="bi bi-pencil-square me-2"></i>Chỉnh sửa đầy đủ</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- Modal for Updating Quantity --}}
+    <div class="modal fade" id="updateQuantityModal" tabindex="-1" aria-labelledby="updateQuantityModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title" id="updateQuantityModalLabel"><i class="bi bi-pencil-square me-2"></i>Cập nhật
+                        số lượng tồn kho</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                        aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="updateQuantityForm">
+                        <input type="hidden" id="updateQuantityProductId">
+                        <p class="mb-3">Cập nhật số lượng tồn kho cho sản phẩm: <strong><span
+                                    id="updateQuantityProductName"></span></strong></p>
                         <div class="mb-3">
-                            <label for="updateStockNewQuantity" class="form-label">Số lượng tồn mới:<span
-                                    class="text-danger">*</span></label>
-                            <input type="number" class="form-control" id="updateStockNewQuantity" name="new_stock_quantity"
-                                min="0" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="updateStockNote" class="form-label">Ghi chú (ví dụ: Nhập kho, Điều chỉnh):</label>
-                            <textarea class="form-control" id="updateStockNote" name="note" rows="2"></textarea>
+                            <label for="newStockQuantity" class="form-label">Số lượng mới</label>
+                            <input type="number" class="form-control" id="newStockQuantity" min="0" value="0">
+                            <div class="text-danger mt-1" id="updateQuantityError"></div>
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
-                    <button type="button" class="btn btn-primary" form="updateStockForm">Cập nhật Tồn kho</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="button" class="btn btn-success" id="confirmUpdateQuantityBtn"><i
+                            class="bi bi-save me-2"></i>Lưu thay đổi</button>
                 </div>
             </div>
         </div>
     </div>
 @endsection
 
-@push('scripts')
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const updateStockModal = document.getElementById('updateStockModal');
-            if (updateStockModal) {
-                updateStockModal.addEventListener('show.bs.modal', function (event) {
-                    const button = event.relatedTarget;
-                    const productId = button.dataset.productId;
-                    const productName = button.dataset.productName;
-                    const currentStock = button.dataset.currentStock;
+@push('styles')
+    {{-- Custom styles for this page if needed --}}
+@endpush
 
-                    updateStockModal.querySelector('#updateStockProductId').value = productId;
-                    updateStockModal.querySelector('#updateStockProductName').textContent = productName;
-                    updateStockModal.querySelector('#updateStockCurrentQuantity').textContent = currentStock;
-                    updateStockModal.querySelector('#updateStockNewQuantity').value = currentStock; // Mặc định là số lượng hiện tại
-                    updateStockModal.querySelector('#updateStockModalLabel').textContent = `Cập nhật Tồn kho: ${productName}`;
-                });
-            }
-        });
-    </script>
+@push('scripts')
+    {{-- Tải script quản lý tồn kho --}}
+    <script src="{{ asset('assets_admin/js/inventory_manager.js') }}"></script>
 @endpush

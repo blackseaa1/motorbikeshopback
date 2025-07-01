@@ -43,11 +43,20 @@ class OrderController extends Controller
             $query->where(function ($q) use ($searchTerm) {
                 $q->where('id', 'like', "%{$searchTerm}%")
                     ->orWhereHas('customer', fn($subQ) => $subQ->where('name', 'like', "%{$searchTerm}%"))
-                    ->orWhere('shipping_name', 'like', "%{$searchTerm}%") // Tìm kiếm theo guest_name
-                    ->orWhere('shipping_email', 'like', "%{$searchTerm}%") // Tìm kiếm theo guest_email
-                    ->orWhere('shipping_phone', 'like', "%{$searchTerm}%"); // Tìm kiếm theo guest_phone
+                    ->orWhere('guest_name', 'like', "%{$searchTerm}%") // Tìm kiếm theo guest_name
+                    ->orWhere('guest_email', 'like', "%{$searchTerm}%") // Tìm kiếm theo guest_email
+                    ->orWhere('guest_phone', 'like', "%{$searchTerm}%"); // Tìm kiếm theo guest_phone
             });
         }
+
+        // Apply sorting based on status priority and then created_at
+        $query->orderByRaw("CASE
+            WHEN status = '" . Order::STATUS_PENDING . "' THEN 1
+            WHEN status = '" . Order::STATUS_PROCESSING . "' THEN 2
+            ELSE 3
+        END")
+        ->orderBy('created_at', 'asc');
+
 
         // Sử dụng pagination.blade.php để phân trang
         $orders = $query->paginate(config('admin.pagination.per_page', 10))->withQueryString();
@@ -88,21 +97,8 @@ class OrderController extends Controller
 
         DB::beginTransaction();
         try {
-            // Logic xử lý địa chỉ mới cho khách hàng có sẵn
-            if ($validated['shipping_address_option'] === 'new' && $validated['customer_type'] === 'existing') {
-                $newAddress = CustomerAddress::create([
-                    'customer_id'    => $validated['customer_id'],
-                    'full_name'      => $validated['new_shipping_name'],
-                    'phone'          => $validated['new_shipping_phone'],
-                    'province_id'    => $validated['new_province_id'],
-                    'district_id'    => $validated['new_district_id'],
-                    'ward_id'        => $validated['new_ward_id'],
-                    'address_line'   => $validated['new_address_line'],
-                    'is_default'     => false,
-                ]);
-                // Gán ID địa chỉ mới để lưu vào đơn hàng
-                $validated['shipping_address_id'] = $newAddress->id;
-            }
+            // No longer creating new customer_addresses from this form.
+            // All address info is stored directly on the order model.
 
             // Tính toán tổng giá trị đơn hàng
             $calculation = $this->calculateOrderTotals($validated['items'], $validated['delivery_service_id'], $validated['promotion_id'] ?? null);
@@ -314,7 +310,6 @@ class OrderController extends Controller
     {
         $rules = [
             'customer_type'         => ['required', Rule::in(['existing', 'guest'])],
-            'shipping_address_option' => ['required', Rule::in(['existing', 'new'])],
             'items'                 => ['required', 'array', 'min:1'],
             'items.*.product_id'    => ['required', 'integer', 'exists:products,id'],
             'items.*.quantity'      => ['required', 'integer', 'min:1'],
@@ -326,32 +321,24 @@ class OrderController extends Controller
                 // Chỉ cho phép COD và Bank Transfer
                 $query->whereIn('code', ['cod', 'bank_transfer']);
             })],
+            // These fields are always submitted, regardless of customer_type, and will be used to populate Order model
+            'guest_name'          => ['required', 'string', 'max:255'],
+            'guest_phone'         => ['required', 'string', 'max:20'],
+            'guest_email'         => ['nullable', 'email', 'max:255'],
+            'guest_province_id'   => ['required', 'integer', 'exists:provinces,id'],
+            'guest_district_id'   => ['required', 'integer', 'exists:districts,id'],
+            'guest_ward_id'       => ['required', 'integer', 'exists:wards,id'],
+            'guest_address_line'  => ['required', 'string', 'max:255'],
         ];
 
         $customerType = $request->input('customer_type');
-        $addressOption = $request->input('shipping_address_option');
 
         if ($customerType === 'existing') {
             $rules['customer_id'] = ['required', 'integer', 'exists:customers,id'];
-
-            if ($addressOption === 'existing') {
-                $rules['shipping_address_id'] = ['required', 'integer', 'exists:customer_addresses,id'];
-            } else { // 'new' address for existing customer
-                $rules['new_shipping_name']  = ['required', 'string', 'max:255'];
-                $rules['new_shipping_phone'] = ['required', 'string', 'max:20'];
-                $rules['new_province_id']    = ['required', 'integer', 'exists:provinces,id'];
-                $rules['new_district_id']    = ['required', 'integer', 'exists:districts,id'];
-                $rules['new_ward_id']        = ['required', 'integer', 'exists:wards,id'];
-                $rules['new_address_line']   = ['required', 'string', 'max:255'];
-            }
+            // No specific address validation for existing customer here, as data comes from guest fields
+            // and we are not creating new customer_addresses.
         } else { // 'guest'
-            $rules['guest_name']          = ['required', 'string', 'max:255'];
-            $rules['guest_phone']         = ['required', 'string', 'max:20'];
-            $rules['guest_email']         = ['nullable', 'email', 'max:255'];
-            $rules['guest_province_id']   = ['required', 'integer', 'exists:provinces,id'];
-            $rules['guest_district_id']   = ['required', 'integer', 'exists:districts,id'];
-            $rules['guest_ward_id']       = ['required', 'integer', 'exists:wards,id'];
-            $rules['guest_address_line']  = ['required', 'string', 'max:255'];
+            $rules['customer_id'] = ['nullable']; // Ensure customer_id is not required for guests
         }
 
         return Validator::make($request->all(), $rules);
@@ -360,35 +347,19 @@ class OrderController extends Controller
     private function assignCustomerAndAddress(Order &$order, array $validatedData): void
     {
         if ($validatedData['customer_type'] === 'existing') {
-            // Lấy thông tin địa chỉ mà khách hàng đã chọn từ sổ địa chỉ
-            $address = CustomerAddress::with('customer')->findOrFail($validatedData['shipping_address_id']);
-
             $order->customer_id = $validatedData['customer_id'];
-
-            // Sao chép thông tin vào các cột tương ứng của đơn hàng
-            $order->shipping_name = $address->full_name; // Sử dụng shipping_name
-            $order->shipping_phone = $address->phone;   // Sử dụng shipping_phone
-            $order->shipping_email = $address->customer->email; // Sử dụng shipping_email
-            $order->province_id = $address->province_id;
-            $order->district_id = $address->district_id;
-            $order->ward_id = $address->ward_id;
-
-            // Lưu địa chỉ chi tiết vào cột mới
-            $order->shipping_address_line = $address->address_line;
-        } else { // Xử lý cho khách vãng lai
+        } else { // 'guest'
             $order->customer_id = null;
-
-            // Gán thông tin từ form của khách vãng lai
-            $order->shipping_name = $validatedData['guest_name']; // Sử dụng shipping_name
-            $order->shipping_phone = $validatedData['guest_phone']; // Sử dụng shipping_phone
-            $order->shipping_email = $validatedData['guest_email']; // Sử dụng shipping_email
-            $order->province_id = $validatedData['guest_province_id'];
-            $order->district_id = $validatedData['guest_district_id'];
-            $order->ward_id = $validatedData['guest_ward_id'];
-
-            // Lưu địa chỉ chi tiết vào cột mới
-            $order->shipping_address_line = $validatedData['guest_address_line'];
         }
+
+        // Always assign from the 'guest' fields, as they are now the unified input for shipping details
+        $order->guest_name = $validatedData['guest_name'];
+        $order->guest_phone = $validatedData['guest_phone'];
+        $order->guest_email = $validatedData['guest_email'] ?? null;
+        $order->province_id = $validatedData['guest_province_id'];
+        $order->district_id = $validatedData['guest_district_id'];
+        $order->ward_id = $validatedData['guest_ward_id'];
+        $order->shipping_address_line = $validatedData['guest_address_line'];
     }
 
     private function calculateOrderTotals(array $items, ?int $deliveryServiceId, ?int $promotionId): array

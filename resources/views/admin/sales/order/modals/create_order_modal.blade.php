@@ -38,6 +38,7 @@
                                             class="text-danger">*</span></label>
                                     <select class="form-select selectpicker" id="customer_id_create" name="customer_id"
                                         data-live-search="true" title="Tìm và chọn khách hàng...">
+                                        <option value="">Chọn khách hàng...</option> {{-- Added empty option for initial state --}}
                                         @foreach($customers as $customer)
                                             <option value="{{ $customer->id }}" data-subtext="{{ $customer->email }}">
                                                 {{ $customer->name }}
@@ -46,94 +47,16 @@
                                     </select>
                                     <div class="invalid-feedback" id="error-customer_id"></div>
                                 </div>
-
-                                <h5 class="mb-3 mt-4">2. Địa chỉ giao hàng</h5>
-                                <input type="hidden" name="shipping_address_option" id="shipping_address_option_create"
-                                    value="existing">
-
-                                {{-- Danh sách địa chỉ có sẵn --}}
-                                <div id="existing_address_block">
-                                    <div id="addressListContainer"
-                                        class="address-list-container mb-2 p-3 border rounded bg-light"
-                                        style="max-height: 200px; overflow-y: auto;">
-                                        <p class="text-muted">Vui lòng chọn khách hàng để xem địa chỉ.</p>
-                                    </div>
-                                    <div class="invalid-feedback" id="error-shipping_address_id"></div>
-                                    <button type="button" class="btn btn-sm btn-outline-primary"
-                                        id="btn-show-new-address-form">
-                                        <i class="bi bi-plus-circle"></i> Thêm địa chỉ mới
-                                    </button>
-                                </div>
-
-                                {{-- Form thêm địa chỉ mới cho khách hàng có sẵn --}}
-                                <div id="new_address_form" class="d-none mt-3 border p-3 rounded">
-                                    <h6 class="mb-3">Thêm địa chỉ mới</h6>
-                                    <div class="row">
-                                        <div class="col-md-6 mb-3">
-                                            <label for="new_shipping_name" class="form-label">Họ tên người nhận <span
-                                                    class="text-danger">*</span></label>
-                                            <input type="text" class="form-control" id="new_shipping_name"
-                                                name="new_shipping_name" required>
-                                            <div class="invalid-feedback" id="error-new_shipping_name"></div>
-                                        </div>
-                                        <div class="col-md-6 mb-3">
-                                            <label for="new_shipping_phone" class="form-label">SĐT người nhận <span
-                                                    class="text-danger">*</span></label>
-                                            <input type="text" class="form-control" id="new_shipping_phone"
-                                                name="new_shipping_phone" required>
-                                            <div class="invalid-feedback" id="error-new_shipping_phone"></div>
-                                        </div>
-                                    </div>
-                                    <div class="row">
-                                        <div class="col-md-4 mb-3">
-                                            <label for="new_province_id" class="form-label">Tỉnh/Thành <span
-                                                    class="text-danger">*</span></label>
-                                            <select class="form-select" id="new_province_id" name="new_province_id"
-                                                data-type="new">
-                                                <option value="">Chọn Tỉnh/Thành</option>
-                                                @foreach($provinces as $province)
-                                                    <option value="{{ $province->id }}">{{ $province->name }}</option>
-                                                @endforeach
-                                            </select>
-                                            <div class="invalid-feedback" id="error-new_province_id"></div>
-                                        </div>
-                                        <div class="col-md-4 mb-3">
-                                            <label for="new_district_id" class="form-label">Quận/Huyện <span
-                                                    class="text-danger">*</span></label>
-                                            <select class="form-select" id="new_district_id" name="new_district_id"
-                                                data-type="new" disabled>
-                                                <option value="">Chọn Quận/Huyện</option>
-                                            </select>
-                                            <div class="invalid-feedback" id="error-new_district_id"></div>
-                                        </div>
-                                        <div class="col-md-4 mb-3">
-                                            <label for="new_ward_id" class="form-label">Phường/Xã <span
-                                                    class="text-danger">*</span></label>
-                                            <select class="form-select" id="new_ward_id" name="new_ward_id"
-                                                data-type="new" disabled>
-                                                <option value="">Chọn Phường/Xã</option>
-                                            </select>
-                                            <div class="invalid-feedback" id="error-new_ward_id"></div>
-                                        </div>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label for="new_address_line" class="form-label">Địa chỉ cụ thể <span
-                                                class="text-danger">*</span></label>
-                                        <input type="text" class="form-control" id="new_address_line"
-                                            name="new_address_line" required>
-                                        <div class="invalid-feedback" id="error-new_address_line"></div>
-                                    </div>
-                                    <button type="button" class="btn btn-sm btn-link ps-0"
-                                        id="btn-cancel-new-address">Hủy và chọn địa chỉ có sẵn</button>
-                                </div>
+                                {{-- Removed existing_address_block and new_address_form as per new logic --}}
+                                {{-- Address fields will be populated in guest_customer_block --}}
                             </div>
 
-                            {{-- Block cho Khách vãng lai --}}
-                            <div id="guest_customer_block" style="display: none;">
-                                <h5 class="mb-3 mt-4">2. Thông tin khách vãng lai</h5>
+                            {{-- Block cho Khách vãng lai (hoặc thông tin địa chỉ hiển thị cho khách có sẵn) --}}
+                            <div id="guest_customer_block"> {{-- No longer hidden by default, visibility managed by JS --}}
+                                <h5 class="mb-3 mt-4">2. Thông tin giao hàng</h5>
                                 <div class="row">
                                     <div class="col-md-6 mb-3">
-                                        <label for="guest_name" class="form-label">Tên khách hàng <span
+                                        <label for="guest_name" class="form-label">Tên người nhận <span
                                                 class="text-danger">*</span></label>
                                         <input type="text" class="form-control" id="guest_name" name="guest_name">
                                         <div class="invalid-feedback" id="error-guest_name"></div>
@@ -146,7 +69,7 @@
                                     </div>
                                 </div>
                                 <div class="mb-3">
-                                    <label for="guest_email" class="form-label">Email</label>
+                                    <label for="guest_email" class="form-label">Email (Tùy chọn)</label>
                                     <input type="email" class="form-control" id="guest_email" name="guest_email">
                                     <div class="invalid-feedback" id="error-guest_email"></div>
                                 </div>
