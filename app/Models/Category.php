@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Builder; // Import Builder
 
 class Category extends Model
 {
@@ -14,6 +15,17 @@ class Category extends Model
     // Định nghĩa các hằng số cho trạng thái
     const STATUS_ACTIVE = 'active';
     const STATUS_INACTIVE = 'inactive';
+
+    // Hằng số cho các tùy chọn lọc/sắp xếp
+    const FILTER_STATUS_ALL = 'all';
+    const FILTER_STATUS_ACTIVE_ONLY = 'active_only';
+    const FILTER_STATUS_INACTIVE_ONLY = 'inactive_only';
+
+    const SORT_BY_LATEST = 'latest';
+    const SORT_BY_OLDEST = 'oldest';
+    const SORT_BY_NAME_ASC = 'name_asc';
+    const SORT_BY_NAME_DESC = 'name_desc';
+
 
     protected $fillable = [
         'name',
@@ -70,9 +82,17 @@ class Category extends Model
     /**
      * Scope để chỉ lấy các danh mục đang hoạt động.
      */
-    public function scopeActive($query)
+    public function scopeActive(Builder $query): Builder
     {
         return $query->where('status', self::STATUS_ACTIVE);
+    }
+
+    /**
+     * Scope để chỉ lấy các danh mục đang ẩn.
+     */
+    public function scopeInactive(Builder $query): Builder
+    {
+        return $query->where('status', self::STATUS_INACTIVE);
     }
 
     /**

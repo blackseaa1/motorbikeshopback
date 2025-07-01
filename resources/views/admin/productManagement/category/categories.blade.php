@@ -3,7 +3,7 @@
 @section('title', 'Quản lý Danh mục')
 
 @section('content')
-    <div id="adminCategoriesPage"> {{-- Wrapper cho trang --}}
+    <div id="adminCategoriesPage">
 
         {{-- Content Header --}}
         <div class="content-header">
@@ -25,93 +25,87 @@
 
         <section class="content">
             <div class="container-fluid">
-                <div class="card mb-4">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h2 class="h5 mb-0"><i class="bi bi-list-ul me-2"></i>Danh sách Danh mục</h2>
+                <div class="card mb-4 shadow-sm">
+                    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                        <h2 class="h5 mb-0 text-primary"><i class="bi bi-list-ul me-2"></i>Danh sách Danh mục</h2>
                         <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal"
                             data-bs-target="#createCategoryModal">
                             <i class="bi bi-plus-circle-fill me-1"></i> Tạo Danh mục mới
                         </button>
                     </div>
                     <div class="card-body">
-                        @if ($categories->isEmpty())
-                            <div class="alert alert-info" role="alert">
-                                <i class="bi bi-info-circle me-2"></i>Hiện chưa có danh mục nào.
+                        {{-- Hàng điều khiển: Tìm kiếm, Lọc, Sắp xếp và Hành động hàng loạt --}}
+                        <div class="row g-3 mb-3 align-items-center">
+                            {{-- Thanh tìm kiếm --}}
+                            <div class="col-md-4 col-lg-3">
+                                <div class="input-group">
+                                    <input type="text" id="categorySearchInput" class="form-control form-control-sm"
+                                        placeholder="Tìm kiếm tên, mô tả...">
+                                    <button class="btn btn-outline-secondary btn-sm" type="button" id="categorySearchBtn">
+                                        <i class="bi bi-search"></i>
+                                    </button>
+                                </div>
                             </div>
-                        @else
-                            <div class="table-responsive">
-                                <table class="table table-hover align-middle">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th scope="col" style="width: 5%;">STT</th>
-                                            <th scope="col" style="width: 30%;">Tên Danh mục</th>
-                                            <th scope="col">Mô tả</th>
-                                            <th scope="col" style="width: 10%;" class="text-center">Trạng thái</th>
-                                            <th scope="col" class="text-center" style="width: 25%;">Hành động</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach ($categories as $category)
-                                            <tr id="category-row-{{ $category->id }}"
-                                                class="{{ !$category->isActive() ? 'row-inactive' : '' }}">
-                                                <td>{{ $loop->iteration + $categories->firstItem() - 1 }}</td>
-                                                <td>{{ $category->name }}</td>
-                                                <td>{{ Str::limit($category->description, 70) ?? 'Không có mô tả' }}</td>
-                                                <td class="text-center status-cell" id="category-status-{{ $category->id }}">
-                                                    <span
-                                                        class="badge {{ $category->status_badge_class }}">{{ $category->status_text }}</span>
-                                                </td>
-                                                <td class="text-center action-buttons">
-                                                    {{-- NÚT XEM --}}
-                                                    <button type="button" class="btn btn-sm btn-success btn-view-category"
-                                                        data-bs-toggle="modal" data-bs-target="#viewCategoryModal"
-                                                        data-id="{{ $category->id }}" data-name="{{ $category->name }}"
-                                                        data-description="{{ $category->description ?? '' }}"
-                                                        data-status="{{ $category->status }}"
-                                                        data-status-text="{{ $category->status_text }}"
-                                                        data-status-badge-class="{{ $category->status_badge_class }}"
-                                                        data-created-at="{{ $category->created_at->format('H:i:s d/m/Y') }}"
-                                                        data-updated-at="{{ $category->updated_at->format('H:i:s d/m/Y') }}"
-                                                        data-update-url="{{ route('admin.productManagement.categories.update', $category->id) }}"
-                                                        title="Xem chi tiết">
-                                                        <i class="bi bi-eye-fill"></i>
-                                                    </button>
 
-                                                    {{-- NÚT CHUYỂN ĐỔI TRẠNG THÁI (ĐÃ CẬP NHẬT) --}}
-                                                    <button type="button"
-                                                        class="btn btn-sm toggle-status-btn {{ $category->isActive() ? 'btn-outline-secondary' : 'btn-danger' }}"
-                                                        data-id="{{ $category->id }}"
-                                                        data-url="{{ route('admin.productManagement.categories.toggleStatus', $category->id) }}"
-                                                        title="{{ $category->isActive() ? 'Ẩn danh mục này' : 'Hiển thị danh mục này' }}">
-                                                        <i class="bi bi-power"></i>
-                                                    </button>
-
-                                                    {{-- NÚT SỬA --}}
-                                                    <button type="button" class="btn btn-sm btn-info btn-edit-category"
-                                                        data-bs-toggle="modal" data-bs-target="#updateCategoryModal"
-                                                        data-id="{{ $category->id }}" data-name="{{ $category->name }}"
-                                                        data-description="{{ $category->description ?? '' }}"
-                                                        data-status="{{ $category->status }}"
-                                                        data-update-url="{{ route('admin.productManagement.categories.update', $category->id) }}"
-                                                        title="Cập nhật">
-                                                        <i class="bi bi-pencil-square"></i>
-                                                    </button>
-
-                                                    {{-- NÚT XÓA --}}
-                                                    <button type="button" class="btn btn-sm btn-danger btn-delete-category"
-                                                        data-bs-toggle="modal" data-bs-target="#deleteCategoryModal"
-                                                        data-id="{{ $category->id }}" data-name="{{ $category->name }}"
-                                                        data-delete-url="{{ route('admin.productManagement.categories.destroy', $category->id) }}"
-                                                        title="Xóa">
-                                                        <i class="bi bi-trash-fill"></i>
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        @endforeach
-                                    </tbody>
-                                </table>
+                            {{-- Bộ lọc --}}
+                            <div class="col-md-4 col-lg-3">
+                                <select id="categoryFilterSelect" class="form-select form-select-sm">
+                                    <option value="all">Tất cả trạng thái</option>
+                                    <option value="active_only">Hoạt động</option>
+                                    <option value="inactive_only">Đã ẩn</option>
+                                </select>
                             </div>
-                            <div class="mt-3 d-flex justify-content-end">
+
+                            {{-- Sắp xếp --}}
+                            <div class="col-md-4 col-lg-3">
+                                <select id="categorySortSelect" class="form-select form-select-sm">
+                                    <option value="latest">Mới nhất</option>
+                                    <option value="oldest">Cũ nhất</option>
+                                    <option value="name_asc">Tên (A-Z)</option>
+                                    <option value="name_desc">Tên (Z-A)</option>
+                                </select>
+                            </div>
+
+                            {{-- Nút hành động hàng loạt --}}
+                            <div class="col-12 col-lg-3 text-lg-end">
+                                <button class="btn btn-danger btn-sm me-2 mb-2 mb-lg-0" id="bulkDeleteBtn" disabled
+                                    data-bs-toggle="modal" data-bs-target="#deleteCategoryModal">
+                                    <i class="bi bi-trash-fill me-1"></i> Xóa (<span id="selectedCountDelete">0</span>)
+                                </button>
+                                <button class="btn btn-info btn-sm mb-2 mb-lg-0" id="bulkToggleStatusBtn" disabled
+                                    data-bs-toggle="modal" data-bs-target="#bulkToggleStatusModal">
+                                    <i class="bi bi-arrow-repeat me-1"></i> Trạng thái (<span
+                                        id="selectedCountToggle">0</span>)
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th scope="col" style="width:3%">
+                                            <input type="checkbox" id="selectAllCategories"> {{-- ID khác để tránh xung đột
+                                            --}}
+                                        </th>
+                                        <th scope="col" style="width:5%">STT</th>
+                                        <th scope="col" style="width: 25%;">Tên Danh mục</th> {{-- Giảm width để vừa đủ --}}
+                                        <th scope="col">Mô tả</th>
+                                        <th scope="col" style="width: 10%;" class="text-center">Trạng thái</th>
+                                        <th scope="col" class="text-center" style="width: 20%;">Hành động</th> {{-- Giảm
+                                        width --}}
+                                    </tr>
+                                </thead>
+                                <tbody id="categories-table-body">
+                                    {{-- Dữ liệu sẽ được tải ở đây bởi Controller và AJAX --}}
+                                    @include('admin.productManagement.category.partials._category_table_rows', ['categories' => $categories])
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {{-- Phân trang --}}
+                        @if ($categories->hasPages())
+                            <div class="mt-3 d-flex justify-content-center" id="pagination-links">
                                 {{ $categories->links() }}
                             </div>
                         @endif
@@ -126,6 +120,9 @@
     @include('admin.productManagement.category.modals.update_category_modal')
     @include('admin.productManagement.category.modals.delete_category_modal')
     @include('admin.productManagement.category.modals.view_category_modal')
+    {{-- NEW: Modal for Bulk Toggle Status --}}
+    @include('admin.productManagement.category.modals.modal_bulk_toggle_status')
+
 @endsection
 
 @push('scripts')

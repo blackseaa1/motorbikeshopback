@@ -1,9 +1,11 @@
 {{-- View Category Modal --}}
-<div class="modal fade" id="viewCategoryModal" tabindex="-1" aria-labelledby="viewCategoryModalLabel" aria-hidden="true">
+<div class="modal fade" id="viewCategoryModal" tabindex="-1" aria-labelledby="viewCategoryModalLabel"
+    aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="viewCategoryModalLabel"><i class="bi bi-tags-fill me-2"></i>Chi tiết Danh mục</h5>
+                <h5 class="modal-title" id="viewCategoryModalLabel"><i class="bi bi-tags-fill me-2"></i>Chi tiết Danh
+                    mục</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
@@ -15,7 +17,8 @@
                     <dd class="col-sm-9" id="categoryNameView">-</dd>
 
                     <dt class="col-sm-3">Mô tả:</dt>
-                    <dd class="col-sm-9" id="categoryDescriptionView" style="white-space: pre-wrap; word-break: break-word;">-</dd>
+                    <dd class="col-sm-9" id="categoryDescriptionView"
+                        style="white-space: pre-wrap; word-break: break-word;">-</dd>
 
                     <dt class="col-sm-3">Trạng thái:</dt>
                     <dd class="col-sm-9" id="categoryStatusView">-</dd>

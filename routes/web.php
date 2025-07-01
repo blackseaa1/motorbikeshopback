@@ -248,8 +248,16 @@ Route::prefix('admin')->name('admin.')->group(function () {
             });
 
             // Categories, Brands, Vehicle
-            Route::resource('categories', CategoryController::class)->except(['create', 'edit', 'show']);
-            Route::post('categories/{category}/toggle-status', [CategoryController::class, 'toggleStatus'])->name('categories.toggleStatus');
+            Route::controller(CategoryController::class)->prefix('categories')->name('categories.')->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::post('/', 'store')->name('store');
+                Route::get('/{category}', 'show')->name('show'); // For view/edit modal data fetching
+                Route::put('/{category}', 'update')->name('update');
+                Route::delete('/{category}', 'destroy')->name('destroy');
+                Route::post('/{category}/toggle-status', 'toggleStatus')->name('toggleStatus');
+                Route::post('/bulk-destroy', 'bulkDestroy')->name('bulkDestroy'); // NEW bulk destroy
+                Route::post('/bulk-toggle-status', 'bulkToggleStatus')->name('bulkToggleStatus'); // NEW bulk toggle status
+            });
             Route::resource('brands', BrandController::class)->except(['create', 'edit', 'show']);
             Route::post('brands/{brand}/toggle-status', [BrandController::class, 'toggleStatus'])->name('brands.toggleStatus');
             Route::get('vehicles', [VehicleManagementController::class, 'index'])->name('vehicle.index');

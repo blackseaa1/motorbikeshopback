@@ -15,7 +15,6 @@
 
                 <form id="deletePromotionForm" method="POST">
                     @csrf
-                    @method('DELETE')
                     {{-- Trường ẩn để xác định form khi có lỗi validation --}}
                     <input type="hidden" name="_form_identifier" value="delete_promotion_form">
 
