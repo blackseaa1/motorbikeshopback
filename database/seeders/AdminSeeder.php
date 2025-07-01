@@ -3,50 +3,47 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
 use App\Models\Admin;
+use Illuminate\Support\Facades\Hash;
+use Carbon\Carbon;
 
 class AdminSeeder extends Seeder
 {
     /**
      * Run the database seeds.
+     *
+     * @return void
      */
     public function run(): void
     {
-        // Tạo tài khoản Super Admin mặc định, sử dụng firstOrCreate để tránh trùng lặp
         Admin::firstOrCreate(
-            ['email' => 'admin@gmail.com'], // Tiêu chí tìm kiếm
+            ['email' => 'admin@gmail.com'],
             [
                 'name' => 'Super Admin',
-                'phone' => '0123456789',
-                'role' => 'super_admin', // Sử dụng vai trò cao nhất
-                'password' => Hash::make('admin'), // Mật khẩu là 'admin'
+                'phone' => '0987654321',
+                'role' => Admin::ROLE_SUPER_ADMIN,
+                'password' => Hash::make('admin'),
+                'img' => null,
+                'status' => Admin::STATUS_ACTIVE,
+                'password_change_required' => false,
+                'created_at' => Carbon::now(),
+                'updated_at' => Carbon::now(),
             ]
         );
 
-        // Tạo thêm các tài khoản nhân viên (admin) mẫu khác
-        $moreAdmins = [
+        Admin::firstOrCreate(
+            ['email' => 'staff@example.com'],
             [
-                'name' => 'Staff 1',
-                'email' => 'staff1@example.com', // Đảm bảo email duy nhất
+                'name' => 'Nhân viên A',
                 'phone' => '0912345678',
-                'role' => 'staff', // Vai trò nhân viên
-                'password' => Hash::make('staff123'),
-            ],
-            [
-                'name' => 'Staff 2',
-                'email' => 'staff2@example.com', // Đảm bảo email duy nhất
-                'phone' => '0987654321',
-                'role' => 'editor', // Vai trò biên tập viên
-                'password' => Hash::make('editor123'),
-            ],
-        ];
-
-        foreach ($moreAdmins as $adminData) {
-            Admin::firstOrCreate(
-                ['email' => $adminData['email']], // Tiêu chí tìm kiếm dựa trên email
-                $adminData
-            );
-        }
+                'role' => Admin::ROLE_STAFF,
+                'password' => Hash::make('password'),
+                'img' => null,
+                'status' => Admin::STATUS_ACTIVE,
+                'password_change_required' => false,
+                'created_at' => Carbon::now(),
+                'updated_at' => Carbon::now(),
+            ]
+        );
     }
 }

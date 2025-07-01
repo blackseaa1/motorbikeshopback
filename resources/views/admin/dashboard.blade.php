@@ -52,7 +52,7 @@
                                 <h5 class="card-title">Doanh Thu (Tháng)</h5>
                                 {{-- Link to Reports page --}}
                                 <a href="{{ route('admin.reports') }}" class="text-decoration-none text-dark">
-                                    <p class="card-text-large">{{ number_format($monthlyRevenue) }}đ</p>
+                                    <p class="card-text-large">{{ number_format($monthlyRevenue, 0, ',', '.') }}đ</p>
                                 </a>
                             </div>
                             <i class="bi bi-cash-coin summary-icon icon-primary"></i>
