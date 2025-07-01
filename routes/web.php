@@ -295,11 +295,14 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('orders/get-wards', [OrderController::class, 'getWards'])->name('orders.getWards');
             Route::get('orders/get-product-details', [OrderController::class, 'getProductDetails'])->name('orders.getProductDetails');
             Route::get('orders/get-customer-addresses', [OrderController::class, 'getCustomerAddresses'])->name('orders.getCustomerAddresses');
+
             // == ROUTES CHO KHUYẾN MÃI (PROMOTIONS) ==
-            // Route resource cho PromotionController, loại trừ 'create' và 'edit'
+            // == ROUTES CHO KHUYẾN MÃI (PROMOTIONS) ==
             Route::resource('promotions', PromotionController::class)->except(['create', 'edit']);
-            // Route riêng để bật/tắt trạng thái khuyến mãi
             Route::post('promotions/{promotion}/toggle-status', [PromotionController::class, 'toggleStatus'])->name('promotions.toggleStatus');
+
+            Route::post('promotions/bulk-destroy', [PromotionController::class, 'bulkDestroy'])->name('promotions.bulkDestroy');
+            Route::post('promotions/bulk-toggle-status', [PromotionController::class, 'bulkToggleStatus'])->name('promotions.bulkToggleStatus');
         });
 
         // --- Module: Cấu hình Hệ thống (System Configuration) ---

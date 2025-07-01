@@ -26,6 +26,11 @@ class CheckoutController extends Controller
 {
     protected $cartManager;
 
+    /**
+     * Khởi tạo bộ điều khiển với CartManager.
+     *
+     * @param CartManager $cartManager
+     */
     public function __construct(CartManager $cartManager)
     {
         $this->cartManager = $cartManager;
@@ -33,6 +38,8 @@ class CheckoutController extends Controller
 
     /**
      * Hiển thị trang thanh toán.
+     *
+     * @return \Illuminate\View\View|\Illuminate\Http\RedirectResponse
      */
     public function index()
     {
@@ -136,16 +143,14 @@ class CheckoutController extends Controller
             // Luôn đặt trạng thái ban đầu là PENDING
             $initialStatus = Order::STATUS_PENDING;
 
-            // ========================= SỬA ĐỔI QUAN TRỌNG =========================
             // Tạo bản ghi đơn hàng mới trong cơ sở dữ liệu.
             // Logic mới sẽ luôn sao chép thông tin giao hàng vào đơn hàng để đảm bảo tính toàn vẹn.
             $order = Order::create([
                 'customer_id' => $customer?->id, // ID khách hàng nếu có, ngược lại là null.
                 'payment_method_id' => $paymentMethod->id,
 
-                // SỬA ĐỔI: Các trường này giờ đây sẽ LLUÔN được điền từ thông tin giao hàng đã chọn.
-                // Lưu ý: Tên cột trong DB của bạn có thể là `customer_name`, `customer_phone`.
-                // Ở đây tôi dùng `guest_name` và `guest_phone` theo file bạn cung cấp.
+                // Cập nhật: Sử dụng lại các cột 'guest_name', 'guest_phone', 'guest_email'
+                // để phù hợp với schema database hiện tại của bạn.
                 'guest_name' => $shippingAddressInfo['name'],
                 'guest_phone' => $shippingAddressInfo['phone'],
                 'guest_email' => $shippingAddressInfo['email'],
@@ -167,8 +172,6 @@ class CheckoutController extends Controller
                 'notes' => $validatedData['notes'] ?? null,
                 'created_by_admin_id' => null, // Đơn hàng này được tạo bởi khách hàng, không phải admin.
             ]);
-            // ======================= KẾT THÚC SỬA ĐỔI QUAN TRỌNG =======================
-
 
             // Thêm các mặt hàng từ giỏ hàng vào đơn hàng.
             foreach ($cartDetails['items'] as $item) {
@@ -222,6 +225,7 @@ class CheckoutController extends Controller
             return back()->with('error', 'Đã có lỗi xảy ra trong quá trình đặt hàng. Vui lòng thử lại.')->withInput();
         }
     }
+
     /**
      * Hiển thị trang chi tiết đơn hàng cho khách vãng lai.
      *
@@ -246,7 +250,7 @@ class CheckoutController extends Controller
      * Xử lý tra cứu đơn hàng của khách vãng lai (sau khi form được gửi hoặc lọc/phân trang).
      *
      * @param \Illuminate\Http\Request $request
-     * @return \Illuminate\View\View
+     * @return \Illuminate\View\View|\Illuminate\Http\RedirectResponse
      */
     public function lookupGuestOrder(Request $request)
     {
@@ -282,8 +286,9 @@ class CheckoutController extends Controller
         // Bắt đầu truy vấn đơn hàng
         $query = Order::whereNull('customer_id')
             ->where(function ($q) use ($guestContact) {
-                $q->where('customer_phone', $guestContact) // Sửa: Dùng cột customer_phone đã thống nhất
-                    ->orWhere('customer_email', $guestContact); // Sửa: Dùng cột customer_email đã thống nhất
+                // Cập nhật: Sử dụng lại cột 'guest_phone' và 'guest_email'
+                $q->where('guest_phone', $guestContact)
+                    ->orWhere('guest_email', $guestContact);
             });
 
         // Áp dụng tìm kiếm
@@ -379,6 +384,7 @@ class CheckoutController extends Controller
         $isGuest = ($order->customer_id === null);
 
         if ($customer) {
+            // Kiểm tra quyền hủy đơn hàng của khách hàng đăng nhập
             if ($order->customer_id !== $customer->id) {
                 return back()->with('error', 'Bạn không có quyền hủy đơn hàng này.');
             }
@@ -387,23 +393,26 @@ class CheckoutController extends Controller
                 'password_confirm' => ['required', 'string'],
             ]);
 
+            // Xác thực mật khẩu của khách hàng
             if (!Auth::guard('customer')->attempt(['email' => $customer->email, 'password' => $request->password_confirm])) {
                 return back()->with('error', 'Mật khẩu xác nhận không đúng.')->withInput();
             }
         } elseif ($isGuest) {
+            // Xác thực thông tin khách vãng lai
             $request->validate([
                 'guest_contact_confirm' => ['required', 'string'],
             ]);
 
             $guestContact = trim($request->input('guest_contact_confirm'));
-            // Sửa: Dùng cột customer_email và customer_phone đã thống nhất
-            if (!($order->customer_email === $guestContact || $order->customer_phone === $guestContact)) {
+            // Cập nhật: Dùng cột guest_email và guest_phone
+            if (!($order->guest_email === $guestContact || $order->guest_phone === $guestContact)) {
                 return back()->with('error', 'Xác thực thông tin không thành công. Vui lòng nhập đúng email hoặc số điện thoại đã dùng khi đặt hàng.')->withInput();
             }
         } else {
             return back()->with('error', 'Không thể xác định quyền hủy đơn hàng.');
         }
 
+        // Kiểm tra xem đơn hàng có thể hủy được không
         if (!$order->isCancellable()) {
             return back()->with('error', 'Đơn hàng này không thể hủy vì đã được xử lý hoặc hoàn thành.');
         }
@@ -413,6 +422,7 @@ class CheckoutController extends Controller
             $order->status = Order::STATUS_CANCELLED;
             $order->save();
 
+            // Nếu đơn hàng đã được duyệt, hoàn lại số lượng sản phẩm và lượt sử dụng khuyến mãi
             if ($oldStatus === Order::STATUS_APPROVED) {
                 $order->load('items.product');
                 foreach ($order->items as $item) {
@@ -435,19 +445,26 @@ class CheckoutController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Lỗi khi hủy đơn hàng: ' . $e->getMessage() . ' - Order ID: ' . $order->id);
-            return back()->with('error', 'Đã có lỗi xảy ra trong quá trình đặt hàng. Vui lòng thử lại.')->withInput();
+            return back()->with('error', 'Đã có lỗi xảy ra trong quá trình hủy đơn hàng. Vui lòng thử lại.')->withInput();
         }
     }
 
-
+    /**
+     * Lấy thông tin địa chỉ giao hàng dựa trên dữ liệu đã xác thực và thông tin khách hàng.
+     *
+     * @param array $validatedData
+     * @param Customer|null $customer
+     * @return array
+     */
     private function getShippingAddressInfo(array $validatedData, ?Customer $customer): array
     {
         if ($customer) {
+            // Nếu là khách hàng đã đăng nhập, lấy thông tin từ địa chỉ đã chọn
             $address = CustomerAddress::with(['province', 'district', 'ward'])->find($validatedData['shipping_address_id']);
             return [
                 'name' => $address->full_name,
                 'email' => $customer->email, // Giữ lại email chính của tài khoản để liên lạc
-                'phone' => $address->phone, // SỬA ĐỔI: Lấy SĐT từ địa chỉ đã chọn
+                'phone' => $address->phone, // Lấy SĐT từ địa chỉ đã chọn
                 'province_id' => $address->province_id,
                 'district_id' => $address->district_id,
                 'ward_id' => $address->ward_id,
@@ -455,7 +472,7 @@ class CheckoutController extends Controller
             ];
         }
 
-        // Logic cho khách vãng lai giữ nguyên
+        // Logic cho khách vãng lai
         $province = Province::find($validatedData['guest_province_id']);
         $district = District::find($validatedData['guest_district_id']);
         $ward = Ward::find($validatedData['guest_ward_id']);

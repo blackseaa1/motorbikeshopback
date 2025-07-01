@@ -33,7 +33,7 @@ class ProductController extends Controller
             $query->onlyTrashed();
         }
 
-        $products = $query->latest()->paginate(15);
+        $products = $query->latest()->paginate(10);
         $categories = Category::where('status', 'active')->orderBy('name')->get();
         $brands = Brand::where('status', 'active')->orderBy('name')->get();
         $vehicleBrands = VehicleBrand::with(['vehicleModels' => fn($q) => $q->where('status', 'active')->orderBy('name')])

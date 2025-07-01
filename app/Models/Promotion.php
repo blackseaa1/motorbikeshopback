@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder; // Import Builder
 
 class Promotion extends Model
 {
@@ -26,26 +27,46 @@ class Promotion extends Model
     const DISCOUNT_TYPE_PERCENTAGE = 'percentage';
     const DISCOUNT_TYPE_FIXED = 'fixed';
 
+    // Thêm các hằng số cho Filter/Sort options
+    const FILTER_STATUS_ALL = 'all';
+    const FILTER_STATUS_ACTIVE = 'active_effective';
+    const FILTER_STATUS_INACTIVE = 'inactive_effective';
+    const FILTER_STATUS_EXPIRED = 'expired_effective';
+    const FILTER_STATUS_SCHEDULED = 'scheduled_effective';
+    const FILTER_STATUS_MANUAL_ACTIVE = 'manual_active';
+    const FILTER_STATUS_MANUAL_INACTIVE = 'manual_inactive';
+
+
+    const FILTER_EXPIRY_ALL = 'all';
+    const FILTER_EXPIRY_EXPIRING_SOON = 'expiring_soon'; // Sắp hết hạn (ví dụ: trong 7 ngày tới)
+    const FILTER_EXPIRY_EXPIRED = 'expired'; // Đã hết hạn
+
+    const FILTER_USAGE_ALL = 'all';
+    const FILTER_USAGE_HIGHLY_USED = 'highly_used'; // Dùng nhiều (ví dụ: > 80% max_uses)
+    const FILTER_USAGE_LOWLY_USED = 'lowly_used'; // Dùng ít (ví dụ: < 20% max_uses)
+    const FILTER_USAGE_NO_USES = 'no_uses'; // Chưa dùng lần nào
+
+
     protected $fillable = [
         'code',
         'description',
         'discount_percentage',
-        'discount_type', // Thêm trường mới
-        'fixed_discount_amount', // Thêm trường mới
-        'max_discount_amount', // Thêm trường mới
+        'discount_type',
+        'fixed_discount_amount',
+        'max_discount_amount',
         'start_date',
         'end_date',
         'max_uses',
         'uses_count',
-        'min_order_amount', // Thêm trường mới
+        'min_order_amount',
         'status',
     ];
 
     protected $casts = [
         'discount_percentage' => 'decimal:2',
-        'fixed_discount_amount' => 'decimal:2', // Thêm cast cho trường mới
-        'max_discount_amount' => 'decimal:2', // Thêm cast cho trường mới
-        'min_order_amount' => 'decimal:2', // Thêm cast cho trường mới
+        'fixed_discount_amount' => 'decimal:2',
+        'max_discount_amount' => 'decimal:2',
+        'min_order_amount' => 'decimal:2',
         'start_date' => 'datetime',
         'end_date' => 'datetime',
         'max_uses' => 'integer',
@@ -59,7 +80,8 @@ class Promotion extends Model
         'manual_status_text',
         'manual_status_badge_class',
         'formatted_discount',
-        'display_discount_value', // Thêm thuộc tính mới để hiển thị
+        'display_discount_value',
+        'is_expiring_soon', // Thêm accessor mới
     ];
 
     //======================================================================
@@ -131,17 +153,19 @@ class Promotion extends Model
             $now = Carbon::now();
             return ($this->start_date && $now->lt($this->start_date)) ? self::STATUS_EFFECTIVE_SCHEDULED : self::STATUS_EFFECTIVE_EXPIRED;
         }
-        // Để đơn giản, bỏ qua kiểm tra hasUsesLeft() ở đây để accessor này chỉ phản ánh trạng thái thời gian và trạng thái thủ công
-        // Việc kiểm tra hasUsesLeft và min_order_amount sẽ được thực hiện đầy đủ trong hàm isEffective()
         return self::STATUS_EFFECTIVE_ACTIVE;
     }
 
     public function getEffectiveStatusTextAttribute(): string
     {
+        // Kiểm tra thêm điều kiện hết lượt sử dụng để hiển thị rõ ràng hơn
+        if ($this->effective_status_key === self::STATUS_EFFECTIVE_ACTIVE && !$this->hasUsesLeft()) {
+            return 'Hết lượt sử dụng';
+        }
         return match ($this->effective_status_key) {
             self::STATUS_EFFECTIVE_ACTIVE => 'Đang hiệu lực',
             self::STATUS_EFFECTIVE_SCHEDULED => 'Chưa bắt đầu',
-            self::STATUS_EFFECTIVE_EXPIRED => 'Hết hạn/Hết lượt', // Cần thêm logic để phân biệt hết hạn và hết lượt
+            self::STATUS_EFFECTIVE_EXPIRED => 'Đã hết hạn',
             self::STATUS_EFFECTIVE_INACTIVE => 'Đã tắt',
             default => 'Không xác định',
         };
@@ -149,6 +173,10 @@ class Promotion extends Model
 
     public function getEffectiveStatusBadgeClassAttribute(): string
     {
+        // Kiểm tra thêm điều kiện hết lượt sử dụng
+        if ($this->effective_status_key === self::STATUS_EFFECTIVE_ACTIVE && !$this->hasUsesLeft()) {
+            return 'bg-warning text-dark'; // Hoặc bg-danger nếu muốn nổi bật hơn
+        }
         return match ($this->effective_status_key) {
             self::STATUS_EFFECTIVE_ACTIVE => 'bg-success',
             self::STATUS_EFFECTIVE_SCHEDULED => 'bg-info text-dark',
@@ -170,27 +198,22 @@ class Promotion extends Model
 
     public function getFormattedDiscountAttribute(): string
     {
-        // Hiển thị giá trị giảm giá theo loại
         if ($this->discount_type === self::DISCOUNT_TYPE_PERCENTAGE) {
             $formatted = rtrim(rtrim(number_format($this->discount_percentage, 2, ',', '.'), '0'), '.') . '%';
             if ($this->max_discount_amount !== null) {
-                // [SỬA LỖI] Thêm tham số để định dạng đúng chuẩn VNĐ (dấu chấm hàng nghìn)
                 $formatted .= ' (Tối đa ' . number_format($this->max_discount_amount, 0, ',', '.') . 'đ)';
             }
             return $formatted;
         } elseif ($this->discount_type === self::DISCOUNT_TYPE_FIXED) {
-            // [SỬA LỖI] Thêm tham số để định dạng đúng chuẩn VNĐ
             return number_format($this->fixed_discount_amount, 0, ',', '.') . 'đ';
         }
         return 'N/A';
     }
 
-    // Thêm accessor mới để hiển thị giá trị giảm giá một cách linh hoạt
     public function getDisplayDiscountValueAttribute(): string
     {
         $value = '';
         if ($this->discount_type === self::DISCOUNT_TYPE_PERCENTAGE) {
-            // Change the last rtrim argument from '.' to ','
             $value = rtrim(rtrim(number_format($this->discount_percentage, 2, ',', '.'), '0'), ',') . '%';
             if ($this->max_discount_amount !== null) {
                 $value .= ' (Tối đa: ' . number_format($this->max_discount_amount, 0, ',', '.') . 'đ)';
@@ -199,10 +222,143 @@ class Promotion extends Model
             $value = number_format($this->fixed_discount_amount, 0, ',', '.') . 'đ';
         }
 
-        if ($this->min_order_amount !== null) {
+        if ($this->min_order_amount !== null && $this->min_order_amount > 0) { // Chỉ hiển thị nếu có min_order_amount và > 0
             $value .= ' (Đơn hàng tối thiểu: ' . number_format($this->min_order_amount, 0, ',', '.') . 'đ)';
         }
         return $value;
+    }
+
+    /**
+     * Accessor để kiểm tra xem mã có sắp hết hạn trong X ngày tới không (mặc định 7 ngày).
+     * @return bool
+     */
+    public function getIsExpiringSoonAttribute(): bool
+    {
+        if (!$this->end_date) {
+            return false;
+        }
+        $now = Carbon::now();
+        $sevenDaysFromNow = $now->copy()->addDays(7);
+        return $this->end_date->isBetween($now, $sevenDaysFromNow);
+    }
+
+    //======================================================================
+    // LOCAL SCOPES (CHO VIỆC LỌC & SẮP XẾP)
+    //======================================================================
+
+    /**
+     * Scope để lọc các mã đang hiệu lực (active).
+     */
+    public function scopeActiveEffective(Builder $query): Builder
+    {
+        return $query->where('status', self::STATUS_MANUAL_ACTIVE)
+            ->where('start_date', '<=', Carbon::now())
+            ->where('end_date', '>=', Carbon::now())
+            ->where(function ($q) {
+                $q->whereNull('max_uses')
+                    ->orWhereColumn('uses_count', '<', 'max_uses');
+            });
+    }
+
+    /**
+     * Scope để lọc các mã chưa bắt đầu (scheduled).
+     */
+    public function scopeScheduledEffective(Builder $query): Builder
+    {
+        return $query->where('status', self::STATUS_MANUAL_ACTIVE)
+            ->where('start_date', '>', Carbon::now());
+    }
+
+    /**
+     * Scope để lọc các mã đã hết hạn (expired based on date or uses).
+     */
+    public function scopeExpiredEffective(Builder $query): Builder
+    {
+        return $query->where('status', self::STATUS_MANUAL_ACTIVE)
+            ->where(function ($q) {
+                $q->where('end_date', '<', Carbon::now()) // Hết hạn theo ngày
+                    ->orWhere(function ($q2) {
+                        $q2->whereNotNull('max_uses')
+                            ->whereColumn('uses_count', '>=', 'max_uses'); // Hết lượt sử dụng
+                    });
+            });
+    }
+
+    /**
+     * Scope để lọc các mã đã bị tắt thủ công.
+     */
+    public function scopeInactiveEffective(Builder $query): Builder
+    {
+        return $query->where('status', self::STATUS_MANUAL_INACTIVE);
+    }
+
+    /**
+     * Scope để lọc các mã sắp hết hạn (trong X ngày tới).
+     * @param Builder $query
+     * @param int $days
+     * @return Builder
+     */
+    public function scopeExpiringSoon(Builder $query, int $days = 7): Builder
+    {
+        $now = Carbon::now();
+        $futureDate = $now->copy()->addDays($days);
+        return $query->whereNotNull('end_date')
+            ->where('end_date', '>', $now)
+            ->where('end_date', '<=', $futureDate);
+    }
+
+    /**
+     * Scope để lọc các mã đã hết hạn theo ngày.
+     * @param Builder $query
+     * @return Builder
+     */
+    public function scopeExpiredByDate(Builder $query): Builder
+    {
+        return $query->whereNotNull('end_date')->where('end_date', '<', Carbon::now());
+    }
+
+    /**
+     * Scope để lọc các mã đã hết lượt sử dụng.
+     * @param Builder $query
+     * @return Builder
+     */
+    public function scopeUsesExhausted(Builder $query): Builder
+    {
+        return $query->whereNotNull('max_uses')->whereColumn('uses_count', '>=', 'max_uses');
+    }
+
+    /**
+     * Scope để lọc các mã được sử dụng nhiều (ví dụ: uses_count / max_uses >= threshold).
+     * @param Builder $query
+     * @param float $threshold (ví dụ: 0.8 cho 80%)
+     * @return Builder
+     */
+    public function scopeHighlyUsed(Builder $query, float $threshold = 0.8): Builder
+    {
+        return $query->whereNotNull('max_uses')
+            ->whereRaw('uses_count / max_uses >= ?', [$threshold]);
+    }
+
+    /**
+     * Scope để lọc các mã được sử dụng ít (ví dụ: uses_count / max_uses < threshold).
+     * @param Builder $query
+     * @param float $threshold (ví dụ: 0.2 cho 20%)
+     * @return Builder
+     */
+    public function scopeLowlyUsed(Builder $query, float $threshold = 0.2): Builder
+    {
+        return $query->whereNotNull('max_uses')
+            ->whereRaw('uses_count / max_uses < ?', [$threshold]);
+    }
+
+    /**
+     * Scope để lọc các mã chưa được sử dụng lần nào.
+     * @param Builder $query
+     * @return Builder
+     */
+    public function scopeNoUses(Builder $query): Builder
+    {
+        return $query->where('uses_count', 0);
     }
 
     //======================================================================
@@ -221,7 +377,6 @@ class Promotion extends Model
      */
     public function calculateDiscount(float $subtotal): float
     {
-        // Đảm bảo mã hợp lệ trước khi tính toán
         if (!$this->isEffective($subtotal)) {
             return 0;
         }
@@ -229,13 +384,12 @@ class Promotion extends Model
         $discount = 0;
         if ($this->discount_type === self::DISCOUNT_TYPE_PERCENTAGE) {
             $discount = ($subtotal * $this->discount_percentage) / 100;
-            // Áp dụng giới hạn tối đa nếu có
             if ($this->max_discount_amount !== null && $discount > $this->max_discount_amount) {
                 $discount = $this->max_discount_amount;
             }
         } elseif ($this->discount_type === self::DISCOUNT_TYPE_FIXED) {
             $discount = $this->fixed_discount_amount;
         }
-        return round($discount, 2); // Làm tròn số tiền giảm giá
+        return round($discount, 2);
     }
 }

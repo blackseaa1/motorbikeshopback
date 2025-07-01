@@ -14,8 +14,7 @@ class BrandController extends Controller
 {
     public function index()
     {
-        $brands = Brand::latest()->paginate(10);
-
+        $brands = Brand::latest()->paginate(5); // Lấy 10 thương hiệu mỗi trang
         return view('admin.productManagement.brand.brands', compact('brands'));
     }
 

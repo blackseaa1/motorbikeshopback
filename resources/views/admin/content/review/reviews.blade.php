@@ -88,12 +88,12 @@
                                 <table class="table table-hover align-middle"> {{-- Thêm table-hover và align-middle --}}
                                     <thead class="table-light"> {{-- Dùng table-light --}}
                                         <tr>
-                                            <th scope="col">ID Khách hàng</th>
-                                            <th scope="col">ID Sản phẩm</th>
+                                            <th scope="col" class="d-none">ID Khách hàng</th>
+                                            <th scope="col" class="d-none">ID Sản phẩm</th>
                                             <th scope="col">Khách hàng</th>
                                             <th scope="col">Sản phẩm</th>
                                             <th scope="col" class="text-center">Đánh giá</th>
-                                            <th scope="col">Bình luận</th>
+                                            <th scope="col" class="d-none">Bình luận</th>
                                             <th scope="col" class="text-center">Trạng thái</th>
                                             <th scope="col">Ngày tạo</th>
                                             <th scope="col" class="text-center">Hành động</th>
@@ -102,8 +102,8 @@
                                     <tbody>
                                         @foreach ($reviews as $review)
                                         <tr id="review-row-{{ $review->customer_id }}-{{ $review->product_id }}"> {{-- ID hàng cho JS --}}
-                                            <td>{{ $review->customer_id }}</td>
-                                            <td>{{ $review->product_id }}</td>
+                                            <td class="d-none">{{ $review->customer_id }}</td>
+                                            <td class="d-none">{{ $review->product_id }}</td>
                                             <td>{{ $review->customer->name ?? 'N/A' }} ({{ $review->customer->email ?? 'N/A' }})</td>
                                             <td>{{ $review->product->name ?? 'N/A' }}</td>
                                             <td class="text-center">
@@ -115,7 +115,7 @@
                                                     @endif
                                                 @endfor
                                             </td>
-                                            <td>{{ Str::limit($review->comment, 50) }}</td>
+                                            <td class="d-none">{{ Str::limit($review->comment, 50) }}</td>
                                             <td class="text-center status-cell" id="review-status-{{ $review->customer_id }}-{{ $review->product_id }}">
                                                 <span class="badge {{ $review->status_badge_class }}">{{ $review->status_text }}</span>
                                             </td>
@@ -173,7 +173,7 @@
                                 </table>
                             </div>
                             {{-- Hiển thị link phân trang --}}
-                            <div class="mt-3 d-flex justify-content-end">
+                            <div class="mt-3 d-flex justify-content-center">
                                 {{ $reviews->links('admin.vendor.pagination') }} {{-- Đảm bảo sử dụng phân trang tùy chỉnh --}}
                             </div>
                         @endif
