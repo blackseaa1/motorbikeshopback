@@ -404,7 +404,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/products', [ProductController::class, 'searchProductsApi'])->name('products.search.api');
         // API lấy danh sách địa chỉ của một khách hàng
         Route::get('/customers/{customer}/addresses', [CustomerAccountController::class, 'getAddressesApi'])->name('customers.addresses.api');
-        Route::post('/sales/orders/calculate-summary', [OrderController::class, 'calculateOrderSummaryApi'])->name('admin.orders.calculateSummary');
+        Route::post('/admin/sales/orders/calculate-summary', [OrderController::class, 'calculateOrderSummaryApi'])->name('admin.sales.orders.calculate-summary');
 
         // Note: The product details and update stock APIs are now under 'admin.productManagement.api.products.'
         // So, the routes below are redundant if they are also defined under 'admin.productManagement.api.products.'

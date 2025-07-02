@@ -1,3 +1,5 @@
+// public/assets_admin/js/order_manager.js
+
 /**
  * =================================================================================
  * order_manager.js - PHIÊN BẢN API-DRIVEN
@@ -35,6 +37,8 @@ window.initializeOrderManager = (
     // MỚI: Biến state để lưu trữ dữ liệu sản phẩm và HTML options
     let allProducts = [];
     let productOptionsHtml = ''; // Sẽ được tạo khi dữ liệu được tải thành công
+    let isCalculatingSummary = false; // Biến cờ để ngăn các yêu cầu API chồng chéo
+
 
     // B. MAIN INITIALIZATION
     function initialize() {
@@ -71,7 +75,7 @@ window.initializeOrderManager = (
 
     // MỚI: Hàm tạo chuỗi HTML <option> cho select sản phẩm
     function buildProductOptionsHtml() {
-        let options = '<option value="" selected>Chọn sản phẩm...</option>'; // Placeholder mặc định
+        let options = '<option value="">Chọn sản phẩm...</option>'; // Placeholder mặc định
         if (allProducts && allProducts.length > 0) {
             options += allProducts.map(product => {
                 const imageUrl = product.thumbnail_url || NO_IMAGE_URL;
@@ -107,7 +111,12 @@ window.initializeOrderManager = (
         // Setup dependent dropdowns for guest/unified address fields
         setupDependentDropdowns('guest_province_id', 'guest_district_id', 'guest_ward_id');
 
-        $('#delivery_service_id_create, #promotion_id_create').on('change', () => calculateAndUpdateAll());
+        // OLD: $('#delivery_service_id_create, #promotion_id_create').on('change', () => calculateAndUpdateAll());
+        // NEW: Event listeners for summary calculation
+        $('#delivery_service_id_create').on('change', debounce(calculateAndUpdateAll, 300));
+        $('#apply-promo-btn-create').on('click', calculateAndUpdateAll);
+        $('#clear-promo-btn-create').on('click', clearPromotionCode);
+        $('#promotion_code_create').on('input', toggleClearPromoButton); // Show/hide clear button based on input
 
         setupAjaxForm('createOrderForm', 'createOrderModal');
     }
@@ -117,15 +126,18 @@ window.initializeOrderManager = (
         $createForm[0].reset();
         $customerSelect.selectpicker('val', ''); // Reset existing customer select
         $('#delivery_service_id_create').val('');
-        $('#promotion_id_create').val('');
+        $('#promotion_code_create').val(''); // Reset promotion code input
+        $('#promotion_id_for_form').val(''); // Reset hidden promotion ID
+        $('#promo-feedback-create').html(''); // Clear promo feedback
+        $('#clear-promo-btn-create').addClass('d-none'); // Hide clear button
         $('#status_create').val('pending');
-        
+
         // Reset customer type to existing and trigger change to set initial state
-        $('#customerTypeExisting').prop('checked', true).trigger('change'); 
-        
+        $('#customerTypeExisting').prop('checked', true).trigger('change');
+
         $productItemsContainer.empty();
-        addProductRow();
-        calculateAndUpdateAll();
+        addProductRow(); // Add an initial product row
+        // calculateAndUpdateAll(); // Will be called after addProductRow or other events
 
         // Reset guest/unified address fields
         $('#guest_name').val('');
@@ -204,56 +216,125 @@ window.initializeOrderManager = (
         handleQuantityChange($quantityInput);
     }
 
-    function calculateAndUpdateAll() {
-        let orderSubtotal = 0;
+    // NEW: Debounce function to limit API calls
+    function debounce(func, delay) {
+        let timeout;
+        return function (...args) {
+            const context = this;
+            clearTimeout(timeout);
+            timeout = setTimeout(() => func.apply(context, args), delay);
+        };
+    }
 
+    // NEW: Async function to calculate and update all summary fields via API
+    async function calculateAndUpdateAll() {
+        if (isCalculatingSummary) return; // Prevent multiple concurrent requests
+        isCalculatingSummary = true;
+        showAppLoader();
+        clearValidationErrors($('#createOrderForm')[0]); // Clear old validation errors
+
+        const orderItems = [];
         $productItemsContainer.find('.product-item-row').each(function () {
             const $row = $(this);
-            const $productSelect = $row.find('.product-select');
-            const $quantityInput = $row.find('.quantity-input');
-            const $selectedOption = $productSelect.find('option:selected');
-
-            const productId = $productSelect.val();
-            const quantity = parseInt($quantityInput.val()) || 0;
-            const price = parseFloat($selectedOption.data('price')) || 0;
-
-            const rowSubtotal = price * quantity;
-            $row.find('.product-subtotal-value').text(formatCurrency(rowSubtotal));
-
+            const productId = $row.find('.product-select').val();
+            const quantity = parseInt($row.find('.quantity-input').val()) || 0;
             if (productId && quantity > 0) {
-                orderSubtotal += rowSubtotal;
+                orderItems.push({
+                    product_id: productId,
+                    quantity: quantity
+                });
             }
         });
 
-        const deliverySelect = document.getElementById('delivery_service_id_create');
-        const shippingFee = parseFloat(deliverySelect.options[deliverySelect.selectedIndex]?.dataset.fee || 0);
+        const deliveryServiceId = $('#delivery_service_id_create').val();
+        const promotionCode = $('#promotion_code_create').val();
 
-        const promoSelect = document.getElementById('promotion_id_create');
-        const promoOption = promoSelect.options[promoSelect.selectedIndex];
-        let discount = 0;
-        if (promoOption && promoOption.value) {
-            const promoType = promoOption.dataset.type;
-            const promoValue = parseFloat(promoOption.dataset.value) || 0;
+        const payload = {
+            items: orderItems,
+            delivery_service_id: deliveryServiceId,
+            promotion_code: promotionCode
+        };
 
-            if (promoType === 'percentage') {
-                discount = (orderSubtotal > 0 ? (orderSubtotal * promoValue) / 100 : 0);
+        try {
+            const response = await fetch('/admin/api/admin/sales/orders/calculate-summary', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await response.json();
+            if (response.ok && data.success) {
+                const summary = data.summary;
+                $('#summary-subtotal').text(formatCurrency(summary.subtotal));
+                $('#summary-shipping').text(formatCurrency(summary.shipping_fee));
+                $('#summary-discount').text(`-${formatCurrency(summary.discount_amount)}`);
+                $('#summary-grand-total').text(formatCurrency(summary.total_price));
+
+                // Toggle discount row visibility
+                $('#summary-discount-row').toggleClass('d-none', summary.discount_amount <= 0);
+
+                // Update hidden promotion_id_for_form
+                $('#promotion_id_for_form').val(summary.promotion_id || '');
+
+                // Update promotion feedback
+                const promoFeedbackEl = $('#promo-feedback-create');
+                if (summary.promo_error) {
+                    promoFeedbackEl.html(`<div class='text-danger small mt-1'>${summary.promo_error}</div>`);
+                    $('#clear-promo-btn-create').removeClass('d-none'); // Show clear button on error
+                } else if (summary.promotion_info && summary.promotion_info.code) {
+                    promoFeedbackEl.html(`<div class='text-success small mt-1'>Đã áp dụng mã: <strong>${summary.promotion_info.code}</strong></div>`);
+                    $('#clear-promo-btn-create').removeClass('d-none'); // Show clear button if applied
+                } else {
+                    promoFeedbackEl.html('');
+                    if (!$('#promotion_code_create').val()) { // Only hide if input is empty
+                        $('#clear-promo-btn-create').addClass('d-none');
+                    }
+                }
+
             } else {
-                discount = promoValue;
+                // Handle validation errors from API or general errors
+                const errors = data.errors;
+                if (errors) {
+                    if (errors.items) {
+                        $('#error-items').text(errors.items[0]).show();
+                    } else {
+                        $('#error-items').text('').hide();
+                    }
+                    if (errors.promotion_code) {
+                        $('#promo-feedback-create').html(`<div class='text-danger small mt-1'>${errors.promotion_code[0]}</div>`);
+                        $('#clear-promo-btn-create').removeClass('d-none');
+                    }
+                } else {
+                    showAppInfoModal(data.message || 'Đã có lỗi xảy ra khi tính toán tóm tắt đơn hàng.', 'Lỗi', 'error');
+                }
+                // Reset summary and hidden promo ID on error
+                $('#summary-subtotal').text(formatCurrency(0));
+                $('#summary-shipping').text(formatCurrency(0));
+                $('#summary-discount').text(`-${formatCurrency(0)}`);
+                $('#summary-grand-total').text(formatCurrency(0));
+                $('#summary-discount-row').addClass('d-none');
+                $('#promotion_id_for_form').val('');
             }
-            discount = Math.min(discount, orderSubtotal + shippingFee);
+        } catch (error) {
+            console.error('Error updating order summary:', error);
+            showAppInfoModal('Không thể cập nhật tóm tắt đơn hàng. Vui lòng kiểm tra kết nối.', 'Lỗi', 'error');
+            // Reset summary and hidden promo ID on network error
+            $('#summary-subtotal').text(formatCurrency(0));
+            $('#summary-shipping').text(formatCurrency(0));
+            $('#summary-discount').text(`-${formatCurrency(0)}`);
+            $('#summary-grand-total').text(formatCurrency(0));
+            $('#summary-discount-row').addClass('d-none');
+            $('#promotion_id_for_form').val('');
+        } finally {
+            hideAppLoader();
+            isCalculatingSummary = false;
         }
-
-        const grandTotal = Math.max(orderSubtotal + shippingFee - discount, 0);
-
-        $('#summary-subtotal').text(formatCurrency(orderSubtotal));
-        $('#summary-shipping').text(formatCurrency(shippingFee));
-
-        const $discountDisplay = $('#summary-discount');
-        $discountDisplay.text(`-${formatCurrency(discount)}`);
-        $discountDisplay.closest('p').toggleClass('d-none', discount <= 0);
-
-        $('#summary-grand-total').text(formatCurrency(grandTotal));
     }
+
 
     function handleCustomerTypeChange() {
         const isExisting = $('#customerTypeExisting').is(':checked');
@@ -354,7 +435,7 @@ window.initializeOrderManager = (
                 $guestAddressLine.val(defaultAddress.address_line);
 
             } else {
-                 showAppInfoModal('Khách hàng này chưa có địa chỉ mặc định. Vui lòng nhập địa chỉ mới.', 'Thông báo');
+                showAppInfoModal('Khách hàng này chưa có địa chỉ mặc định. Vui lòng nhập địa chỉ mới.', 'Thông báo');
             }
         } catch (error) {
             showAppInfoModal(error.message, 'Lỗi');
@@ -364,9 +445,23 @@ window.initializeOrderManager = (
         calculateAndUpdateAll();
     }
 
-    // Removed renderAddressList and toggleNewAddressForm as they are no longer used
-    // function renderAddressList(addresses, customerId) { /* ... */ }
-    // function toggleNewAddressForm(show) { /* ... */ }
+    // NEW: Function to clear promotion code
+    function clearPromotionCode() {
+        $('#promotion_code_create').val('');
+        $('#clear-promo-btn-create').addClass('d-none');
+        $('#promo-feedback-create').html('');
+        calculateAndUpdateAll(); // Re-calculate after clearing promo
+    }
+
+    // NEW: Function to toggle clear promo button visibility
+    function toggleClearPromoButton() {
+        const promoCode = $('#promotion_code_create').val();
+        $('#clear-promo-btn-create').toggleClass('d-none', !promoCode);
+        if (!promoCode) {
+            $('#promo-feedback-create').html(''); // Clear feedback if input is empty
+        }
+    }
+
 
     function initializeUpdateModal() {
         $updateModal.on('show.bs.modal', async (event) => {
@@ -529,7 +624,7 @@ window.initializeOrderManager = (
                             <div class="col-6">
                                 <p class="fw-bold">Thông tin khách hàng:</p>
                                 <p><strong>Tên:</strong> ${order.guest_name}</p>
-                                <p><strong>SĐT:</strong> ${order.guest_phone}</p> 
+                                <p><strong>SĐT:</strong> ${order.guest_phone}</p>
                                 <p><strong>Email:</strong> ${order.guest_email || 'N/A'}</p>
                                 <p><strong>Địa chỉ:</strong> ${order.shipping_address_line}, ${order.ward.name}, ${order.district.name}, ${order.province.name}</p>
                             </div>

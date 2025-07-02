@@ -158,6 +158,24 @@
                                     </select>
                                     <div class="invalid-feedback" id="error-payment_method_id"></div>
                                 </div>
+                                {{-- Start of NEW Promotion Code input --}}
+                                <div class="mb-3">
+                                    <label for="promotion_code_create" class="form-label">Mã khuyến mãi <span class="text-muted">(Vui lòng bấm Áp dụng)</span></label>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" id="promotion_code_create" placeholder="Nhập mã...">
+                                        <button class="btn btn-outline-secondary" type="button" id="apply-promo-btn-create">Áp dụng</button>
+                                        <button class="btn btn-outline-secondary d-none" type="button" id="clear-promo-btn-create" title="Xóa mã">
+                                            <i class="bi bi-x"></i>
+                                        </button>
+                                    </div>
+                                    <div id="promo-feedback-create" class="mt-2"></div>
+                                    {{-- Hidden input to store validated promotion_id --}}
+                                    <input type="hidden" id="promotion_id_for_form" name="promotion_id">
+                                </div>
+                                {{-- End of NEW Promotion Code input --}}
+
+                                {{-- The original promotion_id_create select is removed --}}
+                                {{--
                                 <div class="mb-3">
                                     <label for="promotion_id_create" class="form-label">Mã khuyến mãi</label>
                                     <select class="form-select" id="promotion_id_create" name="promotion_id">
@@ -170,6 +188,7 @@
                                         @endforeach
                                     </select>
                                 </div>
+                                --}}
                                 <div class="mb-3">
                                     <label for="status_create" class="form-label">Trạng thái <span
                                             class="text-danger">*</span></label>
@@ -192,7 +211,7 @@
                                             id="summary-subtotal">0 ₫</span></p>
                                     <p class="mb-2 d-flex justify-content-between"><span>Phí vận chuyển:</span> <span
                                             id="summary-shipping">0 ₫</span></p>
-                                    <p class="mb-2 d-flex justify-content-between text-success"><span>Giảm giá:</span>
+                                    <p class="mb-2 d-flex justify-content-between text-success" id="summary-discount-row"><span>Giảm giá:</span>
                                         <span id="summary-discount">-0 ₫</span>
                                     </p>
                                     <hr class="my-2">

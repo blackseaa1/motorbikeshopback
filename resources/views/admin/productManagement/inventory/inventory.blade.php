@@ -13,66 +13,31 @@
                 <h2 class="h5 mb-0 text-primary"><i class="bi bi-funnel me-2"></i>Sản phẩm sắp hết hàng</h2>
             </div>
             <div class="card-body">
-                @if ($lowStockProducts->isEmpty())
-                    <div class="alert alert-info mb-0" role="alert">
-                        <i class="bi bi-info-circle-fill me-2"></i>Không có sản phẩm nào sắp hết hàng.
-                    </div>
-                @else
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle">
-                            <thead class="table-light">
-                                <tr>
-                                    <th scope="col" style="width: 10%;">Hình Ảnh</th>
-                                    <th scope="col" style="width: 30%;">Tên Sản Phẩm</th>
-                                    <th scope="col" style="width: 15%;">Danh Mục</th>
-                                    <th scope="col" style="width: 15%;">Thương Hiệu</th>
-                                    <th scope="col" class="text-center" style="width: 10%;">Tồn Kho</th>
-                                    <th scope="col" class="text-end" style="width: 10%;">Giá Bán</th>
-                                    <th scope="col" class="text-center" style="width: 10%;">Hành Động</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach ($lowStockProducts as $product)
-                                    <tr>
-                                        <td>
-                                            <img src="{{ $product->thumbnail_url }}" alt="{{ $product->name }}"
-                                                class="img-fluid rounded border"
-                                                style="width: 60px; height: 60px; object-fit: contain;"
-                                                onerror="this.src='https://placehold.co/60x60/grey/white?text=Img'">
-                                        </td>
-                                        <td>{{ $product->name }}</td>
-                                        <td>{{ $product->category->name ?? 'N/A' }}</td>
-                                        <td>{{ $product->brand->name ?? 'N/A' }}</td>
-                                        <td class="text-center">
-                                            {{-- Display only the stock quantity --}}
-                                            <span class="badge bg-danger">{{ $product->stock_quantity }}</span>
-                                            {{-- Removed inline input and +/- buttons --}}
-                                        </td>
-                                        <td class="text-end">{{ number_format($product->price) }}đ</td>
-                                        <td class="text-center">
-                                            {{-- Button to view product details via modal --}}
-                                            <button type="button" class="btn btn-info btn-sm view-product-details-btn"
-                                                data-bs-toggle="modal" data-bs-target="#viewProductDetailsModal"
-                                                data-id="{{ $product->id }}" title="Xem chi tiết">
-                                                <i class="bi bi-eye"></i>
-                                            </button>
-                                            {{-- Button to open quantity update modal --}}
-                                            <button type="button" class="btn btn-success btn-sm open-update-quantity-modal-btn"
-                                                data-bs-toggle="modal" data-bs-target="#updateQuantityModal"
-                                                data-id="{{ $product->id }}" title="Cập nhật số lượng">
-                                                <i class="bi bi-pencil"></i>
-                                            </button>
-                                        </td>
-                                    </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                    </div>
-                    {{-- Pagination Links --}}
-                    <div class="mt-3 d-flex justify-content-center">
-                        {{ $lowStockProducts->links('admin.vendor.pagination') }}
-                    </div>
-                @endif
+                {{-- Loại bỏ @if ($lowStockProducts->isEmpty()) và @else ở đây vì JS sẽ xử lý hiển thị "không có sản phẩm" --}}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th scope="col" style="width: 10%;">Hình Ảnh</th>
+                                <th scope="col" style="width: 30%;">Tên Sản Phẩm</th>
+                                <th scope="col" style="width: 15%;">Danh Mục</th>
+                                <th scope="col" style="width: 15%;">Thương Hiệu</th>
+                                <th scope="col" class="text-center" style="width: 10%;">Tồn Kho</th>
+                                <th scope="col" class="text-end" style="width: 10%;">Giá Bán</th>
+                                <th scope="col" class="text-center" style="width: 10%;">Hành Động</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inventory-table-body"> {{-- Thêm ID cho tbody --}}
+                            {{-- Dữ liệu sẽ được tải ở đây bởi Controller và AJAX --}}
+                            @include('admin.productManagement.inventory.partials._inventory_table_rows', ['lowStockProducts' => $lowStockProducts])
+                        </tbody>
+                    </table>
+                </div>
+                {{-- Pagination Links Container --}}
+                <div class="mt-3 d-flex justify-content-center" id="inventory-pagination-links">
+                    {{-- Pagination links will be rendered here by Controller and AJAX --}}
+                    {{ $lowStockProducts->links('admin.vendor.pagination') }}
+                </div>
             </div>
         </div>
     </div>
@@ -119,7 +84,6 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
-                    {{-- This link still goes to the full edit page for comprehensive edits --}}
                     <a id="viewProductEditLink" href="#" class="btn btn-warning"><i
                             class="bi bi-pencil-square me-2"></i>Chỉnh sửa đầy đủ</a>
                 </div>
