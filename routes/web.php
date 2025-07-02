@@ -246,9 +246,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 // Các route đơn lẻ hoặc API
                 Route::get('/', 'index')->name('index'); // Danh sách sản phẩm (có thể kèm filter/search)
                 Route::post('/', 'store')->name('store');
-                Route::get('/{product}/details', 'getProductDetailsApi')->name('details'); // API cho modal xem/sửa
-                Route::post('/{product}', 'update')->name('update')->withTrashed(); // Cập nhật sản phẩm
-                Route::delete('/{product}', 'destroy')->name('destroy'); // Xóa mềm sản phẩm
+                Route::get('/{product}/details', 'details')->name('details')->withTrashed(); // API cho modal xem/sửa, đổi tên thành details
+                Route::put('/{product}', 'update')->name('update')->withTrashed(); // Cập nhật sản phẩm
+                Route::delete('/{product}', 'destroy')->name('destroy')->withTrashed(); // Xóa mềm sản phẩm
                 Route::post('/{product}/toggle-status', 'toggleStatus')->name('toggleStatus')->withTrashed(); // Bật/tắt trạng thái sản phẩm
                 Route::post('/{product}/restore', 'restore')->name('restore')->withTrashed(); // Khôi phục sản phẩm
                 Route::delete('/{product}/force-delete', 'forceDelete')->name('forceDelete')->withTrashed(); // Xóa vĩnh viễn sản phẩm
@@ -315,7 +315,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
             // API routes for Inventory page
             Route::prefix('api/products')->name('api.products.')->group(function () {
-                Route::get('/{product}/details', [ProductController::class, 'getProductDetailsApi'])->name('details');
+                Route::get('/{product}/details', [ProductController::class, 'details'])->name('details'); // Renamed from getProductDetailsApi
                 Route::put('/{product}/update-stock', [ProductController::class, 'updateStockQuantity'])->name('updateStock');
             });
         });

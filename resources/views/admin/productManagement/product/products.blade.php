@@ -1,12 +1,11 @@
-{{-- File: resources/views/admin/productManagement/product/products.blade.php --}}
-
+{{-- resources/views/admin/productManagement/product/products.blade.php --}}
 @extends('admin.layouts.app')
 
 @section('title', 'Quản lý Sản phẩm')
 
+
 @section('content')
     <div id="adminProductsPage">
-        {{-- Header của trang --}}
         <div class="content-header">
             <div class="container-fluid">
                 <div class="row mb-2">
@@ -24,9 +23,9 @@
             </div>
         </div>
 
-        {{-- Nội dung chính --}}
         <div class="container-fluid">
             <div class="card mb-4">
+                {{-- Card Header không đổi --}}
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h2 class="h5 mb-0"><i class="bi bi-box-seam-fill me-2"></i>Danh sách Sản phẩm</h2>
                     <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#createProductModal">
@@ -34,37 +33,30 @@
                     </button>
                 </div>
                 <div class="card-body">
-                    {{-- Hàng điều khiển: Tìm kiếm, Lọc, Sắp xếp và Hành động hàng loạt --}}
+                    {{-- NEW: Hàng điều khiển: Tìm kiếm, Lọc, Sắp xếp và Hành động hàng loạt --}}
                     <div class="row g-3 mb-3 align-items-center">
                         {{-- Thanh tìm kiếm --}}
                         <div class="col-md-4 col-lg-3">
                             <div class="input-group">
                                 <input type="text" id="productSearchInput" class="form-control form-control-sm"
-                                    placeholder="Tìm kiếm tên sản phẩm...">
+                                    placeholder="Tìm kiếm tên, mô tả...">
                                 <button class="btn btn-outline-secondary btn-sm" type="button" id="productSearchBtn">
                                     <i class="bi bi-search"></i>
                                 </button>
                             </div>
                         </div>
 
-                        {{-- Bộ lọc --}}
+                        {{-- Bộ lọc trạng thái --}}
                         <div class="col-md-4 col-lg-3">
                             <select id="productFilterSelect" class="form-select form-select-sm">
-                                <option value="all">Tất cả trạng thái</option>
-                                <optgroup label="Trạng thái bán hàng">
-                                    <option value="active">Đang bán</option>
-                                    <option value="inactive">Ngừng bán</option>
-                                </optgroup>
-                                <optgroup label="Trạng thái tồn kho">
-                                    <option value="out_of_stock">Hết hàng</option>
-                                    <option value="low_stock">Sắp hết hàng (&lt;10)</option>
-                                </optgroup>
-                                <optgroup label="Trạng thái hệ thống">
-                                    <option value="trashed">Trong thùng rác</option>
-                                </optgroup>
+                                <option value="all" {{ !$status ? 'selected' : '' }}>Tất cả trạng thái</option>
+                                <option value="active_only" {{ $status === 'active_only' ? 'selected' : '' }}>Đang bán
+                                </option>
+                                <option value="inactive_only" {{ $status === 'inactive_only' ? 'selected' : '' }}>Ngừng bán
+                                </option>
+                                <option value="trashed" {{ $status === 'trashed' ? 'selected' : '' }}>Trong thùng rác</option>
                             </select>
                         </div>
-
 
                         {{-- Sắp xếp --}}
                         <div class="col-md-4 col-lg-3">
@@ -80,49 +72,41 @@
                             </select>
                         </div>
 
-                        {{-- Nút hành động hàng loạt (Điều kiện hiển thị) --}}
+                        {{-- Nút hành động hàng loạt --}}
                         <div class="col-12 col-lg-3 text-lg-end">
-                            {{-- Nút cho trạng thái "Tất cả" --}}
-                            <div id="bulkActionsNormal" class="{{ $status_query_param === 'trashed' ? 'd-none' : '' }}">
-                                <button class="btn btn-danger btn-sm me-2 mb-2 mb-lg-0" id="bulkSoftDeleteBtn" disabled
-                                    data-bs-toggle="modal" data-bs-target="#bulkDeleteProductModal">
-                                    <i class="bi bi-trash-fill me-1"></i> Xóa mềm (<span
-                                        id="selectedCountSoftDelete">0</span>)
+                            <div class="dropdown d-inline-block">
+                                <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button"
+                                    id="bulkActionsDropdown" data-bs-toggle="dropdown" aria-expanded="false" disabled>
+                                    Hành động hàng loạt (<span id="selectedCountBulk">0</span>)
                                 </button>
-                                <button class="btn btn-info btn-sm mb-2 mb-lg-0" id="bulkToggleStatusBtn" disabled
-                                    data-bs-toggle="modal" data-bs-target="#bulkToggleStatusProductModal">
-                                    <i class="bi bi-arrow-repeat me-1"></i> Trạng thái (<span
-                                        id="selectedCountToggle">0</span>)
-                                </button>
-                            </div>
-
-                            {{-- Nút cho trạng thái "Thùng rác" --}}
-                            <div id="bulkActionsTrashed" class="{{ $status_query_param !== 'trashed' ? 'd-none' : '' }}">
-                                <button class="btn btn-success btn-sm me-2 mb-2 mb-lg-0" id="bulkRestoreBtn" disabled
-                                    data-bs-toggle="modal" data-bs-target="#bulkRestoreProductModal">
-                                    <i class="bi bi-arrow-counterclockwise me-1"></i> Khôi phục (<span
-                                        id="selectedCountRestore">0</span>)
-                                </button>
-                                <button class="btn btn-danger btn-sm mb-2 mb-lg-0" id="bulkForceDeleteBtn" disabled
-                                    data-bs-toggle="modal" data-bs-target="#bulkForceDeleteProductModal">
-                                    <i class="bi bi-trash-fill me-1"></i> Xóa vĩnh viễn (<span
-                                        id="selectedCountForceDelete">0</span>)
-                                </button>
+                                <ul class="dropdown-menu" aria-labelledby="bulkActionsDropdown">
+                                    <li>
+                                        <button class="dropdown-item" id="bulkToggleStatusBtn" data-bs-toggle="modal"
+                                            data-bs-target="#bulkToggleStatusProductsModal">
+                                            <i class="bi bi-arrow-repeat me-1"></i> Chuyển trạng thái
+                                        </button>
+                                    </li>
+                                    <li>
+                                        <button class="dropdown-item text-success" id="bulkRestoreBtn"
+                                            data-bs-toggle="modal" data-bs-target="#bulkRestoreProductsModal">
+                                            <i class="bi bi-arrow-counterclockwise me-1"></i> Khôi phục
+                                        </button>
+                                    </li>
+                                    <li>
+                                        <button class="dropdown-item text-danger" id="bulkDeleteBtn" data-bs-toggle="modal"
+                                            data-bs-target="#bulkDeleteProductsModal">
+                                            <i class="bi bi-trash me-1"></i> Xóa mềm
+                                        </button>
+                                    </li>
+                                    <li>
+                                        <button class="dropdown-item text-danger" id="bulkForceDeleteBtn"
+                                            data-bs-toggle="modal" data-bs-target="#bulkForceDeleteProductsModal">
+                                            <i class="bi bi-trash-fill me-1"></i> Xóa vĩnh viễn
+                                        </button>
+                                    </li>
+                                </ul>
                             </div>
                         </div>
-                    </div>
-
-                    {{-- Các nút "Tất cả" và "Thùng rác" cũ (nếu muốn giữ làm tab) --}}
-                    {{-- These are redundant if productFilterSelect handles the 'trashed' filter.
-                         They can still be used as simple links to trigger the filter. --}}
-                    <div class="d-flex justify-content-end mb-3">
-                        <a href="{{ route('admin.productManagement.products.index') }}" id="allProductsTab"
-                            class="btn btn-sm {{ !$status_query_param ? 'btn-dark' : 'btn-outline-dark' }} me-2"><i
-                                class="bi bi-list-ul me-1"></i> Tất cả</a>
-                        <a href="{{ route('admin.productManagement.products.index', ['status' => 'trashed']) }}"
-                            id="trashedProductsTab"
-                            class="btn btn-sm {{ $status_query_param === 'trashed' ? 'btn-dark' : 'btn-outline-dark' }}"><i
-                                class="bi bi-trash me-1"></i> Thùng rác</a>
                     </div>
 
                     <div class="table-responsive">
@@ -133,23 +117,22 @@
                                         <input type="checkbox" id="selectAllProducts">
                                     </th>
                                     <th scope="col" style="width:5%">STT</th>
-                                    <th scope="col">Ảnh</th>
+                                    <th scope="col" style="width: 8%;">Ảnh</th>
                                     <th scope="col">Tên Sản phẩm</th>
-                                    <th scope="col">Danh mục</th>
-                                    <th scope="col">Thương hiệu</th>
-                                    <th scope="col">Giá</th>
-                                    <th scope="col">Tồn kho</th>
-                                    <th scope="col">Trạng thái</th>
-                                    <th scope="col" class="text-center">Hành động</th>
+                                    <th scope="col" style="width:12%">Danh mục</th>
+                                    <th scope="col" style="width:12%">Thương hiệu</th>
+                                    <th scope="col" style="width:10%">Giá</th>
+                                    <th scope="col" style="width:8%">Tồn kho</th>
+                                    <th scope="col" style="width:10%">Trạng thái</th>
+                                    <th scope="col" class="text-center" style="width:15%">Hành động</th>
                                 </tr>
                             </thead>
                             <tbody id="product-table-body">
-                                @include('admin.productManagement.product.partials._product_table_rows', ['products' => $products])
+                                {{-- Products will be loaded here by Controller and AJAX --}}
+                                @include('admin.productManagement.product.partials._product_table_rows', ['products' => $products, 'loopIndex' => 0, 'startIndex' => $products->firstItem() - 1])
                             </tbody>
                         </table>
                     </div>
-
-                    {{-- Phân trang --}}
                     @if ($products->hasPages())
                         <div class="mt-3 d-flex justify-content-center" id="pagination-links">
                             {{ $products->links() }}
@@ -159,18 +142,19 @@
             </div>
         </div>
 
-        {{-- Include tất cả các modals cần thiết cho trang --}}
+        {{-- Include Modals --}}
         @include('admin.productManagement.product.modals.create_product')
         @include('admin.productManagement.product.modals.update_product')
         @include('admin.productManagement.product.modals.view_product')
-        {{-- FIX: Use confirm_delete_product for single delete --}}
-        @include('admin.productManagement.product.modals.confirm_delete_product')
-        @include('admin.productManagement.product.modals.confirm_force_delete_product')
-        @include('admin.productManagement.product.modals.confirm_restore_product')
-        @include('admin.productManagement.product.modals.modal_bulk_toggle_status_product')
-        @include('admin.productManagement.product.modals.modal_bulk_delete_product')
-        @include('admin.productManagement.product.modals.modal_bulk_restore_product')
-        @include('admin.productManagement.product.modals.modal_bulk_force_delete_product')
+        {{-- Unified Delete/Bulk Delete Modal --}}
+        @include('admin.productManagement.product.modals.delete_product_confirm')
+        {{-- Unified Force Delete/Bulk Force Delete Modal --}}
+        @include('admin.productManagement.product.modals.force_delete_product_confirm')
+        {{-- Unified Restore/Bulk Restore Modal --}}
+        @include('admin.productManagement.product.modals.restore_product_confirm')
+        {{-- New Modal for Bulk Toggle Status --}}
+        @include('admin.productManagement.product.modals.modal_bulk_toggle_status_products')
+
     </div>
 @endsection
 

@@ -1,80 +1,61 @@
-// File: public/assets_admin/js/product_management.js (UPDATED)
-
 /**
  * ===================================================================
  * product_management.js
  * Xử lý JavaScript cho trang quản lý Sản phẩm (Thêm, Sửa, Xóa, Xem).
  * Phiên bản: Hoàn chỉnh, đã sửa lỗi route 405 và đảm bảo phương thức POST cho update.
  * Đã tích hợp thông báo Toast và định dạng tiền tệ (tương tự promotion_manager.js).
- * Đã thêm các tính năng quản lý hàng loạt và bộ lọc/sắp xếp/tìm kiếm nâng cao.
+ * Đã thêm chức năng: Tìm kiếm, Lọc, Sắp xếp, Chọn tất cả, Hành động hàng loạt (xóa mềm, xóa vĩnh viễn, khôi phục, bật/tắt trạng thái).
  * ===================================================================
  */
+
+// Biến toàn cục cho container phân trang, sẽ được gán giá trị trong initializeProductsPage
+let paginationLinksContainer = null;
 
 function initializeProductsPage() {
     console.log("Khởi tạo JS cho trang Sản phẩm...");
 
-    // ===================================================================
-    // KHAI BÁO CÁC PHẦN TỬ HTML CẦN THIẾT (đảm bảo ID khớp với Blade)
-    // ===================================================================
-
-    // Main Modal Elements
+    // Lấy các element modal chính
     const createProductModalEl = document.getElementById('createProductModal');
     const updateProductModalEl = document.getElementById('updateProductModal');
     const viewProductModalEl = document.getElementById('viewProductModal');
-    const deleteModalEl = document.getElementById('confirmDeleteModal'); // Single soft delete confirmation
-    const forceDeleteModalEl = document.getElementById('confirmForceDeleteModal'); // Single force delete confirmation
-    const restoreModalEl = document.getElementById('confirmRestoreModal'); // Single restore confirmation
+    // Unified Modals
+    const bulkDeleteProductsModalEl = document.getElementById('bulkDeleteProductsModal');
+    const bulkForceDeleteProductsModalEl = document.getElementById('bulkForceDeleteProductsModal');
+    const bulkRestoreProductsModalEl = document.getElementById('bulkRestoreProductsModal');
+    const bulkToggleStatusProductsModalEl = document.getElementById('bulkToggleStatusProductsModal');
 
-    // Bulk Action Modal Elements
-    const bulkDeleteProductModalEl = document.getElementById('bulkDeleteProductModal'); // Bulk soft delete
-    const bulkForceDeleteProductModalEl = document.getElementById('bulkForceDeleteProductModal'); // Bulk force delete
-    const bulkRestoreProductModalEl = document.getElementById('bulkRestoreProductModal'); // Bulk restore
-    const bulkToggleStatusProductModalEl = document.getElementById('bulkToggleStatusProductModal'); // Bulk toggle status
-
-    // Table and Control Elements
     const productTableBody = document.getElementById('product-table-body');
+    // paginationLinksContainer được khai báo là biến toàn cục ở trên
+
+    // Search, Filter, Sort elements
     const productSearchInput = document.getElementById('productSearchInput');
     const productSearchBtn = document.getElementById('productSearchBtn');
     const productFilterSelect = document.getElementById('productFilterSelect');
     const productSortSelect = document.getElementById('productSortSelect');
-    const paginationLinksContainer = document.getElementById('pagination-links');
 
-    // Bulk Action Buttons and Counters
+    // Bulk Action elements
     const selectAllProductsCheckbox = document.getElementById('selectAllProducts');
-    const bulkSoftDeleteBtn = document.getElementById('bulkSoftDeleteBtn');
+    const bulkActionsDropdownBtn = document.getElementById('bulkActionsDropdown');
+    const selectedCountBulkSpan = document.getElementById('selectedCountBulk');
     const bulkToggleStatusBtn = document.getElementById('bulkToggleStatusBtn');
     const bulkRestoreBtn = document.getElementById('bulkRestoreBtn');
+    const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
     const bulkForceDeleteBtn = document.getElementById('bulkForceDeleteBtn');
 
-    const selectedCountSoftDeleteSpan = document.getElementById('selectedCountSoftDelete');
-    const selectedCountToggleSpan = document.getElementById('selectedCountToggle');
-    const selectedCountRestoreSpan = document.getElementById('selectedCountRestore');
-    const selectedCountForceDeleteSpan = document.getElementById('selectedCountForceDelete');
-
-    // Bulk Action Visibility Toggles (Tabs)
-    const bulkActionsNormalDiv = document.getElementById('bulkActionsNormal');
-    const bulkActionsTrashedDiv = document.getElementById('bulkActionsTrashed');
-    const allProductsTab = document.getElementById('allProductsTab');
-    const trashedProductsTab = document.getElementById('trashedProductsTab');
+    // Spans inside bulk modals for count
+    const selectedProductsCountToggleModalSpan = document.getElementById('selectedProductsCountToggleModal');
 
 
-    // ===================================================================
-    // KIỂM TRA SỰ TỒN TẠI CỦA CÁC PHẦN TỬ QUAN TRỌNG
-    // ===================================================================
-    const requiredElements = {
-        createProductModalEl, updateProductModalEl, viewProductModalEl, deleteModalEl, forceDeleteModalEl, restoreModalEl,
-        bulkDeleteProductModalEl, bulkForceDeleteProductModalEl, bulkRestoreProductModalEl, bulkToggleStatusProductModalEl,
-        productTableBody, productSearchInput, productSearchBtn, productFilterSelect, productSortSelect, paginationLinksContainer,
-        selectAllProductsCheckbox, bulkSoftDeleteBtn, bulkToggleStatusBtn, bulkRestoreBtn, bulkForceDeleteBtn,
-        selectedCountSoftDeleteSpan, selectedCountToggleSpan, selectedCountRestoreSpan, selectedCountForceDeleteSpan,
-        bulkActionsNormalDiv, bulkActionsTrashedDiv, allProductsTab, trashedProductsTab
-    };
-
-    const missingElements = Object.entries(requiredElements).filter(([key, value]) => !value);
-
-    if (missingElements.length > 0) {
-        console.warn('Cảnh báo: Một hoặc nhiều element modal/table/filter/sort/bulk quan trọng không tồn tại. Script có thể không hoạt động đầy đủ. Các phần tử thiếu:', missingElements.map(([key]) => key).join(', '));
-        return; // Dừng khởi tạo nếu thiếu các phần tử cốt lõi
+    // Kiểm tra sự tồn tại của các element quan trọng
+    if (!createProductModalEl || !updateProductModalEl || !viewProductModalEl ||
+        !bulkDeleteProductsModalEl || !bulkForceDeleteProductsModalEl || !bulkRestoreProductsModalEl || !bulkToggleStatusProductsModalEl ||
+        !productTableBody || !productSearchInput || !productSearchBtn || !productFilterSelect || !productSortSelect ||
+        !selectAllProductsCheckbox || !bulkActionsDropdownBtn || !selectedCountBulkSpan ||
+        !bulkToggleStatusBtn || !bulkRestoreBtn || !bulkDeleteBtn || !bulkForceDeleteBtn ||
+        !selectedProductsCountToggleModalSpan
+    ) {
+        console.error('Một hoặc nhiều element quan trọng không tồn tại. Script sẽ không chạy.');
+        return;
     }
 
     // Lấy CSRF Token
@@ -84,7 +65,7 @@ function initializeProductsPage() {
         return;
     }
 
-    // Lấy các hàm helper toàn cục từ admin_layout.js (giả định tồn tại)
+    // Lấy các hàm helper toàn cục từ admin_layout.js
     const showAppLoader = typeof window.showAppLoader === 'function' ? window.showAppLoader : () => console.log('Show Loader');
     const hideAppLoader = typeof window.hideAppLoader === 'function' ? window.hideAppLoader : () => console.log('Hide Loader');
     const showAppInfoModal = typeof window.showAppInfoModal === 'function' ? window.showAppInfoModal : (msg, type) => alert(`${type}: ${msg}`);
@@ -92,7 +73,7 @@ function initializeProductsPage() {
         const toastContainer = document.querySelector('.toast-container');
         if (!toastContainer) {
             console.error('Không tìm thấy .toast-container. Vui lòng thêm vào layout chính.');
-            alert(`${type}: ${msg}`); // Fallback to alert if toast container is missing
+            alert(`${type}: ${msg}`);
             return;
         }
 
@@ -114,45 +95,37 @@ function initializeProductsPage() {
         toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
     };
 
-    // Bootstrap Modal Instances
+    // Khởi tạo các đối tượng Modal của Bootstrap
     const createProductModal = new bootstrap.Modal(createProductModalEl);
     const updateProductModal = new bootstrap.Modal(updateProductModalEl);
     const viewProductModal = new bootstrap.Modal(viewProductModalEl);
-    const deleteProductModal = new bootstrap.Modal(deleteModalEl); // Single soft delete
-    const forceDeleteProductModal = new bootstrap.Modal(forceDeleteModalEl); // Single force delete
-    const restoreProductModal = new bootstrap.Modal(restoreModalEl); // Single restore
-    const bulkDeleteProductModal = new bootstrap.Modal(bulkDeleteProductModalEl); // Bulk soft delete
-    const bulkForceDeleteProductModal = new bootstrap.Modal(bulkForceDeleteProductModalEl); // Bulk force delete
-    const bulkRestoreProductModal = new bootstrap.Modal(bulkRestoreProductModalEl); // Bulk restore
-    const bulkToggleStatusProductModal = new bootstrap.Modal(bulkToggleStatusProductModalEl); // Bulk toggle status
+    const bulkDeleteProductsModal = new bootstrap.Modal(bulkDeleteProductsModalEl);
+    const bulkForceDeleteProductsModal = new bootstrap.Modal(bulkForceDeleteProductsModalEl);
+    const bulkRestoreProductsModal = new bootstrap.Modal(bulkRestoreProductsModalEl);
+    const bulkToggleStatusProductsModal = new bootstrap.Modal(bulkToggleStatusProductsModalEl);
 
-
-    let selectedProductIds = new Set(); // Stores IDs of selected products
+    let selectedProductIds = new Set(); // Để lưu trữ các ID sản phẩm đã chọn
 
 
     // --- CÁC HÀM KHỞI TẠO & HỖ TRỢ ---
 
     /**
      * Khởi tạo SelectPicker cho các select element
-     * This function should be called initially on page load.
-     * When a modal is shown, only `refresh` is typically needed if options are not dynamic.
-     * If options ARE dynamic (e.g., loaded by AJAX), then `destroy` and re-create is valid.
      */
     const initializeSelectPickers = () => {
         try {
             const $pickers = $('.selectpicker');
             if ($pickers.length === 0) return;
-            // Destroy existing selectpicker instances to prevent duplicates
-            if ($pickers.data('selectpicker')) { // Check if selectpicker is already initialized
-                $pickers.selectpicker('destroy');
-            }
+            if ($pickers.data('selectpicker')) $pickers.selectpicker('destroy');
             $pickers.selectpicker({
                 liveSearch: true,
                 width: '100%',
                 noneSelectedText: 'Chưa chọn mục nào',
                 actionsBox: true,
                 selectAllText: 'Chọn tất cả',
-                deselectAllText: 'Bỏ chọn tất cả'
+                deselectAllText: 'Bỏ chọn tất cả',
+                size: 10, // Số lượng mục hiển thị trước khi cuộn
+                dropupAuto: false // Vô hiệu hóa tự động "dropup" để giữ menu cuộn xuống
             });
             $pickers.selectpicker('render');
         } catch (error) {
@@ -168,7 +141,6 @@ function initializeProductsPage() {
     const setupImagePreviews = (inputEl, previewContainerEl) => {
         if (!inputEl || !previewContainerEl) return;
         inputEl.addEventListener('change', function (event) {
-            // Remove only newly added previews, keep existing ones for update modal
             previewContainerEl.querySelectorAll('.new-preview').forEach(el => el.remove());
             const files = event.target.files;
             if (!files) return;
@@ -194,6 +166,10 @@ function initializeProductsPage() {
         if (!formElement) return;
         formElement.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
         formElement.querySelectorAll('.invalid-feedback').forEach(el => el.textContent = '');
+        formElement.querySelectorAll('[id$="Error"]').forEach(el => { // Clear specific error divs (e.g., for password)
+            el.textContent = '';
+            el.style.display = 'none';
+        });
     }
 
     /**
@@ -208,6 +184,7 @@ function initializeProductsPage() {
         for (const fieldName in errors) {
             if (errors.hasOwnProperty(fieldName)) {
                 let inputField = formElement.querySelector(`[name="${fieldName}"]`);
+                let errorDiv = null;
 
                 // Xử lý các trường hợp đặc biệt nếu name không khớp trực tiếp với ID
                 if (!inputField) {
@@ -216,32 +193,31 @@ function initializeProductsPage() {
                     } else if (fieldName === 'brand_id') {
                         inputField = formElement.querySelector('#productBrandCreate') || formElement.querySelector('#productBrandUpdate');
                     } else if (fieldName === 'vehicle_model_ids') {
+                        // For selectpickers, the error feedback might not be a direct sibling
                         inputField = formElement.querySelector('#productVehicleModelsCreate') || formElement.querySelector('#productVehicleModelsUpdate');
+                        if (inputField) {
+                            // Find the container, then the feedback div
+                            errorDiv = inputField.closest('.mb-3')?.querySelector('.invalid-feedback');
+                        }
                     } else if (fieldName === 'admin_password_confirm_delete') {
-                        inputField = formElement.querySelector('#admin_password_confirm_delete');
-                    } else if (fieldName === 'admin_password_bulk_force_delete') {
-                        inputField = formElement.querySelector('#admin_password_bulk_force_delete');
+                        inputField = formElement.querySelector('#deleteProductsPassword') || formElement.querySelector('#forceDeleteProductsPassword') || formElement.querySelector('#bulkToggleStatusProductsPassword');
+                        errorDiv = formElement.querySelector('#deleteProductsPasswordError') || formElement.querySelector('#forceDeleteProductsPasswordError') || formElement.querySelector('#bulkToggleStatusProductsPasswordError');
                     }
-                    // Thêm các trường khác nếu cần
                 }
-
 
                 if (inputField) {
                     inputField.classList.add('is-invalid');
-                    // Find the appropriate invalid-feedback element
-                    let errorDiv = inputField.nextElementSibling;
-                    if (!errorDiv || !errorDiv.classList.contains('invalid-feedback')) {
-                        // For selectpickers or other complex structures, find within parent group
-                        const formGroup = inputField.closest('.form-group') || inputField.closest('.mb-3');
-                        if (formGroup) {
-                            errorDiv = formGroup.querySelector('.invalid-feedback');
-                        }
+                    if (!errorDiv) { // if errorDiv not already set by specific handling
+                        errorDiv = inputField.nextElementSibling;
                     }
 
-                    if (errorDiv && errorDiv.classList.contains('invalid-feedback')) {
+                    if (errorDiv && (errorDiv.classList.contains('invalid-feedback') || (errorDiv.id && errorDiv.id.endsWith('Error')))) {
                         errorDiv.textContent = errors[fieldName][0];
+                        if (errorDiv.id && errorDiv.id.endsWith('Error')) { // For specific error divs that might be hidden by default
+                            errorDiv.style.display = 'block';
+                        }
                     } else {
-                        console.warn(`Không tìm thấy div .invalid-feedback cho trường: ${fieldName}`);
+                        console.warn(`Không tìm thấy div .invalid-feedback hoặc error cụ thể cho trường: ${fieldName}`);
                     }
 
                     if (!firstErrorField) {
@@ -257,70 +233,42 @@ function initializeProductsPage() {
         }
     }
 
-    /**
- * Định dạng số tiền theo chuẩn VNĐ khi người dùng nhập.
- * Hỗ trợ phần thập phân, tự động thêm dấu phân cách hàng nghìn.
- *
- * @param {HTMLInputElement} inputElement - Trường input cần định dạng.
- */
-    function formatCurrencyInput(inputElement) {
-        const formatValue = (value) => {
-            if (value === null || value === undefined) return '';
-            let raw = String(value);
 
-            // Remove all non-numeric and non-comma characters
+    /**
+     * Định dạng số tiền theo chuẩn VNĐ khi người dùng nhập.
+     * Hỗ trợ phần thập phân, tự động thêm dấu phân cách hàng nghìn.
+     *
+     * @param {HTMLInputElement} inputElement - Trường input cần định dạng.
+     */
+    function formatCurrencyInput(inputElement) {
+        inputElement.addEventListener('input', function (e) {
+            let raw = e.target.value;
+
+            // Giữ vị trí con trỏ
+            let caretPosition = e.target.selectionStart;
+
+            // Xoá mọi ký tự ngoại trừ số và dấu phẩy (phần thập phân)
             raw = raw.replace(/[^0-9,]/g, '');
 
-            // Split into integer and decimal parts
+            // Tách phần nguyên và phần thập phân (nếu có)
             let parts = raw.split(',');
             let integerPart = parts[0];
             let decimalPart = parts[1] ? ',' + parts[1] : '';
 
-            // Format integer part with dot as thousands separator
+            // Xoá dấu chấm cũ rồi thêm lại theo hàng nghìn
             integerPart = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 
-            return integerPart + decimalPart;
-        };
+            e.target.value = integerPart + decimalPart;
 
-        // Set initial formatted value if not empty
-        if (inputElement.value) {
-            inputElement.value = formatValue(inputElement.value);
-        }
-
-        inputElement.addEventListener('input', function (e) {
-            const originalValue = e.target.value;
-            const originalLength = originalValue.length;
-            const caretPosition = e.target.selectionStart;
-
-            // Get current raw numbers for caret position calculation
-            const rawNumbersBeforeCaret = originalValue.substring(0, caretPosition).replace(/[^0-9]/g, '');
-
-            const formattedValue = formatValue(originalValue);
-            e.target.value = formattedValue;
-
-            // Calculate new caret position
-            let newCaretPosition = 0;
-            let currentRawIndex = 0;
-            for (let i = 0; i < formattedValue.length; i++) {
-                if (newCaretPosition >= caretPosition + (formattedValue.length - originalLength)) {
-                    break;
-                }
-                if (/\d/.test(formattedValue[i])) { // If character is a digit
-                    if (currentRawIndex < rawNumbersBeforeCaret.length && formattedValue[i] === rawNumbersBeforeCaret[currentRawIndex]) {
-                        currentRawIndex++;
-                    }
-                }
-                newCaretPosition++;
-            }
-            e.target.setSelectionRange(newCaretPosition, newCaretPosition);
+            // Cập nhật lại vị trí con trỏ tương đối
+            e.target.setSelectionRange(e.target.value.length, e.target.value.length);
         });
 
-        // Optional: select all text on focus
+        // Tuỳ chọn: chọn toàn bộ text khi focus để người dùng dễ gõ lại
         inputElement.addEventListener('focus', function (e) {
             e.target.select();
         });
     }
-
 
     /**
      * Chuyển đổi chuỗi số tiền định dạng VNĐ về số nguyên hoặc số thập phân.
@@ -339,18 +287,11 @@ function initializeProductsPage() {
         // Reset modal tạo mới
         createProductModalEl.addEventListener('hidden.bs.modal', () => {
             const form = document.getElementById('createProductForm');
-            if (form) {
-                form.reset();
-                clearValidationErrors(form);
-                document.getElementById('productImagesPreviewCreate').innerHTML = '';
-                // Refresh selectpickers after reset
-                $('#createProductForm .selectpicker').selectpicker('val', '');
-                $('#createProductForm .selectpicker').selectpicker('refresh');
-                // Reset currency inputs if they have a data-currency-input attribute
-                form.querySelectorAll('[data-currency-input="true"]').forEach(input => {
-                    input.value = ''; // Clear actual value
-                });
-            }
+            form.reset();
+            clearValidationErrors(form);
+            document.getElementById('productImagesPreviewCreate').innerHTML = '';
+            $('#createProductForm .selectpicker').selectpicker('val', '');
+            $('#createProductForm .selectpicker').selectpicker('refresh');
         });
         const createImagesInput = document.getElementById('productImagesCreate');
         const createImagesPreview = document.getElementById('productImagesPreviewCreate');
@@ -359,49 +300,31 @@ function initializeProductsPage() {
         // Reset modal cập nhật
         updateProductModalEl.addEventListener('hidden.bs.modal', () => {
             const form = document.getElementById('updateProductForm');
-            if (form) {
-                form.reset();
-                clearValidationErrors(form);
-                document.getElementById('productImagesPreviewUpdate').innerHTML = '';
-                // The file input's value cannot be programmatically set for security reasons.
-                // Resetting it by form.reset() should be enough or re-create it if issues persist.
-                document.getElementById('productImagesUpdate').value = '';
-                // Ensure selectpickers are reset when modal closes
-                $('#updateProductForm .selectpicker').selectpicker('val', '');
-                $('#updateProductForm .selectpicker').selectpicker('refresh');
-                // Reset currency inputs if they have a data-currency-input attribute
-                form.querySelectorAll('[data-currency-input="true"]').forEach(input => {
-                    input.value = ''; // Clear actual value
-                });
-            }
+            form.reset();
+            clearValidationErrors(form);
+            document.getElementById('productImagesPreviewUpdate').innerHTML = '';
+            document.getElementById('productImagesUpdate').value = ''; // Clear file input
+            $('#updateProductForm .selectpicker').selectpicker('val', '');
+            $('#updateProductForm .selectpicker').selectpicker('refresh');
         });
         const updateImagesInput = document.getElementById('productImagesUpdate');
         const updateImagesPreview = document.getElementById('productImagesPreviewUpdate');
         if (updateImagesInput && updateImagesPreview) setupImagePreviews(updateImagesInput, updateImagesPreview);
 
-        // Clear validation on bulk action modals when hidden
-        bulkDeleteProductModalEl.addEventListener('hidden.bs.modal', () => {
-            clearValidationErrors(document.getElementById('bulkDeleteProductForm'));
-        });
-        bulkForceDeleteProductModalEl.addEventListener('hidden.bs.modal', () => {
-            clearValidationErrors(document.getElementById('bulkForceDeleteProductForm'));
-            document.getElementById('bulkForceDeleteProductForm').querySelector('#admin_password_bulk_force_delete').value = '';
-        });
-        bulkRestoreProductModalEl.addEventListener('hidden.bs.modal', () => {
-            clearValidationErrors(document.getElementById('bulkRestoreProductForm'));
-        });
-        bulkToggleStatusProductModalEl.addEventListener('hidden.bs.modal', () => {
-            clearValidationErrors(document.getElementById('bulkToggleStatusProductForm'));
-        });
-        deleteModalEl.addEventListener('hidden.bs.modal', () => {
-            clearValidationErrors(document.getElementById('deleteProductForm'));
-        });
-        forceDeleteModalEl.addEventListener('hidden.bs.modal', () => {
-            clearValidationErrors(document.getElementById('forceDeleteProductForm'));
-            document.getElementById('forceDeleteProductForm').querySelector('#admin_password_confirm_delete').value = '';
-        });
-        restoreModalEl.addEventListener('hidden.bs.modal', () => {
-            clearValidationErrors(document.getElementById('restoreProductForm'));
+         // Reset password and errors for deletion/bulk modals on show
+        [bulkDeleteProductsModalEl, bulkForceDeleteProductsModalEl, bulkToggleStatusProductsModalEl, bulkRestoreProductsModalEl].forEach(modalEl => {
+            modalEl.addEventListener('show.bs.modal', () => {
+                const passwordInput = modalEl.querySelector('[name="admin_password_confirm_delete"]');
+                if (passwordInput) {
+                    passwordInput.value = '';
+                    passwordInput.classList.remove('is-invalid');
+                    const errorDiv = modalEl.querySelector(`#${passwordInput.id}Error`);
+                    if (errorDiv) {
+                        errorDiv.textContent = '';
+                        errorDiv.style.display = 'none';
+                    }
+                }
+            });
         });
     };
 
@@ -414,7 +337,7 @@ function initializeProductsPage() {
     const handleShowViewModal = async (productId) => {
         showAppLoader();
         try {
-            const response = await fetch(`/admin/product-management/products/${productId}/details`); // Using new API route
+            const response = await fetch(`/admin/product-management/products/${productId}/details`);
             if (!response.ok) throw new Error(`Lỗi mạng: ${response.statusText}`);
             const product = await response.json();
 
@@ -457,7 +380,7 @@ function initializeProductsPage() {
             viewProductModal.show();
         } catch (error) {
             console.error('Lỗi khi lấy dữ liệu xem chi tiết:', error);
-            showToast(error.message || 'Không thể lấy dữ liệu sản phẩm.', 'error');
+            showAppInfoModal(error.message || 'Không thể lấy dữ liệu sản phẩm.', 'error', 'Lỗi Hệ thống');
         } finally {
             hideAppLoader();
         }
@@ -479,14 +402,7 @@ function initializeProductsPage() {
 
             form.querySelector('#productNameUpdate').value = product.name || '';
             form.querySelector('#productDescriptionUpdate').value = product.description || '';
-
-            // Apply currency formatting for price input
-            const priceUpdateInput = form.querySelector('#productPriceUpdate');
-            if (priceUpdateInput) {
-                priceUpdateInput.value = product.price; // Set raw value
-                formatCurrencyInput(priceUpdateInput); // Format it
-            }
-
+            form.querySelector('#productPriceUpdate').value = product.price || 0;
             form.querySelector('#productStockUpdate').value = product.stock_quantity || 0;
             form.querySelector('#productMaterialUpdate').value = product.material || '';
             form.querySelector('#productColorUpdate').value = product.color || '';
@@ -494,80 +410,106 @@ function initializeProductsPage() {
             form.querySelector('#productIsActiveUpdate').checked = product.status === 'active';
 
             const vehicleModelIds = product.vehicle_models ? product.vehicle_models.map(model => String(model.id)) : [];
-
-            // IMPORTANT FIX for Selectpicker not populating:
-            // Ensure selectpicker is initialized (or re-initialized) BEFORE setting values.
-            // Then set values, and then refresh.
-            // Calling initializeSelectPickers() here will destroy and recreate,
-            // ensuring a clean state before setting values.
-            initializeSelectPickers();
-
-            // Set values for selectpickers
-            $('#productCategoryUpdate').selectpicker('val', product.category_id);
-            $('#productBrandUpdate').selectpicker('val', product.brand_id);
-            $('#productVehicleModelsUpdate').selectpicker('val', vehicleModelIds);
-
-            // Refresh individual selectpickers after setting their values
-            $('#productCategoryUpdate').selectpicker('refresh');
-            $('#productBrandUpdate').selectpicker('refresh');
-            $('#productVehicleModelsUpdate').selectpicker('refresh');
-
+            updateProductModalEl.dataset.categoryId = product.category_id || '';
+            updateProductModalEl.dataset.brandId = product.brand_id || '';
+            updateProductModalEl.dataset.vehicleModelIds = JSON.stringify(vehicleModelIds);
 
             const previewContainer = document.getElementById('productImagesPreviewUpdate');
             previewContainer.innerHTML = '';
             if (product.images && product.images.length > 0) {
                 product.images.forEach(image => {
-                    // Include hidden input for existing image ID
                     previewContainer.innerHTML += `<div class="img-preview-wrapper existing-preview"><input type="hidden" name="existing_images[]" value="${image.id}"><img src="${image.image_full_url}" class="img-preview" alt=""><button type="button" class="img-preview-remove" title="Xóa ảnh này">×</button></div>`;
                 });
             }
 
+            // Apply currency format after setting value
+            const priceUpdateInput = form.querySelector('#productPriceUpdate');
+            if (priceUpdateInput) {
+                priceUpdateInput.value = new Intl.NumberFormat('vi-VN').format(parseFloat(priceUpdateInput.value));
+            }
+            clearValidationErrors(form); // Clear errors before showing
             updateProductModal.show();
         } catch (error) {
             console.error('Lỗi khi lấy dữ liệu cập nhật:', error);
-            showToast(error.message || 'Không thể lấy dữ liệu sản phẩm.', 'error');
+            showAppInfoModal(error.message || 'Không thể lấy dữ liệu sản phẩm.', 'error', 'Lỗi Hệ thống');
         } finally {
             hideAppLoader();
         }
     };
 
     /**
-     * Hiển thị modal xác nhận xóa mềm
-     * @param {number} productId - ID sản phẩm
-     * @param {string} productName - Tên sản phẩm
+     * Hiển thị modal xác nhận xóa mềm hoặc hàng loạt xóa mềm.
+     * @param {Array<string>|string} productIds - ID sản phẩm hoặc mảng các ID.
+     * @param {string} productNameOrCount - Tên sản phẩm hoặc số lượng sản phẩm.
+     * @param {boolean} isBulk - True nếu là xóa hàng loạt.
      */
-    const handleShowDeleteModal = (productId, productName) => {
-        const form = document.getElementById('deleteProductForm');
-        form.action = `/admin/product-management/products/${productId}`;
-        document.getElementById('productNameToDelete').textContent = productName || 'Sản phẩm này';
-        deleteProductModal.show();
+    const handleShowDeleteModal = (productIds, productNameOrCount, isBulk = false) => {
+        const form = document.getElementById('bulkDeleteProductsForm');
+        const nameElement = document.getElementById('productNameToDelete');
+        const submitBtn = form.querySelector('button[type="submit"]');
+
+        form.action = isBulk ? '/admin/product-management/products/bulk-destroy' : `/admin/product-management/products/${productIds}`;
+        form.dataset.isBulk = isBulk;
+        form.dataset.productIds = JSON.stringify(Array.isArray(productIds) ? productIds.map(String) : [String(productIds)]);
+
+        nameElement.textContent = productNameOrCount;
+        submitBtn.textContent = isBulk ? 'Xác nhận Xóa mềm' : 'Xóa Sản phẩm';
+
+        clearValidationErrors(form);
+        bulkDeleteProductsModal.show();
     };
 
     /**
-     * Hiển thị modal xác nhận xóa vĩnh viễn
-     * @param {string} deleteUrl - URL để xóa vĩnh viễn
-     * @param {string} productName - Tên sản phẩm
+     * Hiển thị modal xác nhận xóa vĩnh viễn hoặc hàng loạt xóa vĩnh viễn.
+     * @param {Array<string>|string} productIds - ID sản phẩm hoặc mảng các ID.
+     * @param {string} productNameOrCount - Tên sản phẩm hoặc số lượng sản phẩm.
+     * @param {boolean} isBulk - True nếu là xóa hàng loạt.
      */
-    const handleShowForceDeleteModal = (deleteUrl, productName) => {
-        const form = document.getElementById('forceDeleteProductForm');
-        form.action = deleteUrl;
+    const handleShowForceDeleteModal = (productIds, productNameOrCount, isBulk = false) => {
+        const form = document.getElementById('bulkForceDeleteProductsForm');
         const nameElement = document.getElementById('productNameToForceDelete');
-        if (nameElement) {
-            nameElement.textContent = productName || 'Sản phẩm này';
-        }
-        forceDeleteProductModal.show();
+        const submitBtn = form.querySelector('button[type="submit"]');
+
+        form.action = isBulk ? '/admin/product-management/products/bulk-force-delete' : `/admin/product-management/products/${productIds}/force-delete`;
+        form.dataset.isBulk = isBulk;
+        form.dataset.productIds = JSON.stringify(Array.isArray(productIds) ? productIds.map(String) : [String(productIds)]);
+
+        nameElement.textContent = productNameOrCount;
+        submitBtn.textContent = isBulk ? 'Xóa Vĩnh viễn' : 'Xóa Vĩnh viễn';
+
+        clearValidationErrors(form);
+        bulkForceDeleteProductsModal.show();
     };
 
     /**
-     * Hiển thị modal xác nhận khôi phục
-     * @param {number} productId - ID sản phẩm
-     * @param {string} productName - Tên sản phẩm
+     * Hiển thị modal xác nhận khôi phục hoặc hàng loạt khôi phục.
+     * @param {Array<string>|string} productIds - ID sản phẩm hoặc mảng các ID.
+     * @param {string} productNameOrCount - Tên sản phẩm hoặc số lượng sản phẩm.
+     * @param {boolean} isBulk - True nếu là khôi phục hàng loạt.
      */
-    const handleShowRestoreModal = (productId, productName) => {
-        const form = document.getElementById('restoreProductForm');
-        form.action = `/admin/product-management/products/${productId}/restore`;
-        document.getElementById('productNameToRestore').textContent = productName || 'Sản phẩm này';
-        restoreProductModal.show();
+    const handleShowRestoreModal = (productIds, productNameOrCount, isBulk = false) => {
+        const form = document.getElementById('bulkRestoreProductsForm');
+        const nameElement = document.getElementById('productNameToRestore');
+        const submitBtn = form.querySelector('button[type="submit"]');
+
+        form.action = isBulk ? '/admin/product-management/products/bulk-restore' : `/admin/product-management/products/${productIds}/restore`;
+        form.dataset.isBulk = isBulk;
+        form.dataset.productIds = JSON.stringify(Array.isArray(productIds) ? productIds.map(String) : [String(productIds)]);
+
+        nameElement.textContent = productNameOrCount;
+        submitBtn.textContent = isBulk ? 'Xác nhận Khôi phục' : 'Xác nhận Khôi phục';
+
+        clearValidationErrors(form);
+        bulkRestoreProductsModal.show();
+    };
+
+    /**
+     * Hiển thị modal bật/tắt trạng thái hàng loạt.
+     */
+    const handleShowBulkToggleStatusModal = () => {
+        selectedProductsCountToggleModalSpan.textContent = selectedProductIds.size;
+        clearValidationErrors(document.getElementById('bulkToggleStatusProductsForm'));
+        bulkToggleStatusProductsModal.show();
     };
 
     // --- CÁC HÀM XỬ LÝ HÀNH ĐỘNG (AJAX) ---
@@ -579,17 +521,16 @@ function initializeProductsPage() {
     async function handleToggleStatus(button) {
         showAppLoader();
         try {
-            const response = await fetch(button.dataset.url, {
+            const url = button.dataset.statusUrl;
+            const response = await fetch(url, {
                 method: 'POST',
-                headers: { 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                headers: { 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' }
             });
             const result = await response.json();
             if (!response.ok) throw new Error(result.message || "Lỗi không xác định");
 
             showToast(result.message, 'success');
-            // Refresh the table to reflect the change and maintain filters/sorts
-            handleUpdateOrToggleSuccess();
-
+            performSearch(getCurrentPage());
         } catch (error) {
             console.error('Lỗi khi bật/tắt trạng thái:', error);
             showToast(error.message, 'error');
@@ -598,31 +539,70 @@ function initializeProductsPage() {
         }
     }
 
+    // --- GẮN KẾT SỰ KIỆN & THIẾT LẬP FORM ---
 
     /**
-     * Update table content and re-attach event listeners for pagination.
-     * @param {string} tableRowsHtml - HTML for table rows.
-     * @param {string} paginationLinksHtml - HTML for pagination links.
+     * Lấy số trang hiện tại từ phân trang.
      */
-    function updateTableContent(tableRowsHtml, paginationLinksHtml) {
-        productTableBody.innerHTML = tableRowsHtml || `
-            <tr id="no-products-row"><td colspan="10" class="text-center">
-                <div class="alert alert-info mb-0" role="alert"><i class="bi bi-info-circle me-2"></i>Không tìm thấy kết quả phù hợp.</div>
-            </td></tr>`;
-
+    function getCurrentPage() {
         if (paginationLinksContainer) {
-            paginationLinksContainer.innerHTML = paginationLinksHtml || '';
+            const activePageLink = paginationLinksContainer.querySelector('.page-item.active .page-link');
+            if (activePageLink) {
+                return parseInt(activePageLink.textContent, 10);
+            }
         }
-        updateCheckboxStates();
-        updateBulkActionButtons();
-        attachPaginationListeners(); // Re-attach listeners to new pagination links
-        checkAndToggleBulkActionVisibility(); // Check and toggle bulk action buttons based on current tab
+        return 1;
     }
 
     /**
-     * Perform AJAX search, filter, and sort for products.
-     * @param {number} page - Current page number.
-     * @param {string} currentSearchQuery - Current search input value.
+     * Cập nhật nội dung bảng và liên kết phân trang.
+     * @param {string} tableRowsHtml - HTML cho các hàng của bảng.
+     * @param {string} paginationLinksHtml - HTML cho các liên kết phân trang.
+     */
+    function updateTableContent(tableRowsHtml, paginationLinksHtml) {
+        productTableBody.innerHTML = tableRowsHtml || `
+            <tr id="no-products-row">
+                <td colspan="10" class="text-center">
+                    <div class="alert alert-info mb-0">Không tìm thấy kết quả phù hợp.</div>
+                </td>
+            </tr>`;
+
+        const cardBody = document.querySelector('#adminProductsPage .card-body');
+        if (!cardBody) {
+            console.error("Card body not found. Cannot update pagination.");
+            // Không return ở đây vì productTableBody đã được cập nhật.
+        } else {
+            // Xóa phần tử phân trang hiện có nếu nó tồn tại
+            let existingPaginationDiv = cardBody.querySelector('#pagination-links');
+            if (existingPaginationDiv) {
+                existingPaginationDiv.remove();
+            }
+
+            // Nếu có HTML phân trang mới, tạo và thêm phần tử mới
+            if (paginationLinksHtml && paginationLinksHtml.trim() !== '') {
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = paginationLinksHtml; // HTML này chứa div#pagination-links
+                const newPaginationDiv = tempDiv.querySelector('#pagination-links'); // Tìm div thực tế bên trong container tạm
+
+                if (newPaginationDiv) {
+                    cardBody.appendChild(newPaginationDiv);
+                } else {
+                    console.warn("Pagination HTML returned by server did not contain #pagination-links div.");
+                }
+            }
+        }
+
+        // Cập nhật biến toàn cục để trỏ đến phần tử mới (hoặc null nếu không có)
+        paginationLinksContainer = document.getElementById('pagination-links');
+
+        updateCheckboxStates();
+        updateBulkActionButtons();
+        attachPaginationListeners();
+    }
+
+    /**
+     * Thực hiện tìm kiếm, lọc và sắp xếp bằng AJAX và cập nhật bảng.
+     * @param {number} page - Số trang muốn fetch.
      */
     async function performSearch(page = 1) {
         showAppLoader();
@@ -631,53 +611,53 @@ function initializeProductsPage() {
             const currentFilter = productFilterSelect.value;
             const currentSort = productSortSelect.value;
 
-            const urlParams = new URLSearchParams(window.location.search);
-            urlParams.set('page', page);
-            urlParams.set('filter', currentFilter); // Always set filter, even if 'all'
-            urlParams.set('sort_by', currentSort); // Always set sort_by
-
-            // Remove search if empty, otherwise add it
-            if (currentSearchQuery) {
-                urlParams.set('search', currentSearchQuery);
-            } else {
-                urlParams.delete('search');
-            }
-
-            // Always update the 'status' URL parameter based on the current active tab
-            const currentStatusTab = productFilterSelect.value === 'trashed' ? 'trashed' : null;
-            if (currentStatusTab) {
-                urlParams.set('status', currentStatusTab);
-            } else {
-                urlParams.delete('status');
-            }
-
+            const urlParams = new URLSearchParams();
+            urlParams.append('page', page);
+            if (currentSearchQuery) urlParams.append('search', currentSearchQuery);
+            if (currentFilter && currentFilter !== 'all') urlParams.append('status', currentFilter);
+            if (currentSort && currentSort !== 'latest') urlParams.append('sort_by', currentSort);
 
             const url = `/admin/product-management/products?${urlParams.toString()}`;
 
-            const response = await fetch(url, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } });
-            if (!response.ok) throw new Error(`Lỗi mạng: ${response.statusText}`);
+            const response = await fetch(url, {
+                method: 'GET', // Đã thay đổi từ 'POST' sang 'GET'
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ message: 'Lỗi không xác định từ máy chủ.' }));
+                throw new Error(errorData.message || `Lỗi mạng: ${response.statusText}`);
+            }
             const data = await response.json();
             updateTableContent(data.table_rows, data.pagination_links);
-            clearSelectedProducts(); // Clear selections on new search/filter/sort
         } catch (error) {
-            console.error('Lỗi khi tìm kiếm, lọc hoặc sắp xếp:', error);
-            showToast('Không thể tải dữ liệu. Vui lòng thử lại.', 'error');
+            console.error('Lỗi khi tải dữ liệu sản phẩm:', error);
+            showToast('Không thể tải dữ liệu sản phẩm. Vui lòng thử lại.', 'error');
         } finally {
             hideAppLoader();
         }
     }
 
-    // Attach listeners for pagination links dynamically
+    /**
+     * Gắn lại event listeners cho các liên kết phân trang sau khi DOM được cập nhật.
+     */
     function attachPaginationListeners() {
+        // Sử dụng biến toàn cục `paginationLinksContainer`
         if (paginationLinksContainer) {
-            // Remove existing listeners to prevent duplicates
+            // Xóa listener hiện có để tránh trùng lặp
             paginationLinksContainer.removeEventListener('click', handlePaginationClick);
-            // Add new listener
+            // Thêm listener mới
             paginationLinksContainer.addEventListener('click', handlePaginationClick);
         }
+        // Không còn console.warn ở đây vì việc không tìm thấy container là trường hợp dự kiến.
     }
 
-    // Handle pagination link clicks
+    /**
+     * Xử lý sự kiện click trên các liên kết phân trang.
+     * @param {Event} event - Sự kiện click.
+     */
     function handlePaginationClick(event) {
         const link = event.target.closest('.pagination a');
         if (link) {
@@ -685,73 +665,54 @@ function initializeProductsPage() {
             const url = new URL(link.href);
             const page = url.searchParams.get('page');
             if (page) {
-                performSearch(parseInt(page, 10));
+                performSearch(page);
             }
         }
     }
 
     /**
-     * Callback function for successful create/update/single toggle status.
-     * Re-fetches current page to ensure fresh data and correct ordering/filtering.
+     * Xử lý thành công khi tạo mới, cập nhật hoặc toggle trạng thái đơn lẻ.
+     * @param {object} product - Đối tượng sản phẩm trả về từ server.
      */
-    function handleUpdateOrToggleSuccess() {
-        // Attempt to get the current page from the pagination links
-        let currentPage = 1;
-        if (paginationLinksContainer) {
-            const activePageLink = paginationLinksContainer.querySelector('.page-item.active .page-link');
-            if (activePageLink) {
-                currentPage = parseInt(activePageLink.textContent, 10);
-            }
-        }
-        performSearch(currentPage);
+    function handleUpdateOrToggleSuccess(product) {
+        performSearch(getCurrentPage());
     }
 
     /**
-     * Callback for single delete/restore/force delete success.
-     * @param {Array<number>} affectedIds - Array of IDs that were affected.
+     * Xử lý thành công khi xóa sản phẩm (mềm, vĩnh viễn, khôi phục)
+     * @param {Array<number>} affectedIds - Mảng ID của các sản phẩm bị ảnh hưởng.
+     * @param {string} actionType - Loại hành động đã thực hiện ('delete', 'forceDelete', 'restore').
      */
-    function handleDeleteRestoreOrForceDeleteSuccess(affectedIds) {
-        if (!Array.isArray(affectedIds)) return;
+    function handleActionSuccess(affectedIds, actionType) {
+        if (!Array.isArray(affectedIds)) {
+            console.error("Affected IDs must be an array. Received:", affectedIds);
+            return;
+        }
 
         affectedIds.forEach(id => {
-            const row = document.getElementById(`product-row-${id}`);
-            if (row) {
-                row.remove();
-            }
             selectedProductIds.delete(String(id));
         });
 
-        // If all items on the current page are removed, go to the previous page
-        const currentRows = productTableBody.querySelectorAll('tr:not(#no-products-row)');
-        if (currentRows.length === 0) {
-            let currentPage = 1;
-            if (paginationLinksContainer) {
-                const activePageLink = paginationLinksContainer.querySelector('.page-item.active .page-link');
-                if (activePageLink) {
-                    currentPage = parseInt(activePageLink.textContent, 10);
-                }
-            }
-            const targetPage = currentPage > 1 ? currentPage - 1 : 1;
-            performSearch(targetPage);
+        // Nếu hành động là khôi phục, chúng ta muốn chuyển về bộ lọc 'all' hoặc 'active_only'
+        if (actionType === 'restore') {
+            productFilterSelect.value = 'all'; // Đặt bộ lọc về 'Tất cả trạng thái'
+            performSearch(1); // Tải lại trang 1 với bộ lọc mới để hiển thị sản phẩm đã khôi phục
         } else {
-            // Re-index STT if rows are removed from the current page
-            const currentPageNum = parseInt(paginationLinksContainer?.querySelector('.page-item.active .page-link')?.textContent || '1', 10);
-            const itemsPerPage = 10; // Assuming 10 items per page based on controller pagination
-            const startIndex = (currentPageNum - 1) * itemsPerPage; // 0-indexed start
-            Array.from(productTableBody.children).forEach((row, index) => {
-                const sTTCell = row.querySelector('th[scope="row"]');
-                if (sTTCell) sTTCell.textContent = startIndex + index + 1;
-            });
-            updateBulkActionButtons();
-            updateCheckboxStates(); // Ensure selectAllProducts is updated
+            const currentRowsInDom = productTableBody.querySelectorAll('tr:not(#no-products-row)').length;
+            const totalRowsAfterRemoval = currentRowsInDom - affectedIds.length;
+
+            if (totalRowsAfterRemoval <= 0 && getCurrentPage() > 1) {
+                performSearch(getCurrentPage() - 1);
+            } else {
+                performSearch(getCurrentPage());
+            }
         }
-        clearSelectedProducts(); // Clear all selections after action
+        clearSelectedProducts();
     }
 
-    // --- GẮN KẾT SỰ KIỆN & THIẾT LẬP FORM ---
 
     /**
-     * Thiết lập các event listener cho các nút hành động đơn lẻ và xử lý ảnh.
+     * Thiết lập các event listener
      */
     const setupEventListeners = () => {
         productTableBody.addEventListener('click', async function (event) {
@@ -760,55 +721,52 @@ function initializeProductsPage() {
 
             const id = button.dataset.id;
             const name = button.dataset.name;
-            const deleteUrl = button.dataset.deleteUrl;
 
-            if (button.classList.contains('btn-view')) {
-                await handleShowViewModal(id);
-            } else if (button.classList.contains('btn-edit')) {
-                await handleShowUpdateModal(id);
-            } else if (button.classList.contains('btn-delete')) {
-                handleShowDeleteModal(id, name);
-            } else if (button.classList.contains('toggle-status-product-btn')) {
-                await handleToggleStatus(button);
-            } else if (button.classList.contains('btn-restore-product')) {
-                handleShowRestoreModal(id, name);
-            } else if (button.classList.contains('btn-force-delete-product')) {
-                handleShowForceDeleteModal(deleteUrl, name);
-            }
+            // Data attributes from _product_table_rows.blade.php
+            const deleteUrl = button.dataset.deleteUrl;
+            const forceDeleteUrl = button.dataset.forceDeleteUrl;
+            const restoreUrl = button.dataset.restoreUrl;
+            const statusUrl = button.dataset.statusUrl;
+
+
+            if (button.classList.contains('btn-view')) await handleShowViewModal(id);
+            else if (button.classList.contains('btn-edit')) await handleShowUpdateModal(id);
+            else if (button.classList.contains('btn-delete-product')) handleShowDeleteModal(id, name, false);
+            else if (button.classList.contains('toggle-status-product-btn')) await handleToggleStatus(button);
+            else if (button.classList.contains('btn-restore-product')) handleShowRestoreModal(id, name, false);
+            else if (button.classList.contains('btn-force-delete-product')) handleShowForceDeleteModal(id, name, false);
         });
 
-        // Event listener for removing image previews (both new and existing)
         document.body.addEventListener('click', function (event) {
             if (event.target.classList.contains('img-preview-remove')) {
                 event.preventDefault();
-                const wrapper = event.target.closest('.img-preview-wrapper');
-                if (wrapper && wrapper.classList.contains('existing-preview')) {
-                    // For existing images, mark the hidden input for deletion
-                    wrapper.querySelector('input[type="hidden"]').name = 'deleted_existing_images[]';
-                    wrapper.style.display = 'none'; // Hide instead of remove
-                } else if (wrapper) {
-                    wrapper.remove(); // For new images, just remove
-                }
+                event.target.closest('.img-preview-wrapper').remove();
             }
         });
 
-        // "Edit" button inside "View" modal
         document.getElementById('editProductFromViewBtn').addEventListener('click', function (event) {
             const productId = event.currentTarget.dataset.productId;
             if (productId) {
                 viewProductModal.hide();
-                setTimeout(() => handleShowUpdateModal(productId), 200); // Wait for view modal to close
+                setTimeout(() => handleShowUpdateModal(productId), 200);
             }
         });
 
-        // Initialize selectpickers on modal shown (for dynamic content)
-        // This is primarily for `createProductModal` because `updateProductModal`
-        // calls `initializeSelectPickers()` directly within `handleShowUpdateModal`.
         $(createProductModalEl).on('shown.bs.modal', () => {
             $('#createProductForm .selectpicker').selectpicker('refresh');
         });
 
-        // Search, Filter, Sort event listeners
+        $(updateProductModalEl).on('shown.bs.modal', () => { // Corrected element reference
+            const categoryId = updateProductModalEl.dataset.categoryId;
+            const brandId = updateProductModalEl.dataset.brandId;
+            const vehicleModelIds = JSON.parse(updateProductModalEl.dataset.vehicleModelIds || '[]');
+            $('#productCategoryUpdate').selectpicker('val', categoryId);
+            $('#productBrandUpdate').selectpicker('val', brandId);
+            $('#productVehicleModelsUpdate').selectpicker('val', vehicleModelIds);
+            $('#updateProductForm .selectpicker').selectpicker('refresh');
+        });
+
+        // Search, Filter, Sort Event Listeners
         productSearchBtn.addEventListener('click', () => performSearch(1));
         productSearchInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
@@ -819,80 +777,80 @@ function initializeProductsPage() {
         productFilterSelect.addEventListener('change', () => performSearch(1));
         productSortSelect.addEventListener('change', () => performSearch(1));
 
-        // Event listeners for tab changes (All Products, Trashed)
-        allProductsTab.addEventListener('click', function (e) {
-            e.preventDefault();
-            const currentUrl = new URL(window.location.href);
-            currentUrl.searchParams.delete('status'); // Remove status param for 'all'
-            window.history.pushState({}, '', currentUrl.toString()); // Update URL without reloading
-            productFilterSelect.value = 'all'; // Set filter to 'all'
-            performSearch(1);
-            checkAndToggleBulkActionVisibility();
+        // Bulk Action Button Listeners
+        bulkToggleStatusBtn.addEventListener('click', handleShowBulkToggleStatusModal);
+        bulkRestoreBtn.addEventListener('click', () => {
+            handleShowRestoreModal(Array.from(selectedProductIds), `${selectedProductIds.size} sản phẩm đã chọn`, true);
         });
-
-        trashedProductsTab.addEventListener('click', function (e) {
-            e.preventDefault();
-            const currentUrl = new URL(window.location.href);
-            currentUrl.searchParams.set('status', 'trashed'); // Add status=trashed param
-            window.history.pushState({}, '', currentUrl.toString()); // Update URL without reloading
-            productFilterSelect.value = 'trashed'; // Set filter to 'trashed'
-            performSearch(1);
-            checkAndToggleBulkActionVisibility();
+        bulkDeleteBtn.addEventListener('click', () => {
+            handleShowDeleteModal(Array.from(selectedProductIds), `${selectedProductIds.size} sản phẩm đã chọn`, true);
+        });
+        bulkForceDeleteBtn.addEventListener('click', () => {
+            handleShowForceDeleteModal(Array.from(selectedProductIds), `${selectedProductIds.size} sản phẩm đã chọn`, true);
         });
     };
 
     /**
      * Thiết lập xử lý AJAX cho một form cụ thể.
      * @param {string} formId - ID của form.
-     * @param {object} modalInstance - Bootstrap Modal instance.
+     * @param {Object} modalInstance - Instance của Bootstrap Modal chứa form.
      * @param {function} successCallback - Hàm callback khi form gửi thành công.
-     * @param {string} method - Phương thức HTTP ('POST', 'PUT', 'DELETE').
      */
-    function setupAjaxForm(formId, modalInstance, successCallback, method = 'POST') {
+    function setupAjaxForm(formId, modalInstance, successCallback) {
         const form = document.getElementById(formId);
-        if (!form) return;
+        if (!form) {
+            console.error(`Không thể thiết lập AJAX form: Form ID "${formId}" không tồn tại.`);
+            return;
+        }
 
         form.addEventListener('submit', async function (event) {
             event.preventDefault();
             showAppLoader();
             clearValidationErrors(form);
 
-            const formData = new FormData(form);
-
-            // Add _method for DELETE requests only, as per provided web.php routes
-            if (method === 'DELETE') {
-                formData.append('_method', 'DELETE');
+            const submitButton = form.querySelector('button[type="submit"]');
+            if (submitButton) {
+                submitButton.disabled = true;
+                if (formId.includes('ProductsForm')) {
+                     submitButton.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Đang xử lý...`;
+                } else {
+                    submitButton.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> ${submitButton.textContent}...`;
+                }
             }
-            // For 'update' which is now POST /{product}, no _method is needed.
-            // For 'toggleStatus' and 'restore', which are POST /{product}/action, no _method is needed.
+
+            let requestBody = new FormData(this); // LUÔN LUÔN SỬ DỤNG FORM DATA cho tất cả các form
+            let requestHeaders = {
+                'X-CSRF-TOKEN': csrfToken,
+                'Accept': 'application/json'
+            };
+
+            // Handle _method spoofing for PUT/DELETE
+            if (formId === 'updateProductForm') {
+                requestBody.append('_method', 'PUT');
+            } else if (form.dataset.isBulk === 'false' && (formId === 'bulkDeleteProductsForm' || formId === 'bulkForceDeleteProductsForm')) {
+                requestBody.append('_method', 'DELETE');
+            }
 
             // Special handling for price field: parse from VNĐ format to raw number
             const priceInput = form.querySelector('[name="price"]');
-            if (priceInput && formData.has('price')) {
-                formData.set('price', parseFormattedCurrency(priceInput.value));
+            if (priceInput && requestBody.has('price')) {
+                requestBody.set('price', parseFormattedCurrency(requestBody.get('price')));
             }
 
-            // Handle bulk action IDs
-            const isBulkDeleteForm = formId === 'bulkDeleteProductForm';
-            const isBulkForceDeleteForm = formId === 'bulkForceDeleteProductForm';
-            const isBulkRestoreForm = formId === 'bulkRestoreProductForm';
-            const isBulkToggleStatusForm = formId === 'bulkToggleStatusProductForm';
-
-            if (isBulkDeleteForm || isBulkForceDeleteForm || isBulkRestoreForm || isBulkToggleStatusForm) {
-                formData.append('ids', JSON.stringify(Array.from(selectedProductIds)));
+            // Gắn các ID đã chọn cho hành động hàng loạt
+            const isBulkActionForm = formId === 'bulkDeleteProductsForm' || formId === 'bulkForceDeleteProductsForm' || formId === 'bulkRestoreProductsForm' || formId === 'bulkToggleStatusProductsForm';
+            if (isBulkActionForm) {
+                // Thêm từng ID dưới dạng 'ids[]' để Laravel nhận diện là một mảng
+                Array.from(selectedProductIds).forEach(id => {
+                    requestBody.append('ids[]', id);
+                });
             }
 
             try {
-                // All form submissions will be sent as POST requests, Laravel's routing will handle it.
-                // For DELETE routes, Laravel checks for the _method field.
-                const response = await fetch(form.action, {
-                    method: 'POST', // Always POST for form submissions with FormData
-                    headers: {
-                        'X-CSRF-TOKEN': csrfToken,
-                        'Accept': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest' // Important for Laravel to detect AJAX
-                    },
-                    body: formData
+                const response = await fetch(this.action, {
+                    method: 'POST', // Fetch API vẫn dùng POST, Laravel xử lý _method
+                    headers: requestHeaders,
+                    body: requestBody // FormData tự động đặt Content-Type là multipart/form-data
                 });
 
                 const result = await response.json();
@@ -900,15 +858,40 @@ function initializeProductsPage() {
                 if (response.ok) { // Status code 2xx
                     showToast(result.message, 'success');
                     modalInstance.hide();
-                    if (result.deleted_ids || result.restored_ids) { // For delete/restore (single or bulk)
-                        successCallback(result.deleted_ids || result.restored_ids);
-                    } else if (result.products || result.product) { // For update/create/bulk toggle status
-                        // If it's a single product update/create, result.product will be present. Wrap it in an array.
-                        // If it's bulk toggle status, result.products will be present.
-                        successCallback(result.products || [result.product]);
-                    } else {
-                        successCallback(); // Generic refresh for other cases
+
+                    let affectedIdsToPass = [];
+                    let actionType = '';
+
+                    if (formId === 'bulkDeleteProductsForm') {
+                        affectedIdsToPass = result.deleted_ids || [];
+                        actionType = 'delete';
+                    } else if (formId === 'bulkForceDeleteProductsForm') {
+                        affectedIdsToPass = result.force_deleted_ids || [];
+                        actionType = 'forceDelete';
+                    } else if (formId === 'bulkRestoreProductsForm') {
+                        affectedIdsToPass = result.restored_ids || [];
+                        actionType = 'restore';
+                    } else if (formId === 'bulkToggleStatusProductsForm') {
+                        // For bulk toggle status, we just need to re-perform search
+                        // and clear selected products, no specific affectedIds handling needed here.
+                        performSearch(getCurrentPage());
+                        clearSelectedProducts();
+                        hideAppLoader(); // Hide loader here as no further action is needed
+                        return; // Exit function early
                     }
+
+                    // For single delete/force-delete/restore, get ID from dataset
+                    if (form.dataset.isBulk === 'false' && affectedIdsToPass.length === 0 && form.dataset.productIds) {
+                         try {
+                            affectedIdsToPass = JSON.parse(form.dataset.productIds);
+                        } catch (e) {
+                            console.error("Error parsing single product ID from dataset:", e);
+                            affectedIdsToPass = [];
+                        }
+                    }
+
+                    handleActionSuccess(affectedIdsToPass, actionType);
+
                 } else if (response.status === 422) { // Validation errors
                     displayValidationErrors(form, result.errors);
                     showToast(result.message || 'Vui lòng kiểm tra lại thông tin nhập liệu.', 'error');
@@ -921,50 +904,51 @@ function initializeProductsPage() {
                 showToast('Không thể kết nối đến server. Vui lòng thử lại.', 'error');
             } finally {
                 hideAppLoader();
+                if (submitButton) {
+                    submitButton.disabled = false;
+                    if (formId === 'createProductForm') submitButton.innerHTML = 'Lưu Sản phẩm';
+                    else if (formId === 'updateProductForm') submitButton.innerHTML = 'Lưu thay đổi';
+                    else if (formId === 'bulkDeleteProductsForm') submitButton.innerHTML = 'Xác nhận Xóa mềm';
+                    else if (formId === 'bulkForceDeleteProductsForm') submitButton.innerHTML = 'Xóa Vĩnh viễn';
+                    else if (formId === 'bulkRestoreProductsForm') submitButton.innerHTML = 'Xác nhận Khôi phục';
+                    else if (formId === 'bulkToggleStatusProductsForm') submitButton.innerHTML = 'Xác nhận';
+                }
             }
         });
     }
 
     // --- CHECKBOX & BULK ACTIONS ---
-
+    /**
+     * Cập nhật trạng thái các nút hành động hàng loạt (disabled/enabled) và số lượng đã chọn.
+     */
     function updateBulkActionButtons() {
         const count = selectedProductIds.size;
-        // Update counts
-        if (selectedCountSoftDeleteSpan) selectedCountSoftDeleteSpan.textContent = count;
-        if (selectedCountToggleSpan) selectedCountToggleSpan.textContent = count;
-        if (selectedCountRestoreSpan) selectedCountRestoreSpan.textContent = count;
-        if (selectedCountForceDeleteSpan) selectedCountForceDeleteSpan.textContent = count;
-
-        // Enable/disable buttons based on count
-        const disableButtons = count === 0;
-
-        if (bulkSoftDeleteBtn) bulkSoftDeleteBtn.disabled = disableButtons;
-        if (bulkToggleStatusBtn) bulkToggleStatusBtn.disabled = disableButtons;
-        if (bulkRestoreBtn) bulkRestoreBtn.disabled = disableButtons;
-        if (bulkForceDeleteBtn) bulkForceDeleteBtn.disabled = disableButtons;
+        bulkActionsDropdownBtn.disabled = count === 0;
+        selectedCountBulkSpan.textContent = count;
+        selectedProductsCountToggleModalSpan.textContent = count;
     }
 
+    /**
+     * Cập nhật trạng thái của từng checkbox (checked/unchecked) dựa trên `selectedProductIds`.
+     */
     function updateCheckboxStates() {
         const currentCheckboxes = document.querySelectorAll('.product-checkbox');
-        let allChecked = true;
         if (currentCheckboxes.length === 0) {
-            allChecked = false;
-        } else {
-            currentCheckboxes.forEach(checkbox => {
-                if (selectedProductIds.has(checkbox.value)) {
-                    checkbox.checked = true;
-                } else {
-                    checkbox.checked = false;
-                    allChecked = false;
-                }
-            });
+            if (selectAllProductsCheckbox) selectAllProductsCheckbox.checked = false;
+            return;
         }
-        if (selectAllProductsCheckbox) {
-            selectAllProductsCheckbox.checked = allChecked;
-        }
+        let allVisibleChecked = true;
+        currentCheckboxes.forEach(checkbox => {
+            checkbox.checked = selectedProductIds.has(checkbox.value);
+            if (!checkbox.checked) allVisibleChecked = false;
+        });
+        if (selectAllProductsCheckbox) selectAllProductsCheckbox.checked = allVisibleChecked;
         updateBulkActionButtons();
     }
 
+    /**
+     * Xóa tất cả các lựa chọn checkbox và reset trạng thái.
+     */
     function clearSelectedProducts() {
         selectedProductIds.clear();
         document.querySelectorAll('.product-checkbox').forEach(cb => cb.checked = false);
@@ -972,22 +956,20 @@ function initializeProductsPage() {
         updateBulkActionButtons();
     }
 
-    // Event listener for "select all" checkbox
-    if (selectAllProductsCheckbox) {
-        selectAllProductsCheckbox.addEventListener('change', function () {
-            document.querySelectorAll('.product-checkbox').forEach(checkbox => {
-                checkbox.checked = this.checked;
-                if (this.checked) {
-                    selectedProductIds.add(checkbox.value);
-                } else {
-                    selectedProductIds.delete(checkbox.value);
-                }
-            });
-            updateBulkActionButtons();
+    // Lắng nghe sự kiện cho checkbox "Chọn tất cả"
+    selectAllProductsCheckbox.addEventListener('change', function () {
+        document.querySelectorAll('.product-checkbox').forEach(checkbox => {
+            checkbox.checked = this.checked;
+            if (this.checked) {
+                selectedProductIds.add(checkbox.value);
+            } else {
+                selectedProductIds.delete(checkbox.value);
+            }
         });
-    }
+        updateBulkActionButtons();
+    });
 
-    // Event listener for individual product checkboxes (using delegation)
+    // Lắng nghe sự kiện cho từng checkbox sản phẩm (sử dụng delegation trên tableBody)
     productTableBody.addEventListener('change', function (event) {
         const checkbox = event.target.closest('.product-checkbox');
         if (checkbox) {
@@ -997,7 +979,6 @@ function initializeProductsPage() {
                 selectedProductIds.delete(checkbox.value);
             }
             updateBulkActionButtons();
-            // Update "select all" checkbox state
             const allIndividualCheckboxes = document.querySelectorAll('.product-checkbox');
             const checkedIndividualCheckboxes = document.querySelectorAll('.product-checkbox:checked');
             if (selectAllProductsCheckbox) {
@@ -1006,97 +987,21 @@ function initializeProductsPage() {
         }
     });
 
-    // Bulk Delete (soft)
-    if (bulkSoftDeleteBtn) {
-        bulkSoftDeleteBtn.addEventListener('click', function () {
-            const count = selectedProductIds.size;
-            document.getElementById('bulkDeleteCount').textContent = count;
-            bulkDeleteProductModal.show();
-        });
-    }
-
-    // Bulk Toggle Status
-    if (bulkToggleStatusBtn) {
-        bulkToggleStatusBtn.addEventListener('click', function () {
-            const count = selectedProductIds.size;
-            document.getElementById('bulkToggleStatusCount').textContent = count;
-            bulkToggleStatusProductModal.show();
-        });
-    }
-
-    // Bulk Restore
-    if (bulkRestoreBtn) {
-        bulkRestoreBtn.addEventListener('click', function () {
-            const count = selectedProductIds.size;
-            document.getElementById('bulkRestoreCount').textContent = count;
-            // Form action is not hardcoded in blade for bulkRestore, set it here explicitly
-            document.getElementById('bulkRestoreProductForm').action = '/admin/product-management/products/bulk-restore';
-            bulkRestoreProductModal.show();
-        });
-    }
-
-    // Bulk Force Delete
-    if (bulkForceDeleteBtn) {
-        bulkForceDeleteBtn.addEventListener('click', function () {
-            const count = selectedProductIds.size;
-            document.getElementById('bulkForceDeleteCount').textContent = count;
-            bulkForceDeleteProductModal.show();
-        });
-    }
-
-    function checkAndToggleBulkActionVisibility() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const status = urlParams.get('status');
-
-        if (status === 'trashed') {
-            if (bulkActionsNormalDiv) bulkActionsNormalDiv.classList.add('d-none');
-            if (bulkActionsTrashedDiv) bulkActionsTrashedDiv.classList.remove('d-none');
-            if (trashedProductsTab) {
-                trashedProductsTab.classList.add('btn-dark');
-                trashedProductsTab.classList.remove('btn-outline-dark');
-            }
-            if (allProductsTab) {
-                allProductsTab.classList.remove('btn-dark');
-                allProductsTab.classList.add('btn-outline-dark');
-            }
-        } else {
-            if (bulkActionsNormalDiv) bulkActionsNormalDiv.classList.remove('d-none');
-            if (bulkActionsTrashedDiv) bulkActionsTrashedDiv.classList.add('d-none');
-            if (trashedProductsTab) {
-                trashedProductsTab.classList.remove('btn-dark');
-                trashedProductsTab.classList.add('btn-outline-dark');
-            }
-            if (allProductsTab) {
-                allProductsTab.classList.add('btn-dark');
-                allProductsTab.classList.remove('btn-outline-dark');
-            }
-        }
-        clearSelectedProducts(); // Clear selections when switching tabs
-    }
-
-
     // --- CHẠY CÁC HÀM KHỞI TẠO ---
-    initializeSelectPickers(); // Initialize on page load for all selectpickers
+    initializeSelectPickers();
     setupModalResets();
     setupEventListeners();
 
-    // Setup AJAX for all forms
-    // IMPORTANT: 'method' parameter in setupAjaxForm indicates the Laravel route's HTTP method.
-    // Your web.php currently shows `Route::post('/{product}', 'update')`.
-    // For DELETE routes, Laravel checks for the _method field.
-
-    setupAjaxForm('createProductForm', createProductModal, handleUpdateOrToggleSuccess, 'POST'); //
-    setupAjaxForm('updateProductForm', updateProductModal, handleUpdateOrToggleSuccess, 'POST'); // Changed to POST to match web.php route
-    setupAjaxForm('deleteProductForm', deleteProductModal, handleDeleteRestoreOrForceDeleteSuccess, 'DELETE'); //
-    setupAjaxForm('forceDeleteProductForm', forceDeleteProductModal, handleDeleteRestoreOrForceDeleteSuccess, 'DELETE'); //
-    setupAjaxForm('restoreProductForm', restoreProductModal, handleDeleteRestoreOrForceDeleteSuccess, 'POST'); //
-    setupAjaxForm('bulkDeleteProductForm', bulkDeleteProductModal, handleDeleteRestoreOrForceDeleteSuccess, 'POST'); //
-    setupAjaxForm('bulkToggleStatusProductForm', bulkToggleStatusProductModal, handleUpdateOrToggleSuccess, 'POST'); //
-    setupAjaxForm('bulkRestoreProductForm', bulkRestoreProductModal, handleDeleteRestoreOrForceDeleteSuccess, 'POST'); //
-    setupAjaxForm('bulkForceDeleteProductForm', bulkForceDeleteProductModal, handleDeleteRestoreOrForceDeleteSuccess, 'POST'); //
+    // Thiết lập AJAX cho các form
+    setupAjaxForm('createProductForm', createProductModal, handleUpdateOrToggleSuccess);
+    setupAjaxForm('updateProductForm', updateProductModal, handleUpdateOrToggleSuccess);
+    setupAjaxForm('bulkDeleteProductsForm', bulkDeleteProductsModal, handleActionSuccess);
+    setupAjaxForm('bulkForceDeleteProductsForm', bulkForceDeleteProductsModal, handleActionSuccess);
+    setupAjaxForm('bulkRestoreProductsForm', bulkRestoreProductsModal, handleActionSuccess);
+    setupAjaxForm('bulkToggleStatusProductsForm', bulkToggleStatusProductsModal, handleActionSuccess);
 
 
-    // Apply currency formatting to price inputs
+    // Áp dụng định dạng tiền tệ cho input price
     const productPriceCreateInput = document.getElementById('productPriceCreate');
     const productPriceUpdateInput = document.getElementById('productPriceUpdate');
 
@@ -1109,24 +1014,9 @@ function initializeProductsPage() {
         formatCurrencyInput(productPriceUpdateInput);
     }
 
-    // Initial load/search with current filter/sort values (if page reloads with them)
-    // and set up bulk action button visibility based on URL status param
-    const currentStatusInUrl = new URLSearchParams(window.location.search).get('status');
-    if (productFilterSelect) { // Ensure productFilterSelect exists before accessing its value
-        if (currentStatusInUrl === 'trashed') {
-            productFilterSelect.value = 'trashed';
-        } else {
-            productFilterSelect.value = 'all'; // Default
-        }
-    }
-    checkAndToggleBulkActionVisibility();
-    performSearch(); // Initial table load
+    // Perform initial search to load data
+    performSearch(1);
+
 
     console.log("JS cho trang Sản phẩm đã được khởi tạo thành công với đầy đủ tính năng.");
 }
-
-// Call the initialization function when the DOM is ready.
-// This ensures that all HTML elements are available before the script tries to access them.
-// Ensure this is called only once, perhaps within a larger app initialization script.
-// For demonstration, directly call it if not part of a larger framework:
-// document.addEventListener('DOMContentLoaded', initializeProductsPage); // If not already called by admin_layout.js

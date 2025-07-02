@@ -33,7 +33,8 @@
                                 <label for="productCategoryUpdate" class="form-label">Danh mục <span
                                         class="text-danger">*</span></label>
                                 <select name="category_id" class="selectpicker form-control" id="productCategoryUpdate"
-                                    data-live-search="true" title="Chọn danh mục..." required>
+                                    data-live-search="true" title="Chọn danh mục..." required
+                                    data-size="10" data-dropup-auto="false"> {{-- THÊM THUỘC TÍNH NÀY --}}
                                     @foreach ($categories as $category)
                                         <option value="{{ $category->id }}">{{ $category->name }}</option>
                                     @endforeach
@@ -44,7 +45,8 @@
                                 <label for="productBrandUpdate" class="form-label">Thương hiệu <span
                                         class="text-danger">*</span></label>
                                 <select name="brand_id" class="selectpicker form-control" id="productBrandUpdate"
-                                    data-live-search="true" title="Chọn thương hiệu..." required>
+                                    data-live-search="true" title="Chọn thương hiệu..." required
+                                    data-size="10" data-dropup-auto="false"> {{-- THÊM THUỘC TÍNH NÀY --}}
                                     @foreach ($brands as $brand)
                                         <option value="{{ $brand->id }}">{{ $brand->name }}</option>
                                     @endforeach
@@ -55,7 +57,7 @@
                                 <label for="productPriceUpdate" class="form-label">Giá bán (VNĐ) <span
                                         class="text-danger">*</span></label>
                                 <input type="text" name="price" class="form-control" id="productPriceUpdate" min="0"
-                                    step="0.01" required data-currency-input="true">
+                                    step="0.01" required>
                                 <div class="invalid-feedback"></div>
                             </div>
                             <div class="mb-3">
@@ -85,9 +87,10 @@
                                     xe:</label>
                                 <select name="vehicle_model_ids[]" class="selectpicker form-control"
                                     id="productVehicleModelsUpdate" multiple data-live-search="true"
-                                    title="Chọn các dòng xe tương thích">
+                                    title="Chọn các dòng xe tương thích"
+                                    data-size="10" data-dropup-auto="false"> {{-- THÊM THUỘC TÍNH NÀY --}}
                                     @foreach ($vehicleBrands as $vehicleBrand)
-                                        @if($vehicleBrand->vehicleModels->count() > 0)
+                                        @if ($vehicleBrand->vehicleModels->isNotEmpty())
                                             <optgroup label="{{ $vehicleBrand->name }}">
                                                 @foreach ($vehicleBrand->vehicleModels as $model)
                                                     <option value="{{ $model->id }}">{{ $model->name }} {{ $model->year }}
@@ -111,7 +114,7 @@
                             </div>
                             <div class="mb-3">
                                 <label for="productSpecificationsUpdate" class="form-label">Thông số kỹ thuật
-                                    (khác):</label>
+                                    (Ví dụ: "Loại: Tên loại"):</label>
                                 <textarea name="specifications" class="form-control" id="productSpecificationsUpdate"
                                     rows="4"></textarea>
                                 <div class="invalid-feedback"></div>

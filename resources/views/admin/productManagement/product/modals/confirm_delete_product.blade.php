@@ -1,9 +1,7 @@
-{{-- File: resources/views/admin/productManagement/product/modals/confirm_delete_product.blade.php --}}
 <div class="modal fade" id="confirmDeleteModal" tabindex="-1">
     <div class="modal-dialog">
         <form id="deleteProductForm" method="POST">
             @csrf
-            @method('DELETE')
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title"><i class="bi bi-trash text-danger me-2"></i>Xác nhận Xóa</h5>
