@@ -432,51 +432,48 @@ class OrderController extends Controller
         $order->shipping_address_line = $validatedData['guest_address_line'];
     }
 
-    private function calculateOrderTotals(array $items, ?int $deliveryServiceId, ?int $promotionId): array
-    {
-        $subtotal = 0;
-        $productIds = array_column($items, 'product_id');
-        // Chỉ tìm sản phẩm nếu có productIds
-        $products = !empty($productIds) ? Product::find($productIds)->keyBy('id') : collect();
+   private function calculateOrderTotals(array $items, ?int $deliveryServiceId, ?int $promotionId): array
+{
+    $subtotal = 0;
+    $productIds = array_column($items, 'product_id');
+    $products = !empty($productIds) ? Product::find($productIds)->keyBy('id') : collect();
 
-
-        foreach ($items as $item) {
-            $product = $products->get($item['product_id']);
-            if ($product) {
-                $subtotal += $product->price * $item['quantity'];
-            }
+    foreach ($items as $item) {
+        $product = $products->get($item['product_id']);
+        if ($product) {
+            $subtotal += $product->price * $item['quantity'];
         }
-
-        $shippingFee = 0; // Đặt phí vận chuyển cố định là 0 cho logic lưu đơn hàng
-        if ($deliveryServiceId) {
-            // Mặc dù có deliveryServiceId, chúng ta vẫn đặt phí là 0 theo yêu cầu
-            // $deliveryService = DeliveryService::find($deliveryServiceId);
-            // if ($deliveryService) {
-            //     $shippingFee = $deliveryService->shipping_fee;
-            // }
-        }
-
-        $discountAmount = 0;
-        $validPromotionId = null;
-        if ($promotionId) {
-            $promotion = Promotion::find($promotionId);
-            if ($promotion && $promotion->isEffective()) {
-                $discountAmount = $promotion->calculateDiscount($subtotal);
-                $validPromotionId = $promotion->id;
-            }
-        }
-
-        $grandTotal = $subtotal + $shippingFee - $discountAmount;
-
-        return [
-            'subtotal' => $subtotal,
-            'shipping_fee' => $shippingFee,
-            'discount_amount' => $discountAmount,
-            'grand_total' => max(0, $grandTotal), // Đảm bảo tổng cộng không âm
-            'promotion_id' => $validPromotionId,
-            'delivery_service_id' => $deliveryServiceId, // Trả về delivery_service_id để lưu vào order
-        ];
     }
+
+    $shippingFee = 0; // Keep as 0 as per existing requirement
+
+    $discountAmount = 0;
+    $validPromotionId = null; // Initialize to null
+
+    if ($promotionId) {
+        $promotion = Promotion::find($promotionId);
+        if ($promotion) {
+            // If a promotion is found by ID, always associate its ID.
+            // The actual discount application still depends on isEffective().
+            $validPromotionId = $promotion->id;
+
+            if ($promotion->isEffective()) { // Still check effectiveness for applying discount
+                $discountAmount = $promotion->calculateDiscount($subtotal);
+            }
+        }
+    }
+
+    $grandTotal = $subtotal + $shippingFee - $discountAmount;
+
+    return [
+        'subtotal' => $subtotal,
+        'shipping_fee' => $shippingFee,
+        'discount_amount' => $discountAmount,
+        'grand_total' => max(0, $grandTotal),
+        'promotion_id' => $validPromotionId, // Now it will correctly pass the ID if found
+        'delivery_service_id' => $deliveryServiceId,
+    ];
+}
 
     private function syncOrderItems(Order $order, array $items): void
     {
