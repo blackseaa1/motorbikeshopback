@@ -19,7 +19,7 @@
 
         <div class="col-md-10 ">
             <div class="row g-2 justify-content-between align-items-end">
-                <div class="col-8 col-lg-5">
+                <div class="col-8 col-lg-4">
                     <label for="product_id_{{ $rowIndex }}" class="form-label mb-1 visually-hidden">Sản phẩm</label>
                     {{-- Thẻ select để chọn sản phẩm --}}
                     <select class="form-control selectpicker product-select" id="product_id_{{ $rowIndex }}"
@@ -31,7 +31,7 @@
                     {{-- Feedback cho lỗi validation từ backend (sẽ được JS xử lý) --}}
                 </div>
 
-                <div class="col-10 col-lg-2">
+                <div class="col-10 col-lg-3">
                     <label for="quantity_{{ $rowIndex }}" class="form-label mb-1">Số lượng</label>
                     <div class="input-group input-group-sm"> {{-- Thêm input-group-sm để nhỏ gọn hơn --}}
                         {{-- Nút giảm số lượng --}}

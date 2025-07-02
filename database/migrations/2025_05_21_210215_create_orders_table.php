@@ -23,7 +23,6 @@ return new class extends Migration
             $table->foreignId('province_id')->nullable()->constrained()->cascadeOnUpdate()->nullOnDelete();
             $table->foreignId('district_id')->nullable()->constrained()->cascadeOnUpdate()->nullOnDelete();
             $table->foreignId('ward_id')->nullable()->constrained()->cascadeOnUpdate()->nullOnDelete();
-            $table->string('payment_method', 100)->nullable();
             $table->foreignId('delivery_service_id')->nullable()->constrained()->cascadeOnUpdate()->nullOnDelete();
             $table->foreignId('created_by_admin_id')->nullable()->constrained('admins')->cascadeOnUpdate()->nullOnDelete();
             $table->timestamps();

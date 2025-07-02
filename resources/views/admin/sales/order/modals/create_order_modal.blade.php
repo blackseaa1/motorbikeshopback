@@ -1,9 +1,11 @@
-<div class="modal fade" id="createOrderModal" tabindex="-1" aria-labelledby="createOrderModalLabel" aria-hidden="true">
+{{-- *** FIX: Thêm data-bs-backdrop="static" và data-bs-keyboard="false" để ngăn đóng modal khi chưa xác nhận *** --}}
+<div class="modal fade" id="createOrderModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="createOrderModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header bg-primary text-white">
                 <h5 class="modal-title" id="createOrderModalLabel"><i class="bi bi-plus-circle me-2"></i>Tạo Đơn Hàng
                     Mới</h5>
+                {{-- Nút đóng này sẽ được JS xử lý để hỏi xác nhận --}}
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
                     aria-label="Close"></button>
             </div>
@@ -45,72 +47,70 @@
                                             </option>
                                         @endforeach
                                     </select>
-                                    <div class="invalid-feedback" id="error-customer_id"></div>
+                                    <div class="invalid-feedback" data-field="customer_id"></div>
                                 </div>
-                                {{-- Removed existing_address_block and new_address_form as per new logic --}}
-                                {{-- Address fields will be populated in guest_customer_block --}}
                             </div>
 
                             {{-- Block cho Khách vãng lai (hoặc thông tin địa chỉ hiển thị cho khách có sẵn) --}}
-                            <div id="guest_customer_block"> {{-- No longer hidden by default, visibility managed by JS --}}
+                            <div id="guest_customer_block">
                                 <h5 class="mb-3 mt-4">2. Thông tin giao hàng</h5>
                                 <div class="row">
                                     <div class="col-md-6 mb-3" >
                                         <label for="guest_name" class="form-label">Tên người nhận <span
                                                 class="text-danger">*</span></label>
-                                        <input type="text" class="form-control" id="guest_name" name="guest_name">
-                                        <div class="invalid-feedback" id="error-guest_name"></div>
+                                        <input type="text" class="form-control" id="guest_name" name="guest_name" required>
+                                        <div class="invalid-feedback" data-field="guest_name"></div>
                                     </div>
                                     <div class="col-md-6 mb-3">
                                         <label for="guest_phone" class="form-label">Số điện thoại <span
                                                 class="text-danger">*</span></label>
-                                        <input type="text" class="form-control" id="guest_phone" name="guest_phone">
-                                        <div class="invalid-feedback" id="error-guest_phone"></div>
+                                        <input type="text" class="form-control" id="guest_phone" name="guest_phone" required>
+                                        <div class="invalid-feedback" data-field="guest_phone"></div>
                                     </div>
                                 </div>
                                 <div class="mb-3">
                                     <label for="guest_email" class="form-label">Email (Tùy chọn)</label>
                                     <input type="email" class="form-control" id="guest_email" name="guest_email">
-                                    <div class="invalid-feedback" id="error-guest_email"></div>
+                                    <div class="invalid-feedback" data-field="guest_email"></div>
                                 </div>
                                 <div class="row">
                                     <div class="col-md-4 mb-3">
                                         <label for="guest_province_id" class="form-label">Tỉnh/Thành <span
                                                 class="text-danger">*</span></label>
                                         <select class="form-select" id="guest_province_id" name="guest_province_id"
-                                            data-type="guest">
+                                            data-type="guest" required>
                                             <option value="">Chọn Tỉnh/Thành</option>
                                             @foreach($provinces as $province)
                                                 <option value="{{ $province->id }}">{{ $province->name }}</option>
                                             @endforeach
                                         </select>
-                                        <div class="invalid-feedback" id="error-guest_province_id"></div>
+                                        <div class="invalid-feedback" data-field="guest_province_id"></div>
                                     </div>
                                     <div class="col-md-4 mb-3">
                                         <label for="guest_district_id" class="form-label">Quận/Huyện <span
                                                 class="text-danger">*</span></label>
                                         <select class="form-select" id="guest_district_id" name="guest_district_id"
-                                            data-type="guest" disabled>
+                                            data-type="guest" disabled required>
                                             <option value="">Chọn Quận/Huyện</option>
                                         </select>
-                                        <div class="invalid-feedback" id="error-guest_district_id"></div>
+                                        <div class="invalid-feedback" data-field="guest_district_id"></div>
                                     </div>
                                     <div class="col-md-4 mb-3">
                                         <label for="guest_ward_id" class="form-label">Phường/Xã <span
                                                 class="text-danger">*</span></label>
                                         <select class="form-select" id="guest_ward_id" name="guest_ward_id"
-                                            data-type="guest" disabled>
+                                            data-type="guest" disabled required>
                                             <option value="">Chọn Phường/Xã</option>
                                         </select>
-                                        <div class="invalid-feedback" id="error-guest_ward_id"></div>
+                                        <div class="invalid-feedback" data-field="guest_ward_id"></div>
                                     </div>
                                 </div>
                                 <div class="mb-3">
                                     <label for="guest_address_line" class="form-label">Địa chỉ cụ thể <span
                                             class="text-danger">*</span></label>
                                     <input type="text" class="form-control" id="guest_address_line"
-                                        name="guest_address_line">
-                                    <div class="invalid-feedback" id="error-guest_address_line"></div>
+                                        name="guest_address_line" required>
+                                    <div class="invalid-feedback" data-field="guest_address_line"></div>
                                 </div>
                             </div>
 
@@ -126,7 +126,7 @@
                                     <i class="bi bi-plus-circle me-1"></i>Thêm Sản Phẩm
                                 </button>
                             </div>
-                            <div class="invalid-feedback d-block" id="error-items"></div>
+                            <div class="invalid-feedback d-block" data-field="items"></div>
                         </div>
 
                         {{-- Cột phải: Vận chuyển, thanh toán và tóm tắt --}}
@@ -137,7 +137,7 @@
                                     <label for="delivery_service_id_create" class="form-label">ĐV Vận chuyển <span
                                             class="text-danger">*</span></label>
                                     <select class="form-select" id="delivery_service_id_create"
-                                        name="delivery_service_id">
+                                        name="delivery_service_id" required>
                                         <option value="">Chọn ĐVVC</option>
                                         @foreach($deliveryServices as $service)
                                             <option value="{{ $service->id }}" data-fee="{{ $service->shipping_fee }}">
@@ -145,20 +145,20 @@
                                             </option>
                                         @endforeach
                                     </select>
-                                    <div class="invalid-feedback" id="error-delivery_service_id"></div>
+                                    <div class="invalid-feedback" data-field="delivery_service_id"></div>
                                 </div>
                                 <div class="mb-3">
                                     <label for="payment_method_id_create" class="form-label">Phương thức thanh toán
                                         <span class="text-danger">*</span></label>
-                                    <select class="form-select" id="payment_method_id_create" name="payment_method_id">
+                                    <select class="form-select" id="payment_method_id_create" name="payment_method_id" required>
                                         <option value="">Chọn phương thức</option>
                                         @foreach($paymentMethods as $method)
                                             <option value="{{ $method->id }}">{{ $method->name }}</option>
                                         @endforeach
                                     </select>
-                                    <div class="invalid-feedback" id="error-payment_method_id"></div>
+                                    <div class="invalid-feedback" data-field="payment_method_id"></div>
                                 </div>
-                                {{-- Start of NEW Promotion Code input --}}
+                                
                                 <div class="mb-3">
                                     <label for="promotion_code_create" class="form-label">Mã khuyến mãi <span class="text-muted">(Vui lòng bấm Áp dụng)</span></label>
                                     <div class="input-group">
@@ -169,26 +169,9 @@
                                         </button>
                                     </div>
                                     <div id="promo-feedback-create" class="mt-2"></div>
-                                    {{-- Hidden input to store validated promotion_id --}}
                                     <input type="hidden" id="promotion_id_for_form" name="promotion_id">
                                 </div>
-                                {{-- End of NEW Promotion Code input --}}
-
-                                {{-- The original promotion_id_create select is removed --}}
-                                {{--
-                                <div class="mb-3">
-                                    <label for="promotion_id_create" class="form-label">Mã khuyến mãi</label>
-                                    <select class="form-select" id="promotion_id_create" name="promotion_id">
-                                        <option value="">Không áp dụng</option>
-                                        @foreach($promotions as $promo)
-                                            <option value="{{ $promo->id }}" data-type="{{ $promo->discount_type }}"
-                                                data-value="{{ $promo->discount_value }}">
-                                                {{ $promo->code }} - {{ $promo->description }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                                --}}
+                               
                                 <div class="mb-3">
                                     <label for="status_create" class="form-label">Trạng thái <span
                                             class="text-danger">*</span></label>
@@ -226,6 +209,7 @@
                 </form>
             </div>
             <div class="modal-footer">
+                {{-- Nút Hủy này cũng sẽ được JS xử lý --}}
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
                 <button type="submit" form="createOrderForm" class="btn btn-primary"><i class="bi bi-save me-2"></i>Tạo
                     đơn hàng</button>

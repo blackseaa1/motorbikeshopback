@@ -24,7 +24,8 @@
                                 <div class="card h-100 shadow-sm product-card">
                                     <a href="{{ route('products.show', $product->id) }}" class="text-decoration-none text-dark">
                                         @if($product->images->isNotEmpty())
-                                            <img src="{{ $product->images->first()->url }}" class="card-img-top" alt="{{ $product->name }}">
+                                            <img  class="card-img-top" src="{{ $product->firstImage->image_full_url ?? asset('path/to/default-image.jpg') }}"
+                                                alt="{{ $product->name }}">
                                         @else
                                             <img src="https://placehold.co/400x300/EFEFEF/AAAAAA&text=No+Image" class="card-img-top" alt="No Image">
                                         @endif

@@ -127,21 +127,29 @@ class OrderController extends Controller
 
         DB::beginTransaction();
         try {
-            // No longer creating new customer_addresses from this form.
-            // All address info is stored directly on the order model.
-
             // Tính toán tổng giá trị đơn hàng
             $calculation = $this->calculateOrderTotals($validated['items'], $validated['delivery_service_id'], $validated['promotion_id'] ?? null);
+
+            // *** FIX: Thêm lớp kiểm tra cuối cùng để đảm bảo tính nhất quán của khuyến mãi ***
+            if (isset($validated['promotion_id']) && $validated['promotion_id'] !== null) {
+                // Nếu ID khuyến mãi từ form không khớp với ID được xác thực cuối cùng (có thể là null)
+                if ($validated['promotion_id'] != $calculation['promotion_id']) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Mã khuyến mãi đã chọn không còn hợp lệ hoặc đã hết lượt sử dụng. Vui lòng xóa và thử lại.'
+                    ], 409); // 409 Conflict
+                }
+            }
 
             $order = new Order();
             // Gán thông tin khách hàng và địa chỉ
             $this->assignCustomerAndAddress($order, $validated);
 
             $order->fill([
-                'payment_method_id'   => $validated['payment_method_id'], // Sử dụng payment_method_id từ request
+                'payment_method_id'   => $validated['payment_method_id'],
                 'status'              => $validated['status'],
                 'notes'               => $validated['notes'],
-                'delivery_service_id' => $calculation['delivery_service_id'], // Sử dụng ID từ tính toán để đảm bảo phí vận chuyển 0
+                'delivery_service_id' => $calculation['delivery_service_id'],
                 'promotion_id'        => $calculation['promotion_id'],
                 'subtotal'            => $calculation['subtotal'],
                 'shipping_fee'        => $calculation['shipping_fee'],
@@ -172,8 +180,8 @@ class OrderController extends Controller
      */
     public function show(Order $order): JsonResponse
     {
-        // Thêm eager loading cho paymentMethod
-        $order->load(['customer', 'deliveryService', 'province', 'district', 'ward', 'promotion', 'items.product', 'paymentMethod']);
+        // *** FIX: Tải thêm quan hệ createdByAdmin để hiển thị tên người tạo ***
+        $order->load(['customer', 'deliveryService', 'province', 'district', 'ward', 'promotion', 'items.product', 'paymentMethod', 'createdByAdmin']);
         return response()->json($order);
     }
 
@@ -182,6 +190,20 @@ class OrderController extends Controller
      */
     public function update(Request $request, Order $order): JsonResponse
     {
+        $finalStatuses = [
+            Order::STATUS_COMPLETED,
+            Order::STATUS_CANCELLED,
+            Order::STATUS_FAILED,
+            Order::STATUS_RETURNED
+        ];
+
+        if (in_array($order->status, $finalStatuses)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Không thể cập nhật trạng thái của đơn hàng đã hoàn thành hoặc đã bị hủy.'
+            ], 403);
+        }
+
         $validator = Validator::make($request->all(), [
             'status' => ['required', Rule::in(array_keys(Order::STATUSES))],
             'notes' => ['nullable', 'string', 'max:1000'],
@@ -194,6 +216,15 @@ class OrderController extends Controller
         $validated = $validator->validated();
         $oldStatus = $order->status;
         $newStatus = $validated['status'];
+
+        // *** LOGIC NGHIỆP VỤ: Kiểm tra quy trình chuyển đổi trạng thái ***
+        if (!$this->isValidStatusTransition($oldStatus, $newStatus)) {
+            return response()->json([
+                'success' => false,
+                'message' => "Không thể chuyển trạng thái từ '{$order->status_text}' sang '{$this->getStatusText($newStatus)}'."
+            ], 422); // Unprocessable Entity
+        }
+
 
         if ($oldStatus === $newStatus && $order->notes === $validated['notes']) {
             return response()->json(['success' => true, 'message' => 'Không có gì thay đổi.']);
@@ -221,18 +252,23 @@ class OrderController extends Controller
      */
     public function destroy(Request $request, Order $order): JsonResponse
     {
+        if ($order->status === Order::STATUS_COMPLETED) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Không thể xóa đơn hàng đã hoàn thành.'
+            ], 403);
+        }
+
         if (config('admin.deletion_password') && $request->input('password') !== config('admin.deletion_password')) {
             return response()->json(['success' => false, 'errors' => ['password' => ['Mật khẩu xác nhận không đúng.']]], 422);
         }
 
         DB::beginTransaction();
         try {
-            // Hoàn trả số lượng sản phẩm và lượt sử dụng khuyến mãi nếu đơn hàng đã được duyệt
             if ($order->status === Order::STATUS_APPROVED) {
                 $this->handleStockAndPromotionOnStatusChange($order, Order::STATUS_APPROVED, Order::STATUS_CANCELLED);
             }
 
-            // Xóa tất cả các mục đơn hàng (order items) liên quan
             $order->items()->delete();
             $order->delete();
 
@@ -247,27 +283,21 @@ class OrderController extends Controller
 
     /**
      * API: Lấy danh sách sản phẩm để sử dụng trong modal tạo đơn hàng.
-     * Trả về dữ liệu JSON tinh gọn để JavaScript xử lý.
-     *
-     * @return \Illuminate\Http\JsonResponse
      */
     public function getProductsForOrderCreation(): JsonResponse
     {
-        // Lấy sản phẩm đang hoạt động, kèm hình ảnh đầu tiên.
-        // Giả định Model Product có accessor `thumbnail_url` để lấy URL ảnh nhỏ.
         $products = Product::where('status', Product::STATUS_ACTIVE)
             ->with('firstImage')
             ->orderBy('name')
             ->get();
 
-        // Chuyển đổi collection sang một array với các thuộc tính cần thiết cho JS
         $productsData = $products->map(function ($product) {
             return [
                 'id' => $product->id,
                 'name' => $product->name,
                 'price' => $product->price,
                 'stock_quantity' => $product->stock_quantity,
-                'thumbnail_url' => $product->thumbnail_url, // Sử dụng accessor từ Model
+                'thumbnail_url' => $product->thumbnail_url,
             ];
         });
 
@@ -275,37 +305,28 @@ class OrderController extends Controller
     }
 
     /**
-     * API: Tính toán tóm tắt đơn hàng (subtotal, shipping, discount, total)
-     * dựa trên dữ liệu gửi từ frontend (items, delivery_service, promotion_code).
-     * @param \Illuminate\Http\Request $request
-     * @return \Illuminate\Http\JsonResponse
+     * API: Tính toán tóm tắt đơn hàng.
      */
     public function calculateOrderSummaryApi(Request $request): JsonResponse
     {
         try {
             $validator = Validator::make($request->all(), [
-                'items'                 => ['nullable', 'array'], // Cho phép rỗng nếu chưa có sản phẩm
+                'items'                 => ['nullable', 'array'],
                 'items.*.product_id'    => ['required', 'integer', 'exists:products,id'],
                 'items.*.quantity'      => ['required', 'integer', 'min:1'],
-                'delivery_service_id'   => ['nullable', 'integer', 'exists:delivery_services,id'], // Có thể rỗng ban đầu
-                'promotion_code'        => ['nullable', 'string', 'max:50'], // Thay đổi từ promotion_id sang promotion_code
+                'delivery_service_id'   => ['nullable', 'integer', 'exists:delivery_services,id'],
+                'promotion_code'        => ['nullable', 'string', 'max:50'],
             ]);
 
-            // Nếu có lỗi validation, trả về 422
             if ($validator->fails()) {
-                return response()->json([
-                    'success' => false,
-                    'errors' => $validator->errors()
-                ], 422);
+                return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
             }
 
             $validated = $validator->validated();
-
             $items = $validated['items'] ?? [];
             $deliveryServiceId = $validated['delivery_service_id'] ?? null;
-            $promotionCode = $validated['promotion_code'] ?? null; // Lấy promotion_code
+            $promotionCode = $validated['promotion_code'] ?? null;
 
-            // Tính toán subtotal dựa trên items
             $subtotal = 0;
             $productIds = array_column($items, 'product_id');
             $products = !empty($productIds) ? Product::find($productIds)->keyBy('id') : collect();
@@ -317,76 +338,26 @@ class OrderController extends Controller
                 }
             }
 
-            // Tính toán shipping_fee
-            $shippingFee = 0; // Đặt phí vận chuyển cố định là 0 cho API tính toán
-            if ($deliveryServiceId) {
-                // Mặc dù có deliveryServiceId, chúng ta vẫn đặt phí là 0 theo yêu cầu
-                // $deliveryService = DeliveryService::find($deliveryServiceId);
-                // if ($deliveryService) {
-                //     $shippingFee = $deliveryService->shipping_fee;
-                // }
-            }
+            $shippingFee = 0;
 
-            // Tính toán discount
-            $discountAmount = 0;
-            $validPromotionId = null;
-            $promo_error = null;
-            $promotionInfo = null; // Để lưu thông tin khuyến mãi chi tiết nếu hợp lệ
+            // Tính toán discount từ promotion code
+            $promoResult = $this->validateAndCalculatePromotion($promotionCode, $subtotal);
 
-            if ($promotionCode) {
-                $promotion = Promotion::where('code', strtoupper(trim($promotionCode)))->first();
+            $grandTotal = $subtotal + $shippingFee - $promoResult['discount_amount'];
+            $grandTotal = max(0, $grandTotal);
 
-                if (!$promotion) {
-                    $promo_error = 'Mã giảm giá không tồn tại.';
-                } elseif (!$promotion->isManuallyActive()) {
-                    $promo_error = 'Mã giảm giá đã bị vô hiệu hóa.';
-                } elseif (!$promotion->isCurrentlyActive()) {
-                    if ($promotion->start_date && Carbon::now()->lt($promotion->start_date)) {
-                        $promo_error = 'Mã giảm giá chưa bắt đầu.';
-                    } elseif ($promotion->end_date && Carbon::now()->gt($promotion->end_date)) {
-                        $promo_error = 'Mã giảm giá đã hết hạn.';
-                    } else {
-                        $promo_error = 'Mã giảm giá không hiệu lực vào thời điểm hiện tại.';
-                    }
-                } elseif (!$promotion->hasUsesLeft()) {
-                    $promo_error = 'Mã giảm giá đã hết lượt sử dụng.';
-                } elseif (!$promotion->meetsMinOrderAmount($subtotal)) {
-                    $requiredAmount = number_format($promotion->min_order_amount, 0, ',', '.') . ' ₫';
-                    $promo_error = "Đơn hàng tối thiểu {$requiredAmount} để dùng mã này.";
-                }
-
-                if (!$promo_error) {
-                    $calculatedDiscount = $promotion->calculateDiscount($subtotal);
-                    $discountAmount = $calculatedDiscount;
-                    // Đảm bảo giảm giá không vượt quá tổng phụ + phí vận chuyển
-                    $discountAmount = min($discountAmount, $subtotal + $shippingFee);
-                    $validPromotionId = $promotion->id;
-                    $promotionInfo = $promotion; // Lưu promotion object
-                }
-            }
-
-            $grandTotal = $subtotal + $shippingFee - $discountAmount;
-            $grandTotal = max(0, $grandTotal); // Đảm bảo tổng cộng không âm
-
-            // Trả về dữ liệu JSON đã tính toán
             return response()->json([
                 'success' => true,
                 'summary' => [
                     'subtotal'        => $subtotal,
                     'shipping_fee'    => $shippingFee,
-                    'discount_amount' => $discountAmount,
+                    'discount_amount' => $promoResult['discount_amount'],
                     'total_price'     => $grandTotal,
-                    'promotion_id'    => $validPromotionId,
-                    'promotion_info'  => $promotionInfo,
-                    'promo_error'     => $promo_error,
+                    'promotion_id'    => $promoResult['promotion_id'],
+                    'promotion_info'  => $promoResult['promotion'],
+                    'promo_error'     => $promoResult['error'],
                 ]
             ]);
-        } catch (ValidationException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Dữ liệu đầu vào không hợp lệ.',
-                'errors' => $e->errors()
-            ], 422);
         } catch (\Exception $e) {
             Log::error("Lỗi API tính toán tóm tắt đơn hàng: " . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
             return response()->json(['success' => false, 'message' => 'Đã xảy ra lỗi khi tính toán tóm tắt đơn hàng.'], 500);
@@ -408,11 +379,7 @@ class OrderController extends Controller
             'promotion_id'          => ['nullable', 'integer', 'exists:promotions,id'],
             'status'                => ['required', Rule::in(array_keys(Order::STATUSES))],
             'notes'                 => ['nullable', 'string', 'max:1000'],
-            'payment_method_id'     => ['required', 'integer', Rule::exists('payment_methods', 'id')->where(function ($query) {
-                // Chỉ cho phép COD và Bank Transfer
-                $query->whereIn('code', ['cod', 'bank_transfer']);
-            })],
-            // These fields are always submitted, regardless of customer_type, and will be used to populate Order model
+            'payment_method_id'     => ['required', 'integer', Rule::exists('payment_methods', 'id')->where(fn($query) => $query->whereIn('code', ['cod', 'bank_transfer']))],
             'guest_name'          => ['required', 'string', 'max:255'],
             'guest_phone'         => ['required', 'string', 'max:20'],
             'guest_email'         => ['nullable', 'email', 'max:255'],
@@ -422,14 +389,10 @@ class OrderController extends Controller
             'guest_address_line'  => ['required', 'string', 'max:255'],
         ];
 
-        $customerType = $request->input('customer_type');
-
-        if ($customerType === 'existing') {
+        if ($request->input('customer_type') === 'existing') {
             $rules['customer_id'] = ['required', 'integer', 'exists:customers,id'];
-            // No specific address validation for existing customer here, as data comes from guest fields
-            // and we are not creating new customer_addresses.
-        } else { // 'guest'
-            $rules['customer_id'] = ['nullable']; // Ensure customer_id is not required for guests
+        } else {
+            $rules['customer_id'] = ['nullable'];
         }
 
         return Validator::make($request->all(), $rules);
@@ -437,23 +400,23 @@ class OrderController extends Controller
 
     private function assignCustomerAndAddress(Order &$order, array $validatedData): void
     {
-        if ($validatedData['customer_type'] === 'existing') {
-            $order->customer_id = $validatedData['customer_id'];
-        } else { // 'guest'
-            $order->customer_id = null;
-        }
-
-        // Always assign from the 'guest' fields, as they are now the unified input for shipping details
+        $order->customer_id = ($validatedData['customer_type'] === 'existing') ? $validatedData['customer_id'] : null;
         $order->guest_name = $validatedData['guest_name'];
         $order->guest_phone = $validatedData['guest_phone'];
         $order->guest_email = $validatedData['guest_email'] ?? null;
         $order->province_id = $validatedData['guest_province_id'];
         $order->district_id = $validatedData['guest_district_id'];
-        // SỬA LỖI: Truy cập trực tiếp guest_ward_id
         $order->ward_id = $validatedData['guest_ward_id'];
         $order->shipping_address_line = $validatedData['guest_address_line'];
     }
 
+    /**
+     * *** FIX: Hợp nhất logic kiểm tra và tính toán khuyến mãi ***
+     *
+     * @param integer|null $promotionId ID của khuyến mãi
+     * @param float $subtotal Tổng phụ của đơn hàng
+     * @return array
+     */
     private function calculateOrderTotals(array $items, ?int $deliveryServiceId, ?int $promotionId): array
     {
         $subtotal = 0;
@@ -467,52 +430,97 @@ class OrderController extends Controller
             }
         }
 
-        $shippingFee = 0; // Keep as 0 as per existing requirement
-
+        $shippingFee = 0;
         $discountAmount = 0;
-        $validPromotionId = null; // Initialize to null
+        $validPromotionId = null;
 
         if ($promotionId) {
             $promotion = Promotion::find($promotionId);
-            if ($promotion) {
-                // If a promotion is found by ID, always associate its ID.
-                // The actual discount application still depends on isEffective().
+            // Kiểm tra lại tất cả các điều kiện tại thời điểm tạo đơn hàng
+            if (
+                $promotion &&
+                $promotion->isManuallyActive() &&
+                $promotion->isCurrentlyActive() &&
+                $promotion->hasUsesLeft() &&
+                $promotion->meetsMinOrderAmount($subtotal)
+            ) {
                 $validPromotionId = $promotion->id;
-
-                if ($promotion->isEffective()) { // Still check effectiveness for applying discount
-                    $discountAmount = $promotion->calculateDiscount($subtotal);
-                }
+                $discountAmount = $promotion->calculateDiscount($subtotal);
             }
         }
 
-        $grandTotal = $subtotal + $shippingFee - $discountAmount;
+        $grandTotal = max(0, $subtotal + $shippingFee - $discountAmount);
 
         return [
             'subtotal' => $subtotal,
             'shipping_fee' => $shippingFee,
             'discount_amount' => $discountAmount,
-            'grand_total' => max(0, $grandTotal),
-            'promotion_id' => $validPromotionId, // Now it will correctly pass the ID if found
+            'grand_total' => $grandTotal,
+            'promotion_id' => $validPromotionId,
             'delivery_service_id' => $deliveryServiceId,
         ];
     }
+
+    /**
+     * *** MỚI: Phương thức tập trung để xác thực và tính toán khuyến mãi ***
+     *
+     * @param string|null $promotionCode
+     * @param float $subtotal
+     * @return array
+     */
+    private function validateAndCalculatePromotion(?string $promotionCode, float $subtotal): array
+    {
+        $result = [
+            'error' => null,
+            'discount_amount' => 0,
+            'promotion_id' => null,
+            'promotion' => null,
+        ];
+
+        if (!$promotionCode) {
+            return $result;
+        }
+
+        $promotion = Promotion::where('code', strtoupper(trim($promotionCode)))->first();
+
+        if (!$promotion) {
+            $result['error'] = 'Mã giảm giá không tồn tại.';
+        } elseif (!$promotion->isManuallyActive()) {
+            $result['error'] = 'Mã giảm giá đã bị vô hiệu hóa.';
+        } elseif (!$promotion->isCurrentlyActive()) {
+            $result['error'] = $promotion->start_date && Carbon::now()->lt($promotion->start_date)
+                ? 'Mã giảm giá chưa bắt đầu.'
+                : 'Mã giảm giá đã hết hạn.';
+        } elseif (!$promotion->hasUsesLeft()) {
+            $result['error'] = 'Mã giảm giá đã hết lượt sử dụng.';
+        } elseif (!$promotion->meetsMinOrderAmount($subtotal)) {
+            $requiredAmount = number_format($promotion->min_order_amount, 0, ',', '.') . ' ₫';
+            $result['error'] = "Đơn hàng tối thiểu {$requiredAmount} để dùng mã này.";
+        }
+
+        if (!$result['error']) {
+            $result['discount_amount'] = min($promotion->calculateDiscount($subtotal), $subtotal);
+            $result['promotion_id'] = $promotion->id;
+            $result['promotion'] = $promotion;
+        }
+
+        return $result;
+    }
+
 
     private function syncOrderItems(Order $order, array $items): void
     {
         $productIds = array_column($items, 'product_id');
         $products = Product::find($productIds)->keyBy('id');
 
-        // Xóa tất cả các mục đơn hàng (order items) cũ trước khi thêm mới
         $order->items()->delete();
 
-        // Lặp qua và tạo các mục đơn hàng mới
         foreach ($items as $itemData) {
             $product = $products->get($itemData['product_id']);
             if ($product) {
                 if ($product->stock_quantity < $itemData['quantity']) {
                     throw new \Exception("Sản phẩm '{$product->name}' không đủ số lượng tồn kho.");
                 }
-                // Sử dụng create() để tạo OrderItem mới liên kết với Order
                 $order->items()->create([
                     'product_id' => $itemData['product_id'],
                     'quantity'   => $itemData['quantity'],
@@ -524,28 +532,74 @@ class OrderController extends Controller
 
     private function handleStockAndPromotionOnStatusChange(Order $order, ?string $oldStatus, string $newStatus): void
     {
-        $order->load('items.product', 'promotion');
+        // *** FIX: Sử dụng fresh() để đảm bảo dữ liệu là mới nhất từ DB ***
+        $freshOrder = $order->fresh(['items.product', 'promotion']);
+        if (!$freshOrder) {
+            // Biện pháp an toàn nếu đơn hàng đã bị xóa bởi một tiến trình khác
+            return;
+        }
 
-        // Khi trạng thái chuyển sang Đã duyệt (Approved)
-        if ($oldStatus !== Order::STATUS_APPROVED && $newStatus === Order::STATUS_APPROVED) {
-            foreach ($order->items as $item) {
+        // Khi trạng thái chuyển thành Đã duyệt (Approved) lần đầu tiên
+        if ($newStatus === Order::STATUS_APPROVED && $oldStatus !== Order::STATUS_APPROVED) {
+            foreach ($freshOrder->items as $item) {
                 if ($item->product) {
                     $item->product->decrement('stock_quantity', $item->quantity);
                 }
             }
-            $order->promotion?->increment('uses_count'); // Tăng lượt sử dụng khuyến mãi
+            // Chỉ tăng lượt sử dụng nếu đơn hàng có khuyến mãi
+            if ($freshOrder->promotion) {
+                $freshOrder->promotion->increment('uses_count');
+            }
         }
-        // Khi trạng thái chuyển từ Đã duyệt sang Đã hủy hoặc Đã trả hàng
-        elseif ($oldStatus === Order::STATUS_APPROVED && ($newStatus === Order::STATUS_CANCELLED || $newStatus === Order::STATUS_RETURNED)) {
-            foreach ($order->items as $item) {
+        // Khi một đơn hàng Đã duyệt bị hủy hoặc trả lại
+        elseif ($oldStatus === Order::STATUS_APPROVED && in_array($newStatus, [Order::STATUS_CANCELLED, Order::STATUS_RETURNED])) {
+            foreach ($freshOrder->items as $item) {
                 if ($item->product) {
                     $item->product->increment('stock_quantity', $item->quantity);
                 }
             }
-            // Giảm lượt sử dụng khuyến mãi nếu có và lớn hơn 0
-            if ($order->promotion && $order->promotion->uses_count > 0) {
-                $order->promotion->decrement('uses_count');
+            // Chỉ giảm lượt sử dụng nếu có khuyến mãi và đã được sử dụng
+            if ($freshOrder->promotion && $freshOrder->promotion->uses_count > 0) {
+                $freshOrder->promotion->decrement('uses_count');
             }
         }
+    }
+
+    /**
+     * *** MỚI: Kiểm tra quy trình chuyển đổi trạng thái hợp lệ ***
+     *
+     * @param string $from Trạng thái hiện tại
+     * @param string $to Trạng thái mới
+     * @return boolean
+     */
+    private function isValidStatusTransition(string $from, string $to): bool
+    {
+        if ($from === $to) {
+            return true; // Không thay đổi thì luôn hợp lệ
+        }
+
+        // Định nghĩa các luồng chuyển đổi hợp lệ
+        $allowedTransitions = [
+            Order::STATUS_PENDING    => [Order::STATUS_PROCESSING, Order::STATUS_APPROVED, Order::STATUS_CANCELLED],
+            Order::STATUS_PROCESSING => [Order::STATUS_APPROVED, Order::STATUS_CANCELLED],
+            Order::STATUS_APPROVED   => [Order::STATUS_SHIPPED, Order::STATUS_CANCELLED],
+            Order::STATUS_SHIPPED    => [Order::STATUS_DELIVERED, Order::STATUS_RETURNED],
+            Order::STATUS_DELIVERED  => [Order::STATUS_COMPLETED, Order::STATUS_RETURNED],
+            // Các trạng thái cuối cùng không thể chuyển đi đâu khác
+            Order::STATUS_COMPLETED  => [],
+            Order::STATUS_CANCELLED  => [],
+            Order::STATUS_RETURNED   => [],
+            Order::STATUS_FAILED     => [],
+        ];
+
+        return in_array($to, $allowedTransitions[$from] ?? []);
+    }
+
+    /**
+     * *** MỚI: Helper để lấy text của trạng thái cho thông báo lỗi ***
+     */
+    private function getStatusText(string $statusKey): string
+    {
+        return Order::STATUSES[$statusKey] ?? ucfirst($statusKey);
     }
 }

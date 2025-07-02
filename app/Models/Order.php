@@ -148,8 +148,9 @@ class Order extends Model
         }
         $promotion = $this->promotion;
         $subtotal = $this->subtotal;
-        if ($promotion && method_exists($promotion, 'isEffective') && $promotion->isEffective()) {
-            return ($subtotal * $promotion->discount_percentage) / 100;
+        if ($promotion) {
+            // Sử dụng phương thức calculateDiscount từ mô hình Promotion
+            return $promotion->calculateDiscount($subtotal);
         }
         return 0;
     }

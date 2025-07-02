@@ -89,17 +89,25 @@
                             </thead>
                             <tbody>
                                 @foreach ($orders as $order)
+                                    @php
+                                        // *** LOGIC NGHIỆP VỤ: Xác định các trạng thái cuối cùng ***
+                                        $isFinalStatus = in_array($order->status, [
+                                            \App\Models\Order::STATUS_COMPLETED,
+                                            \App\Models\Order::STATUS_CANCELLED,
+                                            \App\Models\Order::STATUS_FAILED,
+                                            \App\Models\Order::STATUS_RETURNED
+                                        ]);
+                                        $isCompleted = $order->status === \App\Models\Order::STATUS_COMPLETED;
+                                    @endphp
                                     <tr>
                                         <td><strong>#{{ $order->id }}</strong></td>
                                         <td>
-                                            {{-- Hiển thị loại khách hàng và tên khách hàng từ guest_name --}}
                                             @if($order->customer_id)
                                                 <i class="bi bi-person-check-fill text-success me-1"
                                                     title="Khách hàng có tài khoản"></i>
                                             @else
                                                 <i class="bi bi-person-circle text-muted me-1" title="Khách vãng lai"></i>
                                             @endif
-                                            {{-- Use shipping_name, shipping_phone, shipping_email from the order itself --}}
                                             <span>{{ $order->guest_name }}</span>
                                             <br>
                                             <small class="text-muted">{{ $order->guest_phone ?? 'N/A' }}</small>
@@ -111,7 +119,6 @@
                                         <td class="text-center"><span
                                                 class="badge bg-secondary">{{ $order->paymentMethod->name ?? 'N/A' }}</span></td>
                                         <td class="text-center">
-                                            {{-- Sử dụng accessor trên Model để lấy class và text cho badge --}}
                                             <span class="badge {{ $order->status_badge_class }}">
                                                 {{ $order->status_text }}
                                             </span>
@@ -124,12 +131,12 @@
                                             </button>
                                             <button type="button" class="btn btn-warning btn-sm update-order-btn"
                                                 data-bs-toggle="modal" data-bs-target="#updateOrderModal" data-id="{{ $order->id }}"
-                                                title="Cập nhật trạng thái">
+                                                title="Cập nhật trạng thái" {{ $isFinalStatus ? 'disabled' : '' }}>
                                                 <i class="bi bi-pencil"></i>
                                             </button>
                                             <button type="button" class="btn btn-danger btn-sm delete-order-btn"
                                                 data-bs-toggle="modal" data-bs-target="#deleteOrderModal" data-id="{{ $order->id }}"
-                                                title="Xóa vĩnh viễn">
+                                                title="Xóa vĩnh viễn" {{ $isCompleted ? 'disabled' : '' }}>
                                                 <i class="bi bi-trash"></i>
                                             </button>
                                         </td>

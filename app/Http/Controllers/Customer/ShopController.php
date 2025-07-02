@@ -10,32 +10,27 @@ use App\Models\Review;
 use App\Models\VehicleBrand;
 use App\Models\VehicleModel;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth; // Import facade Auth
+use Illuminate\Support\Facades\Auth;
 
 class ShopController extends Controller
 {
     /**
-     * Phương thức chung để xây dựng câu truy vấn sản phẩm với bộ lọc và dữ liệu đánh giá.
-     * Được sử dụng bởi cả index() và getProductsApi() để tránh lặp code.
+     * Xây dựng câu truy vấn sản phẩm với bộ lọc.
      *
      * @param Request $request
      * @param Category|null $category
+     * @param Brand|null $brand
      * @return \Illuminate\Database\Eloquent\Builder
      */
-    private function getFilteredProductsQuery(Request $request, Category $category = null)
+    private function getFilteredProductsQuery(Request $request, Category $category = null, Brand $brand = null)
     {
         $query = Product::query()
             ->where('status', Product::STATUS_ACTIVE)
-            // Tải thêm số lượng và điểm đánh giá trung bình của các review đã được duyệt
-            ->withCount(['reviews' => function ($query) {
-                $query->where('status', Review::STATUS_APPROVED);
-            }])
-            ->withAvg(['reviews' => function ($query) {
-                $query->where('status', Review::STATUS_APPROVED);
-            }], 'rating');
+            ->with(['firstImage', 'brand', 'category']) // Tải trước các quan hệ cần thiết
+            ->withCount(['reviews' => fn($q) => $q->where('status', Review::STATUS_APPROVED)])
+            ->withAvg(['reviews' => fn($q) => $q->where('status', Review::STATUS_APPROVED)], 'rating');
 
-        // --- Logic lọc sản phẩm ---
-        // THÊM: Tìm kiếm theo tên hoặc mô tả sản phẩm
+        // Lọc theo từ khóa tìm kiếm
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', '%' . $search . '%')
@@ -43,11 +38,18 @@ class ShopController extends Controller
             });
         }
 
-        // Lọc theo danh mục
+        // Lọc theo danh mục (ưu tiên route-model binding)
         if ($category) {
             $query->where('category_id', $category->id);
         } elseif ($request->has('categories')) {
             $query->whereIn('category_id', $request->input('categories'));
+        }
+
+        // *** FIX: Lọc theo thương hiệu (ưu tiên route-model binding) ***
+        if ($brand) {
+            $query->where('brand_id', $brand->id);
+        } elseif ($request->has('brands')) {
+            $query->whereIn('brand_id', $request->input('brands'));
         }
 
         // Lọc theo khoảng giá
@@ -58,21 +60,12 @@ class ShopController extends Controller
             $query->where('price', '<=', $maxPrice);
         }
 
-        // Lọc theo thương hiệu sản phẩm
-        if ($brandId = $request->input('brand_id')) {
-            $query->where('brand_id', $brandId);
-        }
-
-        // Lọc theo thương hiệu xe và mẫu xe
+        // Lọc theo hãng xe và dòng xe
         if ($vehicleBrandId = $request->input('vehicle_brand_id')) {
-            $query->whereHas('vehicleModels.vehicleBrand', function ($q) use ($vehicleBrandId) {
-                $q->where('id', $vehicleBrandId);
-            });
+            $query->whereHas('vehicleModels.vehicleBrand', fn($q) => $q->where('id', $vehicleBrandId));
         }
         if ($vehicleModelId = $request->input('vehicle_model_id')) {
-            $query->whereHas('vehicleModels', function ($q) use ($vehicleModelId) {
-                $q->where('id', $vehicleModelId);
-            });
+            $query->whereHas('vehicleModels', fn($q) => $q->where('id', $vehicleModelId));
         }
 
         // Sắp xếp
@@ -90,54 +83,61 @@ class ShopController extends Controller
                 case 'name_desc':
                     $query->orderBy('name', 'desc');
                     break;
-                case 'latest':
                 default:
                     $query->latest();
                     break;
             }
         } else {
-            $query->latest(); // Mặc định sắp xếp theo mới nhất
+            $query->latest();
         }
 
         return $query;
     }
-
 
     /**
      * Hiển thị trang cửa hàng với danh sách sản phẩm.
      *
      * @param Request $request
      * @param Category|null $category
+     * @param Brand|null $brand
      * @return \Illuminate\View\View
      */
-    public function index(Request $request, Category $category = null)
+    public function index(Request $request, Category $category = null, Brand $brand = null)
     {
-        $products = $this->getFilteredProductsQuery($request, $category)->latest()->paginate(9)->withQueryString(); // Thay đổi thành 9 sản phẩm mỗi trang
+        // Hợp nhất ID từ route vào request để bộ lọc được chọn sẵn
+        if ($category && !$request->has('categories')) {
+            $request->merge(['categories' => [$category->id]]);
+        }
+        if ($brand && !$request->has('brands')) {
+            $request->merge(['brands' => [$brand->id]]);
+        }
+
+        $products = $this->getFilteredProductsQuery($request, $category, $brand)->paginate(9)->withQueryString();
+
+        // Lấy dữ liệu cho các bộ lọc
         $categories = Category::all();
-        $brands = Brand::all();
-        $vehicleBrands = VehicleBrand::all();
-        $vehicleModels = VehicleModel::all(); // Thêm dòng này để truyền tất cả vehicleModels
+        $brands = Brand::where('status', Brand::STATUS_ACTIVE)->get();
+        $vehicleBrands = VehicleBrand::with('vehicleModels')->where('status', VehicleBrand::STATUS_ACTIVE)->get();
 
         return view('customer.shops.index', compact(
             'products',
             'categories',
             'brands',
             'vehicleBrands',
-            'vehicleModels',
-            'request' // Đảm bảo $request được truyền để giữ lại trạng thái form
+            'request'
         ));
     }
 
     /**
-     * API: Lấy danh sách sản phẩm đã lọc để hiển thị động bằng JavaScript.
+     * API: Lấy danh sách sản phẩm đã lọc để hiển thị động.
      *
      * @param Request $request
      * @return \Illuminate\Http\JsonResponse
      */
     public function getProductsApi(Request $request)
     {
-        $query = $this->getFilteredProductsQuery($request);
-        $products = $query->latest()->paginate(9)->withQueryString(); // Thay đổi thành 9 sản phẩm mỗi trang
+        // Không cần truyền $category và $brand vì API luôn dựa vào request params
+        $products = $this->getFilteredProductsQuery($request)->paginate(9)->withQueryString();
 
         return response()->json([
             'products_html' => view('customer.shops.partials.product_list', ['products' => $products])->render(),
@@ -148,42 +148,27 @@ class ShopController extends Controller
 
     /**
      * Hiển thị trang chi tiết sản phẩm.
-     *
-     * @param Product $product
-     * @return \Illuminate\View\View
      */
     public function show(Product $product)
     {
-        // Kiểm tra trạng thái sản phẩm, nếu không active thì báo lỗi 404
         if ($product->status !== Product::STATUS_ACTIVE) {
             abort(404);
         }
 
-        // Tải các quan hệ cần thiết, bao gồm các reviews đã được duyệt
         $product->load([
             'category',
             'brand',
             'images',
             'vehicleModels.vehicleBrand',
-            'reviews' => function ($query) {
-                $query->where('status', Review::STATUS_APPROVED)
-                    ->with('customer') // Lấy luôn thông tin khách hàng để hiển thị tên, avatar
-                    ->latest();
-            }
+            'reviews' => fn($query) => $query->where('status', Review::STATUS_APPROVED)->with('customer')->latest()
         ]);
 
         $hasReviewed = false;
-        // Kiểm tra xem khách hàng đã đăng nhập chưa
         if (Auth::guard('customer')->check()) {
             $customer = Auth::guard('customer')->user();
-            // Kiểm tra xem khách hàng này đã đánh giá sản phẩm này chưa
-            $existingReview = $product->reviews()->where('customer_id', $customer->id)->first();
-            if ($existingReview) {
-                $hasReviewed = true;
-            }
+            $hasReviewed = $product->reviews()->where('customer_id', $customer->id)->exists();
         }
 
-        // Truyền biến $hasReviewed vào view
         return view('customer.products.show', compact('product', 'hasReviewed'));
     }
 }
