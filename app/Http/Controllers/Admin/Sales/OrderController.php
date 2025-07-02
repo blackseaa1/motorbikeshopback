@@ -33,60 +33,82 @@ class OrderController extends Controller
      */
     public function index(Request $request): View
     {
-        $query = Order::with(['customer', 'deliveryService', 'paymentMethod'])->latest(); // Eager load paymentMethod
+        // Start with eager loading necessary relationships to avoid N+1 query problem
+        $query = Order::with(['customer', 'deliveryService', 'paymentMethod']);
 
+        // Apply status filter if provided and not 'all'
         if ($request->filled('status') && $request->status !== 'all') {
             $query->where('status', $request->status);
         }
 
+        // Apply search term filter if provided
         if ($request->filled('search')) {
             $searchTerm = $request->search;
             $query->where(function ($q) use ($searchTerm) {
-                $q->where('id', 'like', "%{$searchTerm}%")
-                    ->orWhereHas('customer', fn($subQ) => $subQ->where('name', 'like', "%{$searchTerm}%"))
-                    ->orWhere('guest_name', 'like', "%{$searchTerm}%") // Tìm kiếm theo guest_name
-                    ->orWhere('guest_email', 'like', "%{$searchTerm}%") // Tìm kiếm theo guest_email
-                    ->orWhere('guest_phone', 'like', "%{$searchTerm}%"); // Tìm kiếm theo guest_phone
+                $q->where('id', 'like', '%' . $searchTerm . '%') // Search by order ID
+                    ->orWhere('guest_name', 'like', '%' . $searchTerm . '%') // Search by guest name
+                    ->orWhere('guest_email', 'like', '%' . $searchTerm . '%') // Search by guest email
+                    ->orWhere('guest_phone', 'like', '%' . $searchTerm . '%') // Search by guest phone
+                    ->orWhereHas('customer', function ($subQuery) use ($searchTerm) { // Search by registered customer info
+                        $subQuery->where('name', 'like', '%' . $searchTerm . '%')
+                            ->orWhere('email', 'like', '%' . $searchTerm . '%')
+                            ->orWhere('phone', 'like', '%' . $searchTerm . '%');
+                    });
             });
         }
 
-        // Apply sorting based on status priority and then created_at
-        $query->orderByRaw("CASE
-            WHEN status = '" . Order::STATUS_PENDING . "' THEN 1
-            WHEN status = '" . Order::STATUS_PROCESSING . "' THEN 2
-            ELSE 3
-        END")
-        ->orderBy('created_at', 'asc');
+        // Sorting logic based on 'sort_by' parameter
+        if ($request->filled('sort_by')) {
+            if ($request->sort_by == 'oldest') {
+                $query->oldest(); // Sort by created_at in ascending order
+            } elseif ($request->sort_by == 'priority') {
+                // Define the custom order of statuses for priority sorting.
+                // Orders will appear in this specific sequence, with 'pending' first.
+                $statusOrder = [
+                    Order::STATUS_PENDING,    // 'Pending' status is now the highest priority (chờ xử lý)
+                    Order::STATUS_PROCESSING, // 'Processing' status
+                    Order::STATUS_APPROVED,
+                    Order::STATUS_SHIPPED,
+                    Order::STATUS_DELIVERED,
+                    Order::STATUS_COMPLETED,
+                    Order::STATUS_RETURNED,
+                    Order::STATUS_CANCELLED,
+                    Order::STATUS_FAILED,
+                ];
 
+                // Use orderByRaw with FIELD to sort by the custom order of statuses
+                $query->orderByRaw(DB::raw("FIELD(status, '" . implode("','", $statusOrder) . "')"));
+                // Then, sort by the creation date in descending order (newest first)
+                $query->latest();
+            } else {
+                // Default to 'latest' if 'sort_by' is not 'oldest' or 'priority'
+                $query->latest(); // Sort by created_at in descending order
+            }
+        } else {
+            // Default sorting if no 'sort_by' parameter is provided in the request.
+            // We'll default to 'latest' (newest orders first).
+            $query->latest();
+        }
 
-        // Sử dụng pagination.blade.php để phân trang
-        $orders = $query->paginate(config('admin.pagination.per_page', 10))->withQueryString();
+        // Paginate the results, 10 orders per page
+        $orders = $query->paginate(10);
 
-        // Tải sẵn dữ liệu cho các modal
-        $customers = Customer::where('status', Customer::STATUS_ACTIVE)->orderBy('name')->get(['id', 'name', 'email']);
-        $provinces = Province::orderBy('name')->get(['id', 'name']);
+        // Load all necessary data for the modals (create, update, view)
+        $orderStatuses = Order::STATUSES; // Get all defined order statuses
+        $customers = Customer::all(); // All customers for selection
+        $provinces = Province::all(); // All provinces for address selection
+        $deliveryServices = DeliveryService::all(); // All delivery services
+        $promotions = Promotion::all(); // All promotions
+        $paymentMethods = PaymentMethod::all(); // All payment methods
 
-        // SỬA ĐỔI: Đặt shipping_fee thành 0 cho tất cả các dịch vụ vận chuyển
-        $deliveryServices = DeliveryService::where('status', DeliveryService::STATUS_ACTIVE)->get(['id', 'name', 'shipping_fee'])->map(function ($service) {
-            $service->shipping_fee = 0; // Đặt phí vận chuyển là 0
-            return $service;
-        });
-
-        // Chỉ lấy phương thức thanh toán COD và Bank Transfer
-        $paymentMethods = PaymentMethod::whereIn('code', ['cod', 'bank_transfer'])->where('status', 'active')->get();
-        // Promotions are no longer needed here as they are fetched by API for calculation
-        $promotions = Promotion::where('status', Promotion::STATUS_MANUAL_ACTIVE)
-            ->where(fn($q) => $q->whereNull('end_date')->orWhere('end_date', '>', now()))
-            ->get(); // Still pass for now, but will be removed once fully API-driven
-        $orderStatuses = Order::STATUSES;
-
+        // Return the view with the paginated orders and other necessary data
         return view('admin.sales.order.orders', compact(
             'orders',
+            'orderStatuses',
             'customers',
             'provinces',
             'deliveryServices',
-            'promotions', // Keep for compatibility for now, but will be removed
-            'orderStatuses',
+            'promotions',
             'paymentMethods'
         ));
     }
@@ -319,7 +341,7 @@ class OrderController extends Controller
                 } elseif (!$promotion->isManuallyActive()) {
                     $promo_error = 'Mã giảm giá đã bị vô hiệu hóa.';
                 } elseif (!$promotion->isCurrentlyActive()) {
-                     if ($promotion->start_date && Carbon::now()->lt($promotion->start_date)) {
+                    if ($promotion->start_date && Carbon::now()->lt($promotion->start_date)) {
                         $promo_error = 'Mã giảm giá chưa bắt đầu.';
                     } elseif ($promotion->end_date && Carbon::now()->gt($promotion->end_date)) {
                         $promo_error = 'Mã giảm giá đã hết hạn.';
@@ -432,48 +454,48 @@ class OrderController extends Controller
         $order->shipping_address_line = $validatedData['guest_address_line'];
     }
 
-   private function calculateOrderTotals(array $items, ?int $deliveryServiceId, ?int $promotionId): array
-{
-    $subtotal = 0;
-    $productIds = array_column($items, 'product_id');
-    $products = !empty($productIds) ? Product::find($productIds)->keyBy('id') : collect();
+    private function calculateOrderTotals(array $items, ?int $deliveryServiceId, ?int $promotionId): array
+    {
+        $subtotal = 0;
+        $productIds = array_column($items, 'product_id');
+        $products = !empty($productIds) ? Product::find($productIds)->keyBy('id') : collect();
 
-    foreach ($items as $item) {
-        $product = $products->get($item['product_id']);
-        if ($product) {
-            $subtotal += $product->price * $item['quantity'];
-        }
-    }
-
-    $shippingFee = 0; // Keep as 0 as per existing requirement
-
-    $discountAmount = 0;
-    $validPromotionId = null; // Initialize to null
-
-    if ($promotionId) {
-        $promotion = Promotion::find($promotionId);
-        if ($promotion) {
-            // If a promotion is found by ID, always associate its ID.
-            // The actual discount application still depends on isEffective().
-            $validPromotionId = $promotion->id;
-
-            if ($promotion->isEffective()) { // Still check effectiveness for applying discount
-                $discountAmount = $promotion->calculateDiscount($subtotal);
+        foreach ($items as $item) {
+            $product = $products->get($item['product_id']);
+            if ($product) {
+                $subtotal += $product->price * $item['quantity'];
             }
         }
+
+        $shippingFee = 0; // Keep as 0 as per existing requirement
+
+        $discountAmount = 0;
+        $validPromotionId = null; // Initialize to null
+
+        if ($promotionId) {
+            $promotion = Promotion::find($promotionId);
+            if ($promotion) {
+                // If a promotion is found by ID, always associate its ID.
+                // The actual discount application still depends on isEffective().
+                $validPromotionId = $promotion->id;
+
+                if ($promotion->isEffective()) { // Still check effectiveness for applying discount
+                    $discountAmount = $promotion->calculateDiscount($subtotal);
+                }
+            }
+        }
+
+        $grandTotal = $subtotal + $shippingFee - $discountAmount;
+
+        return [
+            'subtotal' => $subtotal,
+            'shipping_fee' => $shippingFee,
+            'discount_amount' => $discountAmount,
+            'grand_total' => max(0, $grandTotal),
+            'promotion_id' => $validPromotionId, // Now it will correctly pass the ID if found
+            'delivery_service_id' => $deliveryServiceId,
+        ];
     }
-
-    $grandTotal = $subtotal + $shippingFee - $discountAmount;
-
-    return [
-        'subtotal' => $subtotal,
-        'shipping_fee' => $shippingFee,
-        'discount_amount' => $discountAmount,
-        'grand_total' => max(0, $grandTotal),
-        'promotion_id' => $validPromotionId, // Now it will correctly pass the ID if found
-        'delivery_service_id' => $deliveryServiceId,
-    ];
-}
 
     private function syncOrderItems(Order $order, array $items): void
     {

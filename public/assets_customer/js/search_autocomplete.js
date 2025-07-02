@@ -103,7 +103,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         })
                         .catch(error => {
                             console.error('Lỗi khi tìm nạp gợi ý tìm kiếm:', error);
-                            suggestionContainer.innerHTML = '<div class="list-group-item text-center text-danger">Có lỗi xảy ra khi tải gợi ý.</div>';
+                            suggestionContainer.innerHTML = '<div class="list-group-item text-center text-black">Không có nội dung</div>';
                             suggestionContainer.style.display = 'block';
                         });
                 }, 300); // Debounce 300ms

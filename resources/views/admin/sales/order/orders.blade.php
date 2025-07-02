@@ -44,7 +44,8 @@
                                 <option value="latest" {{ request('sort_by') == 'latest' ? 'selected' : '' }}>Mới nhất
                                 </option>
                                 <option value="oldest" {{ request('sort_by') == 'oldest' ? 'selected' : '' }}>Cũ nhất</option>
-                                {{-- "Xử lý theo độ ưu tiên" would require additional fields/logic in DB --}}
+                                <option value="priority" {{ request('sort_by') == 'priority' ? 'selected' : '' }}>Ưu tiên
+                                </option>
                             </select>
                         </div>
                         <div class="col-md-2 d-flex align-items-end">
@@ -157,7 +158,7 @@
     ])
     @include('admin.sales.order.modals.view_order_modal')
     @include('admin.sales.order.modals.update_order_modal', ['orderStatuses' => $orderStatuses, 'deliveryServices' => $deliveryServices])
-        @include('admin.sales.order.modals.delete_order_modal')
+            @include('admin.sales.order.modals.delete_order_modal')
 
 @endsection
 

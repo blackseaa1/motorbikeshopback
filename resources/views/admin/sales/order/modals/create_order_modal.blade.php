@@ -243,32 +243,7 @@
     
     
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const input = document.getElementById('guest_name');
-        input.addEventListener('input', function () {
-            this.value = this.value.replace(/^\s+/, ''); // Xóa khoảng trắng đầu
-        });
-    });
-    let hasLoadedProductDropdown = false;
-
-document.getElementById('productDropdownBtn').addEventListener('click', function () {
-    if (hasLoadedProductDropdown) return; // Đã load rồi, không làm lại
-
-    hasLoadedProductDropdown = true;
-
-    // Thực hiện xử lý chỉ 1 lần ở đây, ví dụ gọi API hoặc render danh sách
-    console.log("Loading product data...");
-
-    // Ví dụ gọi API (giả lập)
-    fetch('/api/products')
-        .then(response => response.json())
-        .then(data => {
-            console.log('Product data:', data);
-            // Hiển thị dữ liệu vào dropdown (nếu cần)
-        })
-        .catch(error => console.error('Lỗi khi load sản phẩm:', error));
-});
-
+    
 </script>
 <style>
 /* Làm nền của dropdown trong suốt */
