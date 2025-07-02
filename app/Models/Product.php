@@ -5,9 +5,10 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;  
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Number;
+use Illuminate\Database\Eloquent\Builder; // Import Builder
 
 class Product extends Model
 {
@@ -66,7 +67,7 @@ class Product extends Model
     /**
      * Các hình ảnh của sản phẩm.
      */
-  public function images(): HasMany
+    public function images(): HasMany
     {
         return $this->hasMany(ProductImage::class);
     }
@@ -134,18 +135,14 @@ class Product extends Model
 
     public function getThumbnailUrlAttribute(): string
     {
-        // Lấy ảnh đầu tiên từ collection images đã được load
-        // Hoặc query nếu chưa được load
         $firstImage = $this->relationLoaded('images')
             ? $this->images->first()
             : $this->images()->first();
 
-        // Kiểm tra xem $firstImage có thực sự tồn tại không trước khi truy cập thuộc tính
         if ($firstImage) {
             return $firstImage->image_full_url;
         }
 
-        // Nếu không có ảnh nào, trả về URL mặc định
         return 'https://placehold.co/400x400/EFEFEF/AAAAAA&text=Product';
     }
 
@@ -153,8 +150,23 @@ class Product extends Model
     // SCOPES (Bổ sung)
     //======================================================================
 
-    public function scopeActive($query)
+    public function scopeActive(Builder $query): Builder
     {
         return $query->where('status', self::STATUS_ACTIVE);
+    }
+
+    public function scopeInactive(Builder $query): Builder
+    {
+        return $query->where('status', self::STATUS_INACTIVE);
+    }
+
+    public function scopeOutOfStock(Builder $query): Builder
+    {
+        return $query->where('stock_quantity', 0);
+    }
+
+    public function scopeLowStock(Builder $query, int $threshold = 10): Builder
+    {
+        return $query->where('stock_quantity', '>', 0)->where('stock_quantity', '<', $threshold);
     }
 }

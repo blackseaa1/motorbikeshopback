@@ -2,7 +2,7 @@
     <td>
         <input type="checkbox" class="promotion-checkbox" value="{{ $promotion->id }}">
     </td>
-    <th scope="row">{{ $loopIndex + $startIndex }}</th>
+    <th scope="row">{{ $loopIndex + $startIndex + 1 }}</th>
     <td class="fw-bold text-primary">{{ $promotion->code }}</td>
     <td>{{ Str::limit($promotion->description, 50) }}</td>
     <td class="text-danger fw-bold text-center">

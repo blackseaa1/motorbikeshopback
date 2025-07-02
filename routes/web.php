@@ -237,14 +237,21 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::prefix('product-management')->name('productManagement.')->group(function () {
             // Products
             Route::controller(ProductController::class)->prefix('products')->name('products.')->group(function () {
-                Route::get('/', 'index')->name('index');
+                // Các hành động hàng loạt (phải đặt trước route resource hoặc các route có tham số động)
+                Route::post('bulk-destroy', 'bulkDestroy')->name('bulkDestroy'); // Xóa mềm hàng loạt
+                Route::post('bulk-toggle-status', 'bulkToggleStatus')->name('bulkToggleStatus'); // Thay đổi trạng thái hàng loạt
+                Route::post('bulk-restore', 'bulkRestore')->name('bulkRestore'); // Khôi phục hàng loạt
+                Route::post('bulk-force-delete', 'bulkForceDelete')->name('bulkForceDelete'); // Xóa vĩnh viễn hàng loạt
+
+                // Các route đơn lẻ hoặc API
+                Route::get('/', 'index')->name('index'); // Danh sách sản phẩm (có thể kèm filter/search)
                 Route::post('/', 'store')->name('store');
-                Route::get('/{product}', 'show')->name('show')->withTrashed();
-                Route::post('/{product}', 'update')->name('update')->withTrashed();
-                Route::delete('/{product}', 'destroy')->name('destroy');
-                Route::post('/{product}/toggle-status', 'toggleStatus')->name('toggleStatus')->withTrashed();
-                Route::post('/{product}/restore', 'restore')->name('restore')->withTrashed();
-                Route::delete('/{product}/force-delete', 'forceDelete')->name('forceDelete')->withTrashed();
+                Route::get('/{product}/details', 'getProductDetailsApi')->name('details'); // API cho modal xem/sửa
+                Route::post('/{product}', 'update')->name('update')->withTrashed(); // Cập nhật sản phẩm
+                Route::delete('/{product}', 'destroy')->name('destroy'); // Xóa mềm sản phẩm
+                Route::post('/{product}/toggle-status', 'toggleStatus')->name('toggleStatus')->withTrashed(); // Bật/tắt trạng thái sản phẩm
+                Route::post('/{product}/restore', 'restore')->name('restore')->withTrashed(); // Khôi phục sản phẩm
+                Route::delete('/{product}/force-delete', 'forceDelete')->name('forceDelete')->withTrashed(); // Xóa vĩnh viễn sản phẩm
             });
 
             // Categories, Brands, Vehicle

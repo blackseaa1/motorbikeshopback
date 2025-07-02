@@ -1,3 +1,4 @@
+{{-- File: resources/views/admin/productManagement/product/modals/create_product.blade.php --}}
 <div class="modal fade" id="createProductModal" tabindex="-1" aria-labelledby="createProductModalLabel"
     aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
@@ -52,7 +53,7 @@
                                 <label for="productPriceCreate" class="form-label">Giá bán (VNĐ) <span
                                         class="text-danger">*</span></label>
                                 <input type="text" name="price" class="form-control" id="productPriceCreate" min="0"
-                                    step="0.01" placeholder="Nhập giá bán" required>
+                                    step="0.01" placeholder="Nhập giá bán" required data-currency-input="true">
                                 <div class="invalid-feedback"></div>
                             </div>
                             <div class="mb-3">

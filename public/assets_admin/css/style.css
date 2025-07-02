@@ -510,9 +510,6 @@
     cursor: pointer;
 }
 
-#adminProductsPage .bootstrap-select .dropdown-menu {
-    max-height: 300px !important;
-}
 
 /* ========================================================================== */
 /* === CSS CHO TRANG HỒ SƠ (PROFILE PAGE) === */

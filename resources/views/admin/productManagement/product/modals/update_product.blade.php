@@ -55,7 +55,7 @@
                                 <label for="productPriceUpdate" class="form-label">Giá bán (VNĐ) <span
                                         class="text-danger">*</span></label>
                                 <input type="text" name="price" class="form-control" id="productPriceUpdate" min="0"
-                                    step="0.01" required>
+                                    step="0.01" required data-currency-input="true">
                                 <div class="invalid-feedback"></div>
                             </div>
                             <div class="mb-3">

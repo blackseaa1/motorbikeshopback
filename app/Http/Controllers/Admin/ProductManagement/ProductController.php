@@ -14,39 +14,122 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Config;
-use Illuminate\Database\QueryException;
-use Illuminate\Http\JsonResponse; // Đảm bảo đã import JsonResponse
-use Illuminate\View\View; // Đảm bảo đã import View
+use Illuminate\Http\JsonResponse;
+use Illuminate\View\View;
 
 class ProductController extends Controller
 {
     /**
-     * Hiển thị danh sách sản phẩm, hỗ trợ xem cả thùng rác.
-     * Logic này đã chính xác và không cần thay đổi.
+     * Hiển thị danh sách sản phẩm, hỗ trợ tìm kiếm, lọc, sắp xếp và phân trang AJAX, xem cả thùng rác.
+     *
+     * @param Request $request
+     * @return View|JsonResponse
      */
-    public function index(Request $request)
+    public function index(Request $request): View|JsonResponse
     {
         $query = Product::with(['category', 'brand', 'images']);
-        $status = $request->query('status');
+        $status_query_param = $request->query('status'); // Lấy tham số status từ URL
 
-        if ($status === 'trashed') {
-            $query->onlyTrashed();
+        // 1. Xử lý tìm kiếm
+        if ($search = $request->input('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', '%' . $search . '%');
+            });
         }
 
-        $products = $query->latest()->paginate(10);
+        // 2. Xử lý lọc
+        $filter = $request->input('filter', 'all');
+
+        // Xử lý riêng trường hợp "trashed" để tránh xung đột với các filter khác
+        if ($filter === 'trashed' || $status_query_param === 'trashed') {
+            $query->onlyTrashed();
+        } else {
+            // Nếu không phải trashed, áp dụng các filter trạng thái khác
+            switch ($filter) {
+                case 'active':
+                    $query->active();
+                    break;
+                case 'inactive':
+                    $query->inactive();
+                    break;
+                case 'out_of_stock':
+                    $query->outOfStock();
+                    break;
+                case 'low_stock':
+                    $query->lowStock();
+                    break;
+                    // 'all' sẽ không thêm điều kiện lọc nào
+            }
+        }
+
+
+        // 3. Xử lý sắp xếp
+        $sortBy = $request->input('sort_by', 'latest');
+        switch ($sortBy) {
+            case 'oldest':
+                $query->orderBy('created_at', 'asc');
+                break;
+            case 'name_asc':
+                $query->orderBy('name', 'asc');
+                break;
+            case 'name_desc':
+                $query->orderBy('name', 'desc');
+                break;
+            case 'price_asc':
+                $query->orderBy('price', 'asc');
+                break;
+            case 'price_desc':
+                $query->orderBy('price', 'desc');
+                break;
+            case 'stock_asc':
+                $query->orderBy('stock_quantity', 'asc');
+                break;
+            case 'stock_desc':
+                $query->orderBy('stock_quantity', 'desc');
+                break;
+            case 'latest':
+            default:
+                $query->orderBy('created_at', 'desc');
+                break;
+        }
+
+        $products = $query->paginate(10)->withQueryString();
+
+        if ($request->expectsJson()) {
+            $tableRowsHtml = '';
+            $startIndex = $products->firstItem() ? ($products->firstItem() - 1) : 0;
+
+            foreach ($products as $index => $product) {
+                $tableRowsHtml .= view('admin.productManagement.product.partials._product_table_row', [
+                    'product' => $product,
+                    'loopIndex' => $index,
+                    'startIndex' => $startIndex,
+                ])->render();
+            }
+
+            return response()->json([
+                'table_rows' => $tableRowsHtml,
+                'pagination_links' => $products->links('admin.vendor.pagination')->render(),
+            ]);
+        }
+
+        // Nếu không phải AJAX, trả về view đầy đủ với dữ liệu đã phân trang
         $categories = Category::where('status', 'active')->orderBy('name')->get();
         $brands = Brand::where('status', 'active')->orderBy('name')->get();
         $vehicleBrands = VehicleBrand::with(['vehicleModels' => fn($q) => $q->where('status', 'active')->orderBy('name')])
             ->where('status', 'active')->orderBy('name')->get();
 
-        return view('admin.productManagement.product.products', compact('products', 'categories', 'brands', 'vehicleBrands', 'status'));
+        // Truyền biến $status_query_param để hiển thị tab đúng trên giao diện
+        return view('admin.productManagement.product.products', compact('products', 'categories', 'brands', 'vehicleBrands', 'status_query_param'));
     }
 
     /**
      * Lưu một sản phẩm mới vào cơ sở dữ liệu.
-     * Logic này đã chính xác và không cần thay đổi.
+     *
+     * @param Request $request
+     * @return JsonResponse
      */
-    public function store(Request $request)
+    public function store(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255|unique:products,name',
@@ -96,20 +179,9 @@ class ProductController extends Controller
     }
 
     /**
-     * Lấy thông tin chi tiết của một sản phẩm và hiển thị trên trang.
-     * Phương thức này dùng để hiển thị trang chi tiết sản phẩm đầy đủ.
-     * @param Product $product
-     * @return View
-     */
-    public function show(Product $product): View
-    {
-        $product->load('category', 'brand', 'vehicleModels', 'images');
-        return view('admin.productManagement.product.show', compact('product'));
-    }
-
-    /**
      * API: Lấy thông tin chi tiết của một sản phẩm dưới dạng JSON.
-     * Được sử dụng bởi modal "Xem chi tiết" trên trang tồn kho.
+     * Được sử dụng bởi modal "Xem chi tiết" và "Cập nhật" trên trang.
+     *
      * @param Product $product
      * @return JsonResponse
      */
@@ -124,6 +196,7 @@ class ProductController extends Controller
 
     /**
      * API: Cập nhật số lượng tồn kho của một sản phẩm.
+     *
      * @param Request $request
      * @param Product $product
      * @return JsonResponse
@@ -154,8 +227,12 @@ class ProductController extends Controller
      * Cập nhật thông tin sản phẩm.
      * Sử dụng Route-Model Binding, Laravel sẽ tự động tìm sản phẩm.
      * Để nó tìm được sản phẩm trong thùng rác, cần thêm ->withTrashed() ở file routes.
+     *
+     * @param Request $request
+     * @param Product $product
+     * @return JsonResponse
      */
-    public function update(Request $request, Product $product)
+    public function update(Request $request, Product $product): JsonResponse
     {
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255|unique:products,name,' . $product->id,
@@ -218,10 +295,12 @@ class ProductController extends Controller
     }
 
     /**
-     * Chuyển đổi trạng thái (Mở bán/Dừng bán).
-     * Logic này đã chính xác và không cần thay đổi.
+     * Chuyển đổi trạng thái (Mở bán/Dừng bán) của một sản phẩm.
+     *
+     * @param Product $product
+     * @return JsonResponse
      */
-    public function toggleStatus(Product $product)
+    public function toggleStatus(Product $product): JsonResponse
     {
         try {
             $product->status = ($product->status === Product::STATUS_ACTIVE) ? Product::STATUS_INACTIVE : Product::STATUS_ACTIVE;
@@ -241,10 +320,13 @@ class ProductController extends Controller
 
     /**
      * Chuyển sản phẩm vào thùng rác (Xóa mềm).
-     * Logic này đã chính xác và không cần thay đổi.
+     *
+     * @param Product $product
+     * @return JsonResponse
      */
-    public function destroy(Product $product)
+    public function destroy(Product $product): JsonResponse
     {
+        // Kiểm tra xem sản phẩm đã từng được sử dụng trong đơn hàng nào chưa
         if ($product->orderItems()->exists()) {
             return response()->json([
                 'success' => false,
@@ -256,7 +338,8 @@ class ProductController extends Controller
             $product->delete(); // Thực hiện soft delete
             return response()->json([
                 'success' => true,
-                'message' => "Đã chuyển sản phẩm '{$product->name}' vào thùng rác."
+                'message' => "Đã chuyển sản phẩm '{$product->name}' vào thùng rác.",
+                'deleted_ids' => [$product->id] // [FIX] Return deleted_ids
             ]);
         } catch (\Exception $e) {
             Log::error("Lỗi khi xóa mềm Sản phẩm (ID: {$product->id}): " . $e->getMessage());
@@ -266,14 +349,20 @@ class ProductController extends Controller
 
     /**
      * Khôi phục sản phẩm từ thùng rác.
-     * Logic này đã chính xác và không cần thay đổi.
+     *
+     * @param int $id
+     * @return JsonResponse
      */
-    public function restore($id)
+    public function restore($id): JsonResponse
     {
         $product = Product::onlyTrashed()->findOrFail($id);
         try {
             $product->restore();
-            return response()->json(['success' => true, 'message' => "Đã khôi phục sản phẩm '{$product->name}'."]);
+            return response()->json([
+                'success' => true,
+                'message' => "Đã khôi phục sản phẩm '{$product->name}'.",
+                'restored_ids' => [$product->id] // [FIX] Return restored_ids
+            ]);
         } catch (\Exception $e) {
             Log::error("Lỗi khi khôi phục Sản phẩm (ID: {$id}): " . $e->getMessage());
             return response()->json(['success' => false, 'message' => 'Không thể khôi phục sản phẩm này.'], 500);
@@ -282,12 +371,16 @@ class ProductController extends Controller
 
     /**
      * Xóa vĩnh viễn sản phẩm.
-     * Logic này đã chính xác và không cần thay đổi.
+     *
+     * @param Request $request
+     * @param int $id
+     * @return JsonResponse
      */
-    public function forceDelete(Request $request, $id)
+    public function forceDelete(Request $request, $id): JsonResponse
     {
         $product = Product::onlyTrashed()->findOrFail($id);
 
+        // Xác thực mật khẩu admin nếu cấu hình yêu cầu
         $request->validate(['admin_password_confirm_delete' => 'required|string']);
         $configPassword = Config::get('admin.deletion_password');
 
@@ -311,14 +404,25 @@ class ProductController extends Controller
             $product->forceDelete();
             DB::commit();
 
-            return response()->json(['success' => true, 'message' => 'Đã xóa vĩnh viễn sản phẩm!']);
+            return response()->json([
+                'success' => true,
+                'message' => 'Đã xóa vĩnh viễn sản phẩm!',
+                'deleted_ids' => [$product->id] // [FIX] Return deleted_ids
+            ]);
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error("Lỗi khi xóa vĩnh viễn Sản phẩm (ID: {$id}): " . $e->getMessage());
             return response()->json(['success' => false, 'message' => 'Không thể xóa vĩnh viễn sản phẩm này.'], 500);
         }
     }
-    public function searchProductsApi(Request $request): \Illuminate\Http\JsonResponse
+
+    /**
+     * API để tìm kiếm sản phẩm cho các chức năng như thêm vào đơn hàng.
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function searchProductsApi(Request $request): JsonResponse
     {
         $searchTerm = $request->input('search', '');
 
@@ -328,14 +432,335 @@ class ProductController extends Controller
 
         $products = Product::where('status', Product::STATUS_ACTIVE)
             ->where(function ($query) use ($searchTerm) {
-                $query->where('name', 'LIKE', "%{$searchTerm}%")
-                    ->orWhere('sku', 'LIKE', "%{$searchTerm}%");
+                $query->where('name', 'LIKE', "%{$searchTerm}%");
             })
-            ->select(['id', 'name', 'sku', 'price', 'stock_quantity'])
+            ->select(['id', 'name', 'price', 'stock_quantity'])
             ->with('firstImage') // Tải ảnh đầu tiên để hiển thị
             ->limit(10)
             ->get();
 
         return response()->json($products);
+    }
+
+    /**
+     * Xóa hàng loạt các sản phẩm (chuyển vào thùng rác).
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function bulkDestroy(Request $request): JsonResponse
+    {
+        $request->validate([
+            'ids' => 'required|json', // Expecting a JSON string of IDs
+        ]);
+
+        $ids = json_decode($request->input('ids'), true);
+
+        if (!is_array($ids) || empty($ids)) {
+            return response()->json(['success' => false, 'message' => 'Dữ liệu ID không hợp lệ hoặc rỗng.'], 400);
+        }
+
+        $successfullyDeletedIds = [];
+        $errors = [];
+
+        // Lấy các sản phẩm tồn tại trong CSDL từ danh sách IDs
+        $productsToProcess = Product::whereIn('id', $ids)->get();
+        // Xác định các IDs không tìm thấy
+        $notFoundIds = array_diff($ids, $productsToProcess->pluck('id')->toArray());
+        foreach ($notFoundIds as $id) {
+            $errors[] = "Sản phẩm với ID '{$id}' không tồn tại.";
+        }
+
+        foreach ($productsToProcess as $product) {
+            // Chỉ xóa mềm nếu sản phẩm chưa từng có trong đơn hàng
+            if ($product->orderItems()->exists()) {
+                $errors[] = "Sản phẩm '{$product->name}' đã tồn tại trong đơn hàng và không thể xóa.";
+            } else {
+                try {
+                    $product->delete(); // Thực hiện soft delete
+                    $successfullyDeletedIds[] = $product->id;
+                } catch (\Exception $e) {
+                    Log::error("Lỗi khi xóa mềm hàng loạt sản phẩm ID {$product->id}: " . $e->getMessage());
+                    $errors[] = "Xảy ra lỗi khi xóa mềm sản phẩm '{$product->name}'.";
+                }
+            }
+        }
+
+        $totalProcessed = count($ids); // Tổng số ID được gửi
+        $totalDeleted = count($successfullyDeletedIds); // Số lượng sản phẩm đã chuyển vào thùng rác thành công
+        $totalFailed = count($errors); // Số lượng lỗi không thể xử lý
+
+        $message = "";
+        $success = false;
+
+        if ($totalDeleted > 0) {
+            $success = true;
+            $message = "Đã chuyển thành công {$totalDeleted} sản phẩm vào thùng rác.";
+        }
+
+        if ($totalFailed > 0) {
+            if ($message) $message .= " ";
+            $message .= "Một số lỗi xảy ra: " . implode('; ', $errors);
+        }
+
+        if ($totalDeleted === 0 && $totalFailed === 0 && $totalProcessed > 0) {
+            $message = "Không có sản phẩm nào được chuyển vào thùng rác hoặc đủ điều kiện xóa.";
+            $success = false; // Vẫn coi là thất bại nếu không có sản phẩm nào được xóa thành công.
+        } else if ($totalProcessed === 0) {
+            $message = "Không có sản phẩm nào được chọn.";
+            $success = false;
+        }
+
+        return response()->json([
+            'success' => $success,
+            'message' => $message,
+            'deleted_ids' => $successfullyDeletedIds, // Trả về ID đã xóa để JS có thể cập nhật
+            'errors' => $errors,
+        ], $success ? 200 : 422); // 200 cho thành công/thành công một phần, 422 cho thất bại hoàn toàn
+    }
+
+    /**
+     * Bật/tắt trạng thái của nhiều sản phẩm.
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function bulkToggleStatus(Request $request): JsonResponse
+    {
+        $request->validate([
+            'ids' => 'required|json', // Expecting a JSON string of IDs
+            'status' => ['required', \Illuminate\Validation\Rule::in([Product::STATUS_ACTIVE, Product::STATUS_INACTIVE])],
+        ]);
+
+        $ids = json_decode($request->input('ids'), true);
+        $targetStatus = $request->input('status');
+
+        if (!is_array($ids) || empty($ids)) {
+            return response()->json(['success' => false, 'message' => 'Dữ liệu ID không hợp lệ.'], 400);
+        }
+
+        $successfullyUpdatedIds = [];
+        $alreadyInTargetStateCount = 0;
+        $errors = [];
+
+        $productsToProcess = Product::whereIn('id', $ids)->get();
+        $foundIds = $productsToProcess->pluck('id')->toArray();
+        $notFoundIds = array_diff($ids, $foundIds);
+        foreach ($notFoundIds as $id) {
+            $errors[] = "Sản phẩm với ID '{$id}' không tồn tại.";
+        }
+
+        foreach ($productsToProcess as $product) {
+            if ($product->status === $targetStatus) {
+                $alreadyInTargetStateCount++;
+            } else {
+                try {
+                    $product->status = $targetStatus;
+                    $product->save();
+                    $successfullyUpdatedIds[] = $product->id;
+                } catch (\Exception $e) {
+                    Log::error("Lỗi khi cập nhật trạng thái sản phẩm ID {$product->id}: " . $e->getMessage());
+                    $errors[] = "Không thể cập nhật trạng thái sản phẩm '{$product->name}'.";
+                }
+            }
+        }
+
+        $totalProcessed = count($ids);
+        $totalUpdated = count($successfullyUpdatedIds);
+        $totalFailed = count($errors);
+
+        $message = "";
+        $success = false;
+
+        if ($totalUpdated > 0) {
+            $success = true;
+            $message = "Đã cập nhật trạng thái thành công cho {$totalUpdated} sản phẩm.";
+        }
+
+        if ($alreadyInTargetStateCount > 0) {
+            if ($message) $message .= " ";
+            $message .= "({$alreadyInTargetStateCount} sản phẩm đã ở trạng thái đích).";
+            $success = true;
+        }
+
+        if ($totalFailed > 0) {
+            if ($message) $message .= " ";
+            $message .= "Một số lỗi xảy ra: " . implode('; ', $errors);
+        }
+
+        if ($totalUpdated === 0 && $alreadyInTargetStateCount === 0 && $totalFailed === 0 && $totalProcessed > 0) {
+            $message = "Không có sản phẩm nào được cập nhật hoặc thay đổi trạng thái.";
+            $success = false;
+        } else if ($totalProcessed === 0) {
+            $message = "Không có sản phẩm nào được chọn.";
+            $success = false;
+        }
+
+        return response()->json([
+            'success' => $success,
+            'message' => $message,
+            'products' => Product::whereIn('id', $successfullyUpdatedIds)->get(), // Trả về các product đã được cập nhật
+            'updated_ids' => $successfullyUpdatedIds,
+            'errors' => $errors,
+        ], $success ? 200 : 422);
+    }
+
+    /**
+     * Khôi phục hàng loạt sản phẩm từ thùng rác.
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function bulkRestore(Request $request): JsonResponse
+    {
+        $request->validate([
+            'ids' => 'required|json',
+        ]);
+
+        $ids = json_decode($request->input('ids'), true);
+
+        if (!is_array($ids) || empty($ids)) {
+            return response()->json(['success' => false, 'message' => 'Dữ liệu ID không hợp lệ hoặc rỗng.'], 400);
+        }
+
+        $successfullyRestoredIds = [];
+        $errors = [];
+
+        $productsToProcess = Product::onlyTrashed()->whereIn('id', $ids)->get();
+        $notFoundIds = array_diff($ids, $productsToProcess->pluck('id')->toArray());
+        foreach ($notFoundIds as $id) {
+            $errors[] = "Sản phẩm với ID '{$id}' không tồn tại trong thùng rác.";
+        }
+
+        foreach ($productsToProcess as $product) {
+            try {
+                $product->restore();
+                $successfullyRestoredIds[] = $product->id;
+            } catch (\Exception $e) {
+                Log::error("Lỗi khi khôi phục hàng loạt sản phẩm ID {$product->id}: " . $e->getMessage());
+                $errors[] = "Xảy ra lỗi khi khôi phục sản phẩm '{$product->name}'.";
+            }
+        }
+
+        $totalProcessed = count($ids);
+        $totalRestored = count($successfullyRestoredIds);
+        $totalFailed = count($errors);
+
+        $message = "";
+        $success = false;
+
+        if ($totalRestored > 0) {
+            $success = true;
+            $message = "Đã khôi phục thành công {$totalRestored} sản phẩm.";
+        }
+
+        if ($totalFailed > 0) {
+            if ($message) $message .= " ";
+            $message .= "Một số lỗi xảy ra: " . implode('; ', $errors);
+        }
+
+        if ($totalRestored === 0 && $totalFailed === 0 && $totalProcessed > 0) {
+            $message = "Không có sản phẩm nào được khôi phục hoặc đủ điều kiện khôi phục.";
+            $success = false;
+        } else if ($totalProcessed === 0) {
+            $message = "Không có sản phẩm nào được chọn.";
+            $success = false;
+        }
+
+        return response()->json([
+            'success' => $success,
+            'message' => $message,
+            'restored_ids' => $successfullyRestoredIds,
+            'errors' => $errors,
+        ], $success ? 200 : 422);
+    }
+
+    /**
+     * Xóa vĩnh viễn hàng loạt sản phẩm từ thùng rác.
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function bulkForceDelete(Request $request): JsonResponse
+    {
+        $request->validate([
+            'ids' => 'required|json',
+            'admin_password_bulk_force_delete' => 'required|string', // Mật khẩu xác nhận
+        ]);
+
+        $configPassword = Config::get('admin.deletion_password');
+        if (!$configPassword || $request->input('admin_password_bulk_force_delete') !== $configPassword) {
+            return response()->json(['errors' => ['admin_password_bulk_force_delete' => ['Mật khẩu xác nhận không đúng.']]], 422);
+        }
+
+        $ids = json_decode($request->input('ids'), true);
+
+        if (!is_array($ids) || empty($ids)) {
+            return response()->json(['success' => false, 'message' => 'Dữ liệu ID không hợp lệ hoặc rỗng.'], 400);
+        }
+
+        $successfullyForceDeletedIds = [];
+        $errors = [];
+
+        $productsToProcess = Product::onlyTrashed()->whereIn('id', $ids)->get();
+        $notFoundIds = array_diff($ids, $productsToProcess->pluck('id')->toArray());
+        foreach ($notFoundIds as $id) {
+            $errors[] = "Sản phẩm với ID '{$id}' không tồn tại trong thùng rác.";
+        }
+
+        DB::beginTransaction();
+        try {
+            foreach ($productsToProcess as $product) {
+                // Xóa các ảnh liên quan trong storage
+                foreach ($product->images as $image) {
+                    if ($image->image_url && Storage::disk('public')->exists($image->image_url)) {
+                        Storage::disk('public')->delete($image->image_url);
+                    }
+                }
+                // Xóa các record ảnh và quan hệ many-to-many
+                $product->images()->delete();
+                $product->vehicleModels()->detach();
+                $product->forceDelete();
+                $successfullyForceDeletedIds[] = $product->id;
+            }
+            DB::commit();
+
+            $totalProcessed = count($ids);
+            $totalForceDeleted = count($successfullyForceDeletedIds);
+            $totalFailed = count($errors);
+
+            $message = "";
+            $success = false;
+
+            if ($totalForceDeleted > 0) {
+                $success = true;
+                $message = "Đã xóa vĩnh viễn thành công {$totalForceDeleted} sản phẩm.";
+            }
+
+            if ($totalFailed > 0) {
+                if ($message) $message .= " ";
+                $message .= "Một số lỗi xảy ra: " . implode('; ', $errors);
+            }
+
+            if ($totalForceDeleted === 0 && $totalFailed === 0 && $totalProcessed > 0) {
+                $message = "Không có sản phẩm nào được xóa vĩnh viễn hoặc đủ điều kiện xóa.";
+                $success = false;
+            } else if ($totalProcessed === 0) {
+                $message = "Không có sản phẩm nào được chọn.";
+                $success = false;
+            }
+
+            return response()->json([
+                'success' => $success,
+                'message' => $message,
+                'deleted_ids' => $successfullyForceDeletedIds,
+                'errors' => $errors,
+            ], $success ? 200 : 422);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error("Lỗi khi xóa vĩnh viễn hàng loạt sản phẩm: " . $e->getMessage());
+            $errorMessage = 'Đã xảy ra lỗi hệ thống khi xóa vĩnh viễn hàng loạt sản phẩm.';
+            return response()->json(['success' => false, 'message' => $errorMessage], 500);
+        }
     }
 }

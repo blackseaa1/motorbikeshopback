@@ -1,4 +1,4 @@
-
+{{-- File: resources/views/admin/productManagement/product/modals/confirm_force_delete_product.blade.php --}}
 <div class="modal fade" id="confirmForceDeleteModal" tabindex="-1" aria-labelledby="confirmForceDeleteModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">

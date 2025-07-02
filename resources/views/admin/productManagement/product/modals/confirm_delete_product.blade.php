@@ -1,3 +1,4 @@
+{{-- File: resources/views/admin/productManagement/product/modals/confirm_delete_product.blade.php --}}
 <div class="modal fade" id="confirmDeleteModal" tabindex="-1">
     <div class="modal-dialog">
         <form id="deleteProductForm" method="POST">
