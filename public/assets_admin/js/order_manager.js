@@ -947,5 +947,5 @@ window.initializeOrderManager = (
     }
 
     // F. KICKSTART THE SCRIPT
-    initialize();
+   initialize(); 
 };

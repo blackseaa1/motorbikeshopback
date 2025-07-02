@@ -139,7 +139,7 @@
                     </div>
                     {{-- Pagination Links --}}
                     <div class="mt-3 d-flex justify-content-center">
-                        {{ $orders->withQueryString()->links('admin.vendor.pagination') }}
+                        {{ $orders->links() }}
                     </div>
                 @endif
             </div>
