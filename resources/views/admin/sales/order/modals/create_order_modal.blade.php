@@ -36,7 +36,7 @@
                                 <div class="mb-3">
                                     <label for="customer_id_create" class="form-label">Chọn khách hàng <span
                                             class="text-danger">*</span></label>
-                                    <select class="form-select selectpicker" id="customer_id_create" name="customer_id"
+                                    <select class="form-select selectpicker " id="customer_id_create" name="customer_id"
                                         data-live-search="true" title="Tìm và chọn khách hàng...">
                                         <option value="">Chọn khách hàng...</option> {{-- Added empty option for initial state --}}
                                         @foreach($customers as $customer)
@@ -249,4 +249,46 @@
             this.value = this.value.replace(/^\s+/, ''); // Xóa khoảng trắng đầu
         });
     });
+    let hasLoadedProductDropdown = false;
+
+document.getElementById('productDropdownBtn').addEventListener('click', function () {
+    if (hasLoadedProductDropdown) return; // Đã load rồi, không làm lại
+
+    hasLoadedProductDropdown = true;
+
+    // Thực hiện xử lý chỉ 1 lần ở đây, ví dụ gọi API hoặc render danh sách
+    console.log("Loading product data...");
+
+    // Ví dụ gọi API (giả lập)
+    fetch('/api/products')
+        .then(response => response.json())
+        .then(data => {
+            console.log('Product data:', data);
+            // Hiển thị dữ liệu vào dropdown (nếu cần)
+        })
+        .catch(error => console.error('Lỗi khi load sản phẩm:', error));
+});
+
 </script>
+<style>
+/* Làm nền của dropdown trong suốt */
+.bootstrap-select.form-select {
+    background-color: #ffffff00 !important;
+    /* border: none !important; nếu muốn ẩn luôn viền */
+    box-shadow: none !important;
+}
+
+/* Làm trong suốt phần hiển thị đã chọn */
+.bootstrap-select.form-select .btn {
+    background-color: #ffffff00 !important;
+    border: none !important;
+    box-shadow: none !important;
+    color: #000; /* Đặt màu chữ để hiển thị tốt trên nền trong suốt */
+}
+
+/* Tùy chọn: ẩn mũi tên nếu muốn */
+.bootstrap-select.form-select .dropdown-toggle::after {
+    display: none;
+}
+
+</style>

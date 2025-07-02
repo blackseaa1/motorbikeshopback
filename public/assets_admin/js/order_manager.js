@@ -203,14 +203,16 @@ window.initializeOrderManager = (
         $productItemsContainer.append($newRow);
 
         if (typeof $.fn.selectpicker === 'function') {
-            // Kiểm tra nếu selectpicker chưa được khởi tạo, thì khởi tạo
-            if (!$select.data('selectpicker')) { // KIỂM TRA ĐỂ KHỞI TẠO DUY NHẤT MỘT LẦN
-                $select.selectpicker(); // Chỉ gọi selectpicker() một lần để khởi tạo
-                console.log(`Product selectpicker initialized for row ${rowIndex}.`);
-            }
-            // Luôn refresh để cập nhật hiển thị sau khi options thay đổi
-            $select.selectpicker('refresh'); // Luôn refresh
-            console.log(`Product selectpicker refreshed for row ${rowIndex}.`);
+            // Luôn khởi tạo selectpicker cho phần tử SELECT MỚI NÀY
+            // Kiểm tra !$select.data('selectpicker') chỉ có ý nghĩa nếu phần tử đó có thể đã được khởi tạo trước đó
+            // trong ngữ cảnh khác. Trong addProductRow, nó luôn là một phần tử mới.
+            $select.selectpicker(); // Khởi tạo selectpicker cho phần tử <select> mới được thêm vào DOM
+            console.log(`Product selectpicker initialized and refreshed for new row ${rowIndex}.`);
+
+            // Không cần gọi riêng 'refresh' nếu nó là khởi tạo lần đầu cho phần tử đó.
+            // selectpicker() khi khởi tạo sẽ tự động render.
+            // Nếu có trường hợp cần thay đổi options sau khi đã khởi tạo, mới dùng refresh.
+            // Ở đây, options được điền trước khi selectpicker() được gọi.
         } else {
             console.warn("Bootstrap-select is not initialized. Product dropdown might not work correctly.");
         }
