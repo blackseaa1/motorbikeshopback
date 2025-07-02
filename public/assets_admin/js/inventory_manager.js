@@ -1,12 +1,14 @@
+// File: public/assets_admin/js/inventory_manager.js
+
 /**
  * =================================================================================
  * inventory_manager.js
  * ---------------------------------------------------------------------------------
- * Quản lý các chức năng tương tác trên trang tồn kho (Inventory).
- * - Cập nhật số lượng sản phẩm trực tiếp qua AJAX.
- * - Hiển thị chi tiết sản phẩm trong modal.
- * - Tải dữ liệu bảng và phân trang bằng AJAX.
- * =================================================================================
+ * Quản lý các chức năng tương tác trên trang tồn kho (Inventory).\r
+ * - Cập nhật số lượng sản phẩm trực tiếp qua AJAX.\r
+ * - Hiển thị chi tiết sản phẩm trong modal.\r
+ * - Tải dữ liệu bảng và phân trang bằng AJAX.\r
+ * =================================================================================\r
  */
 window.initializeInventoryManager = (
     showAppLoader,
@@ -41,6 +43,15 @@ window.initializeInventoryManager = (
     const $viewProductDetailsModal = $('#viewProductDetailsModal');
     const $updateQuantityModal = $('#updateQuantityModal'); // Cache the update quantity modal
     const $newStockQuantityInput = $('#newStockQuantity'); // Cache the new quantity input in the modal
+    const $updateProductModal = $('#updateProductModal'); // Cache the update product (full edit) modal
+
+    // THÊM CÁC PHẦN TỬ MỚI VÀO BỘ NHỚ CACHE
+    const inventorySearchInput = document.getElementById('inventorySearchInput');
+    const inventorySearchBtn = document.getElementById('inventorySearchBtn');
+    const inventoryCategoryFilter = document.getElementById('inventoryCategoryFilter');
+    const inventoryBrandFilter = document.getElementById('inventoryBrandFilter');
+    const inventoryClearFiltersBtn = document.getElementById('inventoryClearFiltersBtn');
+
 
     // Lấy CSRF Token
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
@@ -74,10 +85,45 @@ window.initializeInventoryManager = (
         setupViewDetailsModal();
         // Setup for update quantity modal
         setupUpdateQuantityModal();
+        // Setup for update product (full edit) form submission [new]
+        setupUpdateProductForm(); // <-- Gọi hàm thiết lập form cập nhật
+
+        // Setup event listeners for search and filter [new]
+        setupSearchAndFilterListeners();
 
         // Tải dữ liệu tồn kho ban đầu bằng AJAX
         loadInventoryTable(1);
     }
+
+    // --- CÁC HÀM XỬ LÝ TÌM KIẾM VÀ LỌC MỚI ---
+    function setupSearchAndFilterListeners() {
+        if (inventorySearchBtn) {
+            inventorySearchBtn.addEventListener('click', () => loadInventoryTable(1));
+        }
+        if (inventorySearchInput) {
+            inventorySearchInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    loadInventoryTable(1);
+                }
+            });
+        }
+        if (inventoryCategoryFilter) {
+            inventoryCategoryFilter.addEventListener('change', () => loadInventoryTable(1));
+        }
+        if (inventoryBrandFilter) {
+            inventoryBrandFilter.addEventListener('change', () => loadInventoryTable(1));
+        }
+        if (inventoryClearFiltersBtn) {
+            inventoryClearFiltersBtn.addEventListener('click', () => {
+                if (inventorySearchInput) inventorySearchInput.value = '';
+                if (inventoryCategoryFilter) inventoryCategoryFilter.value = '';
+                if (inventoryBrandFilter) inventoryBrandFilter.value = '';
+                loadInventoryTable(1);
+            });
+        }
+    }
+
 
     // C. AJAX TABLE LOADING & PAGINATION
     /**
@@ -156,6 +202,16 @@ window.initializeInventoryManager = (
             const urlParams = new URLSearchParams();
             urlParams.append('page', page);
 
+            // THÊM THAM SỐ TÌM KIẾM VÀ LỌC VÀO URLSearchParams
+            const currentSearchQuery = inventorySearchInput ? inventorySearchInput.value : '';
+            const currentCategoryFilter = inventoryCategoryFilter ? inventoryCategoryFilter.value : '';
+            const currentBrandFilter = inventoryBrandFilter ? inventoryBrandFilter.value : '';
+
+            if (currentSearchQuery) urlParams.append('search', currentSearchQuery);
+            if (currentCategoryFilter) urlParams.append('category_id', currentCategoryFilter);
+            if (currentBrandFilter) urlParams.append('brand_id', currentBrandFilter);
+
+
             const url = `/admin/product-management/inventory?${urlParams.toString()}`;
             console.log(`Fetching from URL: ${url}`);
 
@@ -169,6 +225,7 @@ window.initializeInventoryManager = (
             console.log(`Phản hồi Fetch Status: ${response.status}`);
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({ message: 'Lỗi không xác định từ máy chủ.' }));
+                console.error('Lỗi phản hồi tải tồn kho:', errorData);
                 throw new Error(errorData.message || `Lỗi mạng: ${response.statusText}`);
             }
             const data = await response.json();
@@ -242,6 +299,7 @@ window.initializeInventoryManager = (
 
             const data = await response.json();
             console.log('Phản hồi từ server (cập nhật tồn kho):', data);
+            console.log(`Phản hồi Cập nhật Tồn kho Status: ${response.status}`);
 
             if (response.ok) {
                 showAppInfoModal('Cập nhật tồn kho thành công!', 'Thành công', 'success');
@@ -265,6 +323,7 @@ window.initializeInventoryManager = (
     // E. VIEW PRODUCT DETAILS MODAL LOGIC
     function setupViewDetailsModal() {
         console.log('Thiết lập trình xử lý sự kiện cho nút "Xem chi tiết".');
+
         $adminInventoryPage.on('click', '.view-product-details-btn', async function() {
             console.log('Nút "Xem chi tiết" được click.');
             const productId = $(this).data('id');
@@ -278,6 +337,7 @@ window.initializeInventoryManager = (
                 console.log(`Phản hồi Fetch Status (chi tiết sản phẩm): ${response.status}`);
                 if (!response.ok) {
                     const errorData = await response.json().catch(() => ({ message: 'Lỗi không xác định từ máy chủ.' }));
+                    console.error('Lỗi phản hồi tải chi tiết sản phẩm:', errorData);
                     throw new Error(errorData.message || `Không thể tải chi tiết sản phẩm. Mã lỗi: ${response.status}`);
                 }
                 const product = await response.json();
@@ -290,6 +350,18 @@ window.initializeInventoryManager = (
             } finally {
                 hideAppLoader();
             }
+        });
+
+        // Bổ sung: Xử lý nút "Chỉnh sửa đầy đủ" trong modal chi tiết
+        $viewProductDetailsModal.on('click', '.open-full-edit-product-modal-btn', async function() {
+            const productId = $('#viewProductId').text(); // Lấy product ID từ modal chi tiết hiện tại
+            console.log(`Nút "Chỉnh sửa đầy đủ" được click từ modal chi tiết. Product ID: ${productId}`);
+            
+            // Đóng modal chi tiết trước khi mở modal chỉnh sửa
+            $viewProductDetailsModal.modal('hide'); 
+
+            // Gọi hàm để mở và điền dữ liệu vào modal chỉnh sửa sản phẩm
+            await openUpdateProductModal(productId);
         });
     }
 
@@ -331,13 +403,244 @@ window.initializeInventoryManager = (
             $vehicleModelsContainer.append('<span class="text-muted">Không có dòng xe tương thích.</span>');
             console.log('Không có dòng xe tương thích.');
         }
+    }
 
-        // Cập nhật link "Chỉnh sửa đầy đủ" trong footer modal
-        // Nút này dùng để điều hướng người dùng đến trang quản lý sản phẩm chính
-        // để thực hiện chỉnh sửa chi tiết sản phẩm. Nó không mở một modal chỉnh sửa tại chỗ.
-        const editLink = `/admin/product-management/products?search=${product.id}`;
-        $('#viewProductEditLink').attr('href', editLink);
-        console.log(`Link chỉnh sửa đầy đủ được đặt thành: ${editLink}`);
+    /**
+     * Khởi tạo SelectPicker cho các select element trong phạm vi cụ thể.
+     * Hủy các instance cũ trước khi khởi tạo lại để tránh lỗi.
+     * (Đây là phiên bản đã điều chỉnh từ product_management.js để phù hợp với inventory_manager.js)
+     */
+    const initializeSelectPickersInScope = (scope = document) => { // Đổi tên để tránh nhầm lẫn nếu có initializeSelectPickers toàn cục khác
+        try {
+            const $pickers = $(scope).find('.selectpicker');
+            if ($pickers.length === 0) return;
+
+            $pickers.each(function() {
+                const $this = $(this);
+                // Kiểm tra xem đã có data selectpicker chưa, nếu có thì hủy trước
+                if ($this.data('selectpicker')) {
+                    $this.selectpicker('destroy');
+                }
+            });
+
+            // Khởi tạo selectpicker
+            $pickers.selectpicker({
+                liveSearch: true,
+                width: '100%',
+                noneSelectedText: 'Chưa chọn mục nào',
+                actionsBox: true,
+                selectAllText: 'Chọn tất cả',
+                deselectAllText: 'Bỏ chọn tất cả',
+                size: 10,
+                dropupAuto: false
+            });
+            $pickers.selectpicker('render');
+            console.log('Selectpickers trong phạm vi đã được khởi tạo/làm mới.');
+        } catch (error) {
+            console.error('Lỗi khi khởi tạo selectpicker trong phạm vi:', error);
+        }
+    };
+
+
+    /**
+     * Hàm mới để mở và điền dữ liệu vào modal chỉnh sửa sản phẩm.
+     * Hàm này sẽ tương tự như cách product_management.js xử lý việc mở modal chỉnh sửa.
+     * Bạn cần đảm bảo #updateProductModal có sẵn trong DOM (đã include trong inventory.blade.php).
+     */
+    async function openUpdateProductModal(productId) {
+        showAppLoader();
+        // $updateProductModal đã được khai báo ở đầu tệp
+        try {
+            // Xóa các lỗi validation cũ và trạng thái is-invalid
+            $updateProductModal.find('.invalid-feedback').remove();
+            $updateProductModal.find('.is-invalid').removeClass('is-invalid');
+            $updateProductModal.find('input[type="file"]').val(''); // Clear file inputs
+
+            // Lấy chi tiết sản phẩm
+            const response = await fetch(`/admin/product-management/api/products/${productId}/details`);
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ message: 'Lỗi không xác định từ máy chủ.' }));
+                throw new Error(errorData.message || `Không thể tải chi tiết sản phẩm để chỉnh sửa. Mã lỗi: ${response.status}`);
+            }
+            const product = await response.json();
+            console.log('Dữ liệu sản phẩm để chỉnh sửa nhận được:', product);
+
+            // Quan trọng: Khởi tạo/làm mới selectpickers TRƯỚC khi đặt giá trị
+            // Sử dụng setTimeout để đảm bảo DOM được cập nhật và selectpicker sẵn sàng.
+            // Gọi initializeSelectPickersInScope cho modal này.
+            setTimeout(() => {
+                initializeSelectPickersInScope($updateProductModal); // [new]
+            }, 0);
+
+
+            // Điền dữ liệu vào form của modal chỉnh sửa
+            $('#updateProductId').val(product.id); // SỬA: Đảm bảo ID này tồn tại trong update_product.blade.php
+            $('#productNameUpdate').val(product.name); // SỬA ID
+            $('#productDescriptionUpdate').val(product.description); // SỬA ID
+            $('#productPriceUpdate').val(product.price); // SỬA ID
+            $('#productStockUpdate').val(product.stock_quantity); // SỬA ID
+            $('#productMaterialUpdate').val(product.material); // SỬA ID
+            $('#productColorUpdate').val(product.color); // SỬA ID
+            $('#productSpecificationsUpdate').val(product.specifications); // SỬA ID
+
+            // Chọn danh mục và thương hiệu (sử dụng trigger('change') và .selectpicker('refresh') nếu là Select2 hoặc tương tự)
+            $('#productCategoryUpdate').val(product.category_id); // SỬA ID
+            if ($.fn.selectpicker) { // Kiểm tra nếu Bootstrap-select đang được sử dụng
+                $('#productCategoryUpdate').selectpicker('refresh');
+            } else if ($.fn.select2) { // Nếu là Select2
+                $('#productCategoryUpdate').trigger('change');
+            }
+            
+            $('#productBrandUpdate').val(product.brand_id); // SỬA ID
+            if ($.fn.selectpicker) { //
+                $('#productBrandUpdate').selectpicker('refresh');
+            } else if ($.fn.select2) { //
+                $('#productBrandUpdate').trigger('change');
+            }
+
+            // Xử lý checkbox trạng thái
+            if (product.status === 'active') {
+                $('#productIsActiveUpdate').prop('checked', true); // SỬA ID
+            } else {
+                $('#productIsActiveUpdate').prop('checked', false); // SỬA ID
+            }
+
+            // Xử lý các dòng xe tương thích (select multiple, giả định Select2 hoặc selectpicker)
+            const selectedVehicleModels = product.vehicle_models ? product.vehicle_models.map(model => model.id.toString()) : [];
+            $('#productVehicleModelsUpdate').val(selectedVehicleModels); // SỬA ID
+            if ($.fn.selectpicker) { //
+                $('#productVehicleModelsUpdate').selectpicker('refresh');
+            } else if ($.fn.select2) { //
+                $('#productVehicleModelsUpdate').trigger('change');
+            }
+
+            // Hiển thị hình ảnh hiện có
+            const $existingImagesContainer = $('#productImagesPreviewUpdate'); // SỬA ID
+            $existingImagesContainer.empty();
+            if (product.images && product.images.length > 0) {
+                product.images.forEach(image => {
+                    const imageUrl = image.image_url.startsWith('http') ? image.image_url : `/storage/${image.image_url}`;
+                    $existingImagesContainer.append(`
+                        <div class="col-md-3 mb-2 existing-image-item" data-id="${image.id}">
+                            <img src="${imageUrl}" class="img-thumbnail" style="width: 100px; height: 100px; object-fit: cover;">
+                            <button type="button" class="btn btn-sm btn-danger remove-existing-image-btn" data-id="${image.id}">X</button>
+                            <input type="hidden" name="existing_images[]" value="${image.id}">
+                        </div>
+                    `);
+                });
+            } else {
+                $existingImagesContainer.append('<p>Không có hình ảnh hiện có.</p>');
+            }
+            
+            // Cập nhật action của form để trỏ đến endpoint update đúng với ID sản phẩm
+            // Giả định route có dạng /admin/product-management/products/{product} và method PUT
+            $('#updateProductForm').attr('action', `/admin/product-management/products/${productId}`);
+
+
+            // Mở modal
+            $updateProductModal.modal('show');
+            console.log('Đã mở modal chỉnh sửa sản phẩm.');
+
+        } catch (error) {
+            console.error('Lỗi khi mở modal chỉnh sửa sản phẩm:', error);
+            showAppInfoModal(error.message, 'Lỗi', 'error');
+        } finally {
+            hideAppLoader();
+        }
+    }
+
+    // G. SETUP UPDATE PRODUCT FORM SUBMISSION [new function]
+    function setupUpdateProductForm() {
+        console.log('Thiết lập trình xử lý gửi form cho modal cập nhật sản phẩm.');
+
+        $('#updateProductForm').on('submit', async function(event) {
+            event.preventDefault(); // Ngăn chặn hành vi gửi form mặc định của trình duyệt
+            showAppLoader();
+            
+            // Xóa các thông báo lỗi validation cũ
+            $updateProductModal.find('.invalid-feedback').text('');
+            $updateProductModal.find('.form-control').removeClass('is-invalid');
+            
+            const form = this;
+            const formData = new FormData(form);
+            const productId = $('#updateProductId').val(); // Lấy ID sản phẩm từ trường ẩn
+
+            // Thêm _method=PUT vào FormData vì Laravel cần nó cho phương thức PUT/PATCH qua form POST
+            formData.append('_method', 'PUT');
+
+            const actionUrl = $(form).attr('action'); // Lấy URL từ thuộc tính action của form
+
+            try {
+                const response = await fetch(actionUrl, {
+                    method: 'POST', // Luôn là POST khi dùng FormData với _method=PUT
+                    headers: {
+                        'X-CSRF-TOKEN': csrfToken // Đảm bảo CSRF token được gửi
+                    },
+                    body: formData // FormData tự động thiết lập Content-Type là multipart/form-data
+                });
+
+                const data = await response.json();
+                console.log('Phản hồi từ server (cập nhật sản phẩm):', data);
+                console.log(`Phản hồi Cập nhật Sản phẩm Status: ${response.status}`);
+
+                if (response.ok) { // Nếu phản hồi thành công (2xx)
+                    showAppInfoModal(data.message || 'Cập nhật sản phẩm thành công!', 'Thành công', 'success');
+                    $updateProductModal.modal('hide'); // Đóng modal
+                    loadInventoryTable(getCurrentPage()); // Tải lại bảng để phản ánh thay đổi
+                } else if (response.status === 422) { // Lỗi validation
+                    console.error('Lỗi validation:', data.errors);
+                    // Hiển thị lỗi validation trên form
+                    for (const fieldName in data.errors) {
+                        const errorMessage = data.errors[fieldName][0];
+                        const inputElement = $(`#${fieldName}Update`); // Giả định ID input là fieldName + 'Update'
+                        
+                        // Xử lý các trường Selectpicker/Select2
+                        if (inputElement.hasClass('selectpicker') || inputElement.hasClass('select2')) {
+                            inputElement.closest('.form-group, .mb-3').find('.invalid-feedback').text(errorMessage).show();
+                            inputElement.closest('.form-group, .mb-3').find('.form-control, .bootstrap-select, .select2-container').addClass('is-invalid');
+                        } else {
+                            inputElement.addClass('is-invalid');
+                            inputElement.next('.invalid-feedback').text(errorMessage);
+                        }
+
+                        // Xử lý product_images nếu có lỗi
+                        if (fieldName.startsWith('product_images')) {
+                            $('#productImagesUpdate').addClass('is-invalid');
+                            $('#productImagesUpdate').next('.invalid-feedback').text(errorMessage);
+                        }
+                    }
+                    showAppInfoModal('Vui lòng kiểm tra lại thông tin bạn đã nhập.', 'Lỗi nhập liệu', 'error');
+                } else { // Các lỗi server khác (5xx)
+                    showAppInfoModal(data.message || 'Đã xảy ra lỗi không xác định. Vui lòng thử lại.', 'Lỗi', 'error');
+                }
+            } catch (error) {
+                console.error('Lỗi khi gửi form cập nhật sản phẩm:', error);
+                showAppInfoModal('Lỗi kết nối đến máy chủ! Vui lòng thử lại.', 'Lỗi kết nối', 'error');
+            } finally {
+                hideAppLoader();
+                if (submitButton) {
+                    submitButton.disabled = false;
+                    if (formId === 'createProductForm') submitButton.innerHTML = 'Lưu Sản phẩm';
+                    else if (formId === 'updateProductForm') submitButton.innerHTML = 'Lưu thay đổi';
+                    else if (formId === 'bulkDeleteProductsForm') submitButton.innerHTML = 'Xác nhận Xóa mềm';
+                    else if (formId === 'bulkForceDeleteProductsForm') submitButton.innerHTML = 'Xóa Vĩnh viễn';
+                    else if (formId === 'bulkRestoreProductsForm') submitButton.innerHTML = 'Xác nhận Khôi phục';
+                    else if (formId === 'bulkToggleStatusProductsForm') submitButton.innerHTML = 'Xác nhận';
+                }
+            }
+        });
+
+        // Event listener để xử lý nút xóa ảnh hiện có trong modal update product
+        // (Nếu logic này không nằm trong product_management.js đang được tải)
+        $updateProductModal.on('click', '.remove-existing-image-btn', function() {
+            const $imageItem = $(this).closest('.existing-image-item');
+            const imageIdToRemove = $(this).data('id');
+            // Gỡ bỏ phần tử ảnh khỏi DOM
+            $imageItem.remove();
+            console.log(`Đã xóa ảnh với ID: ${imageIdToRemove} khỏi hiển thị. ` +
+                        `Hình ảnh này sẽ không được gửi trong mảng 'existing_images[]' khi form được submit.`);
+            // Backend sẽ so sánh 'existing_images[]' với các ảnh hiện có để xác định ảnh nào bị xóa.
+        });
     }
 
     // F. UPDATE QUANTITY MODAL LOGIC

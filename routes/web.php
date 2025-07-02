@@ -252,6 +252,13 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::post('/{product}/toggle-status', 'toggleStatus')->name('toggleStatus')->withTrashed(); // Bật/tắt trạng thái sản phẩm
                 Route::post('/{product}/restore', 'restore')->name('restore')->withTrashed(); // Khôi phục sản phẩm
                 Route::delete('/{product}/force-delete', 'forceDelete')->name('forceDelete')->withTrashed(); // Xóa vĩnh viễn sản phẩm
+                Route::prefix('api')->name('api.')->group(function () {
+                    // API để lấy thông tin chi tiết sản phẩm cho modal "Chi Tiết Sản Phẩm"
+                    Route::get('products/{product}/details', [ProductController::class, 'details'])->name('products.details'); //
+
+                    // API để cập nhật số lượng tồn kho sản phẩm
+                    Route::put('products/{product}/update-stock', [ProductController::class, 'updateStockQuantity'])->name('products.update-stock'); //
+                });
             });
 
             // Categories, Brands, Vehicle
@@ -349,6 +356,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('orders/get-wards', [OrderController::class, 'getWards'])->name('orders.getWards');
             Route::get('orders/get-product-details', [OrderController::class, 'getProductDetails'])->name('orders.getProductDetails');
             Route::get('orders/get-customer-addresses', [OrderController::class, 'getCustomerAddresses'])->name('orders.getCustomerAddresses');
+            // THIS IS THE ROUTE TO MOVE - place it here or similar logical spot
+            Route::post('/orders/calculate-summary', [OrderController::class, 'calculateOrderSummaryApi'])->name('orders.calculate-summary.api'); // <--- MOVED AND CORRECTED PATH
 
             // == ROUTES CHO KHUYẾN MÃI (PROMOTIONS) ==
             // == ROUTES CHO KHUYẾN MÃI (PROMOTIONS) ==
@@ -404,7 +413,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/products', [ProductController::class, 'searchProductsApi'])->name('products.search.api');
         // API lấy danh sách địa chỉ của một khách hàng
         Route::get('/customers/{customer}/addresses', [CustomerAccountController::class, 'getAddressesApi'])->name('customers.addresses.api');
-        Route::post('/admin/sales/orders/calculate-summary', [OrderController::class, 'calculateOrderSummaryApi'])->name('admin.sales.orders.calculate-summary');
+        // Đảm bảo dòng này đã tồn tại và sử dụng 'post'
 
         // Note: The product details and update stock APIs are now under 'admin.productManagement.api.products.'
         // So, the routes below are redundant if they are also defined under 'admin.productManagement.api.products.'

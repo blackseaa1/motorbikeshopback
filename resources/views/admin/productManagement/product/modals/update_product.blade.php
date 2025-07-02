@@ -1,4 +1,4 @@
-{{-- resources/views/admin/productManagement/product/modals/update_product.blade.php --}}
+{{-- File: resources/views/admin/productManagement/product/modals/update_product.blade.php --}}
 <div class="modal fade" id="updateProductModal" tabindex="-1" aria-labelledby="updateProductModalLabel"
     aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
@@ -10,9 +10,12 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                {{-- Form sẽ được set action động bằng JS --}}
                 <form id="updateProductForm" method="POST" novalidate>
                     @csrf
+                    @method('PUT') {{-- Rất quan trọng: Thêm method PUT cho form cập nhật --}}
+
+                    {{-- THÊM TRƯỜNG INPUT HIDDEN NÀY --}}
+                    <input type="hidden" name="id" id="updateProductId">
 
                     <div class="row">
                         <div class="col-md-6">
@@ -33,8 +36,8 @@
                                 <label for="productCategoryUpdate" class="form-label">Danh mục <span
                                         class="text-danger">*</span></label>
                                 <select name="category_id" class="selectpicker form-control" id="productCategoryUpdate"
-                                    data-live-search="true" title="Chọn danh mục..." required
-                                    data-size="10" data-dropup-auto="false"> {{-- THÊM THUỘC TÍNH NÀY --}}
+                                    data-live-search="true" title="Chọn danh mục..." required data-size="10"
+                                    data-dropup-auto="false">
                                     @foreach ($categories as $category)
                                         <option value="{{ $category->id }}">{{ $category->name }}</option>
                                     @endforeach
@@ -45,8 +48,8 @@
                                 <label for="productBrandUpdate" class="form-label">Thương hiệu <span
                                         class="text-danger">*</span></label>
                                 <select name="brand_id" class="selectpicker form-control" id="productBrandUpdate"
-                                    data-live-search="true" title="Chọn thương hiệu..." required
-                                    data-size="10" data-dropup-auto="false"> {{-- THÊM THUỘC TÍNH NÀY --}}
+                                    data-live-search="true" title="Chọn thương hiệu..." required data-size="10"
+                                    data-dropup-auto="false">
                                     @foreach ($brands as $brand)
                                         <option value="{{ $brand->id }}">{{ $brand->name }}</option>
                                     @endforeach
@@ -68,7 +71,6 @@
                                 <div class="invalid-feedback"></div>
                             </div>
 
-                            {{-- ===== SỬA ĐỔI TẠI ĐÂY ===== --}}
                             <div class="mb-3 form-check form-switch ps-5 pt-2">
                                 <input class="form-check-input" type="checkbox" role="switch" name="is_active"
                                     id="productIsActiveUpdate" checked>
@@ -79,7 +81,6 @@
                                     Tắt công tắc này sẽ tạm dừng bán sản phẩm.
                                 </small>
                             </div>
-                            {{-- ===== KẾT THÚC SỬA ĐỔI ===== --}}
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
@@ -87,8 +88,7 @@
                                     xe:</label>
                                 <select name="vehicle_model_ids[]" class="selectpicker form-control"
                                     id="productVehicleModelsUpdate" multiple data-live-search="true"
-                                    title="Chọn các dòng xe tương thích"
-                                    data-size="10" data-dropup-auto="false"> {{-- THÊM THUỘC TÍNH NÀY --}}
+                                    title="Chọn các dòng xe tương thích" data-size="10" data-dropup-auto="false">
                                     @foreach ($vehicleBrands as $vehicleBrand)
                                         @if ($vehicleBrand->vehicleModels->isNotEmpty())
                                             <optgroup label="{{ $vehicleBrand->name }}">

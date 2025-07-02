@@ -159,7 +159,12 @@ class ProductController extends Controller
      */
     public function details(Product $product): JsonResponse
     {
+        // Điểm quan trọng: eager load các mối quan hệ cần thiết
+        // để đảm bảo dữ liệu về danh mục, thương hiệu, dòng xe và hình ảnh
+        // được lấy cùng với sản phẩm và có sẵn cho frontend.
         $product->load('category', 'brand', 'vehicleModels.vehicleBrand', 'images');
+
+        // Trả về đối tượng sản phẩm dưới dạng JSON. Laravel tự động chuyển đổi các mối quan hệ đã tải.
         return response()->json($product);
     }
 
@@ -168,24 +173,37 @@ class ProductController extends Controller
      */
     public function updateStockQuantity(Request $request, Product $product): JsonResponse
     {
+        // Bước 1: Xác thực dữ liệu đầu vào.
+        // Đảm bảo 'stock_quantity' là bắt buộc, là số nguyên và không âm.
         $validator = Validator::make($request->all(), [
             'stock_quantity' => 'required|integer|min:0',
         ]);
 
+        // Nếu xác thực thất bại, trả về lỗi 422 (Unprocessable Entity) kèm thông báo lỗi.
         if ($validator->fails()) {
-            return response()->json(['success' => false, 'message' => 'Dữ liệu không hợp lệ.', 'errors' => $validator->errors()], 422);
+            return response()->json([
+                'success' => false,
+                'message' => 'Dữ liệu không hợp lệ.',
+                'errors' => $validator->errors()
+            ], 422);
         }
 
         try {
+            // Bước 2: Cập nhật số lượng tồn kho và lưu sản phẩm.
             $product->stock_quantity = $request->input('stock_quantity');
             $product->save();
+
+            // Bước 3: Trả về phản hồi thành công.
+            // Bao gồm 'new_stock' trong phản hồi có thể hữu ích cho frontend để cập nhật hiển thị ngay lập tức.
             return response()->json(['success' => true, 'message' => 'Cập nhật tồn kho thành công!', 'new_stock' => $product->stock_quantity]);
         } catch (\Exception $e) {
+            // Bước 4: Xử lý lỗi nếu có ngoại lệ xảy ra trong quá trình cập nhật.
+            // Ghi log lỗi để dễ dàng debug ở phía server.
             Log::error("Lỗi khi cập nhật tồn kho Sản phẩm (ID: {$product->id}): " . $e->getMessage());
+            // Trả về phản hồi lỗi 500 (Internal Server Error) cho frontend.
             return response()->json(['success' => false, 'message' => 'Không thể cập nhật tồn kho. Vui lòng thử lại.'], 500);
         }
     }
-
     /**
      * Cập nhật thông tin sản phẩm.
      */

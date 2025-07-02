@@ -1,19 +1,68 @@
+{{-- File: resources/views/admin/productManagement/inventory/inventory.blade.php --}}
+
 @extends('admin.layouts.app')
 
 @section('title', 'Quản lý Tồn Kho')
 
 @section('content')
     <div id="adminInventoryPage">
-        <header class="content-header">
-            <h1><i class="bi bi-box-seam me-2"></i>Quản lý Tồn Kho</h1>
-        </header>
+       
+         <div class="content-header">
+            <div class="container-fluid">
+                <div class="row mb-2">
+                    <div class="col-sm-6">
+                        <h1 class="m-0"><i class="bi bi-tags-fill me-2"></i>Quản lý Tồn Kho</h1>
+                    </div>
+                    <div class="col-sm-6">
+                        <ol class="breadcrumb float-sm-end">
+                            <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dashboard</a></li>
+                            <li class="breadcrumb-item">Quản lý sản phẩm</li>
+                            <li class="breadcrumb-item active">Quản lý Tồn Kho</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <div class="card mt-4 shadow-sm">
             <div class="card-header bg-light">
                 <h2 class="h5 mb-0 text-primary"><i class="bi bi-funnel me-2"></i>Sản phẩm sắp hết hàng</h2>
             </div>
             <div class="card-body">
-                {{-- Loại bỏ @if ($lowStockProducts->isEmpty()) và @else ở đây vì JS sẽ xử lý hiển thị "không có sản phẩm" --}}
+                {{-- THÊM PHẦN TÌM KIẾM VÀ LỌC VÀO ĐÂY --}}
+                <div class="row mb-3">
+                    <div class="col-md-5">
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="inventorySearchInput" placeholder="Tìm kiếm theo tên sản phẩm..." aria-label="Tìm kiếm sản phẩm">
+                            <button class="btn btn-primary" type="button" id="inventorySearchBtn">
+                                <i class="bi bi-search"></i> Tìm kiếm
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <select class="form-select" id="inventoryCategoryFilter">
+                            <option value="">Lọc theo danh mục</option>
+                            @foreach ($categories as $category)
+                                <option value="{{ $category->id }}">{{ $category->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <select class="form-select" id="inventoryBrandFilter">
+                            <option value="">Lọc theo thương hiệu</option>
+                            @foreach ($brands as $brand)
+                                <option value="{{ $brand->id }}">{{ $brand->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-1 d-flex justify-content-end">
+                        <button class="btn btn-outline-secondary" type="button" id="inventoryClearFiltersBtn" title="Xóa bộ lọc">
+                            <i class="bi bi-x-circle"></i>
+                        </button>
+                    </div>
+                </div>
+                {{-- KẾT THÚC PHẦN TÌM KIẾM VÀ LỌC --}}
+
                 <div class="table-responsive">
                     <table class="table table-hover align-middle">
                         <thead class="table-light">
@@ -27,22 +76,19 @@
                                 <th scope="col" class="text-center" style="width: 10%;">Hành Động</th>
                             </tr>
                         </thead>
-                        <tbody id="inventory-table-body"> {{-- Thêm ID cho tbody --}}
-                            {{-- Dữ liệu sẽ được tải ở đây bởi Controller và AJAX --}}
+                        <tbody id="inventory-table-body">
                             @include('admin.productManagement.inventory.partials._inventory_table_rows', ['lowStockProducts' => $lowStockProducts])
                         </tbody>
                     </table>
                 </div>
-                {{-- Pagination Links Container --}}
                 <div class="mt-3 d-flex justify-content-center" id="inventory-pagination-links">
-                    {{-- Pagination links will be rendered here by Controller and AJAX --}}
-                    {{ $lowStockProducts->links('admin.vendor.pagination') }}
+                    {{ $lowStockProducts->links() }}
                 </div>
             </div>
         </div>
     </div>
 
-    {{-- Modal for Viewing Product Details --}}
+    {{-- Modal for Viewing Product Details (giữ nguyên) --}}
     <div class="modal fade" id="viewProductDetailsModal" tabindex="-1" aria-labelledby="viewProductDetailsModalLabel"
         aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
@@ -84,14 +130,15 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
-                    <a id="viewProductEditLink" href="#" class="btn btn-warning"><i
-                            class="bi bi-pencil-square me-2"></i>Chỉnh sửa đầy đủ</a>
+                    <button type="button" class="btn btn-warning open-full-edit-product-modal-btn" data-bs-dismiss="modal">
+                        <i class="bi bi-pencil-square me-2"></i>Chỉnh sửa đầy đủ
+                    </button>
                 </div>
             </div>
         </div>
     </div>
 
-    {{-- Modal for Updating Quantity --}}
+    {{-- Modal for Updating Quantity (giữ nguyên) --}}
     <div class="modal fade" id="updateQuantityModal" tabindex="-1" aria-labelledby="updateQuantityModalLabel"
         aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
@@ -122,6 +169,13 @@
             </div>
         </div>
     </div>
+
+    {{-- Thêm modal chỉnh sửa sản phẩm đầy đủ vào đây --}}
+    @include('admin.productManagement.product.modals.update_product', [
+        'categories' => $categories, // Truyền biến categories
+        'brands' => $brands, // Truyền biến brands
+        'vehicleBrands' => $vehicleBrands, // Truyền biến vehicleBrands
+    ])
 @endsection
 
 @push('styles')
@@ -129,6 +183,16 @@
 @endpush
 
 @push('scripts')
-    {{-- Tải script quản lý tồn kho --}}
     <script src="{{ asset('assets_admin/js/inventory_manager.js') }}"></script>
+    <script>
+        $(document).ready(function() {
+            if (typeof window.showAppLoader !== 'function' || typeof window.hideAppLoader !== 'function' || typeof window.showAppInfoModal !== 'function') {
+                console.error("Lỗi: Các hàm tiện ích (showAppLoader, hideAppLoader, showAppInfoModal) không được định nghĩa. Đảm bảo admin_layout.js đã được tải và chạy.");
+                window.showAppLoader = () => console.log('Loader shown (placeholder)');
+                window.hideAppLoader = () => console.log('Loader hidden (placeholder)');
+                window.showAppInfoModal = (msg, title, type) => alert(`${title}: ${msg}`);
+            }
+            window.initializeInventoryManager(window.showAppLoader, window.hideAppLoader, window.showAppInfoModal);
+        });
+    </script>
 @endpush
