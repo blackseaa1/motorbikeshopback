@@ -63,12 +63,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const promotionSearchInput = document.getElementById('promotionSearchInput');
     const promotionSearchBtn = document.getElementById('promotionSearchBtn');
-    const promotionFilterSelect = document.getElementById('promotionFilterSelect'); // NEW
-    const promotionSortSelect = document.getElementById('promotionSortSelect');     // NEW
+    const promotionFilterSelect = document.getElementById('promotionFilterSelect');
+    const promotionSortSelect = document.getElementById('promotionSortSelect');
     const paginationLinksContainer = document.getElementById('pagination-links');
 
-    if (!tableBody || !createModalEl || !updateModalEl || !deleteModalEl || !viewModalEl || !bulkToggleStatusModalEl || !promotionFilterSelect || !promotionSortSelect) {
-        console.warn('Cảnh báo: Một hoặc nhiều element modal/table/filter/sort quan trọng không tồn tại.');
+    if (!tableBody || !createModalEl || !updateModalEl || !deleteModalEl || !viewModalEl || !bulkToggleStatusModalEl || !promotionFilterSelect || !promotionSortSelect || !selectAllCheckboxes || !bulkDeleteBtn || !bulkToggleStatusBtn || !selectedCountDeleteSpan || !selectedCountToggleSpan
+    ) {
+        console.warn('Cảnh báo: Một hoặc nhiều element modal/table/filter/sort/bulk quan trọng không tồn tại. Script có thể không hoạt động đầy đủ.');
         return;
     }
 
@@ -136,7 +137,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 let inputField = formElement.querySelector(`[name="${fieldName}"]`);
 
                 if (!inputField) {
-                    // Attempt to find by partial ID match for specific cases
                     if (fieldName === 'discount_percentage') {
                         inputField = formElement.querySelector('[id^="promoDiscount"]');
                     } else if (fieldName === 'fixed_discount_amount') {
@@ -345,20 +345,12 @@ document.addEventListener('DOMContentLoaded', function () {
     // SECTION 5: AJAX, DOM UPDATE, SEARCH, FILTER & PAGINATION
     // -----------------------------------------------------------------------------
 
-    // renderPromotionRow function needs to be in sync with Laravel Blade partial
-    // It's removed from JS and assumed the server provides the HTML via `_promotion_table_rows.blade.php`
-    // If you need client-side rendering for single row updates without full table refresh,
-    // you would need to re-implement renderPromotionRow here based on the partial's HTML structure.
-    // For now, `handleUpdateOrToggleSuccess` and `handleDeleteSuccess` trigger `performSearch`
-    // which refreshes the whole table, making a JS renderRow function less critical for basic CRUD.
-
-
     function updateTableContent(tableRowsHtml, paginationLinksHtml) {
         tableBody.innerHTML = tableRowsHtml || `
             <tr id="no-promotions-row"><td colspan="10" class="text-center">
                 <div class="alert alert-info mb-0">Không tìm thấy kết quả phù hợp.</div>
             </td></tr>`;
-        if (paginationLinksContainer) {
+        if (paginationLinksContainer) { // [FIX] Đảm bảo kiểm tra paginationLinksContainer
             paginationLinksContainer.innerHTML = paginationLinksHtml || '';
         }
         updateCheckboxStates();
@@ -366,18 +358,18 @@ document.addEventListener('DOMContentLoaded', function () {
         attachPaginationListeners(); // Re-attach listeners to new pagination links
     }
 
-    async function performSearch(page = 1) { // Removed query parameter for a more generalized search
+    async function performSearch(page = 1, query = '') {
         showAppLoader();
         try {
             const currentSearchQuery = promotionSearchInput.value;
-            const currentFilter = promotionFilterSelect.value; // NEW
-            const currentSort = promotionSortSelect.value;       // NEW
+            const currentFilter = promotionFilterSelect.value;
+            const currentSort = promotionSortSelect.value;
 
             const urlParams = new URLSearchParams();
             urlParams.append('page', page);
             if (currentSearchQuery) urlParams.append('search', currentSearchQuery);
-            if (currentFilter && currentFilter !== 'all') urlParams.append('filter', currentFilter); // Only append if not 'all'
-            if (currentSort && currentSort !== 'latest') urlParams.append('sort_by', currentSort); // Only append if not 'latest'
+            if (currentFilter && currentFilter !== 'all') urlParams.append('filter', currentFilter);
+            if (currentSort && currentSort !== 'latest') urlParams.append('sort_by', currentSort);
 
             const url = `/admin/sales/promotions?${urlParams.toString()}`;
 
@@ -394,16 +386,16 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // --- Lắng nghe sự kiện tìm kiếm, lọc và phân trang ---
-    promotionSearchBtn?.addEventListener('click', () => performSearch(1));
+    promotionSearchBtn?.addEventListener('click', () => performSearch(1, promotionSearchInput.value)); // [FIX] Truyền query
     promotionSearchInput?.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
             e.preventDefault();
-            performSearch(1);
+            performSearch(1, promotionSearchInput.value); // [FIX] Truyền query
         }
     });
 
-    promotionFilterSelect?.addEventListener('change', () => performSearch(1)); // NEW
-    promotionSortSelect?.addEventListener('change', () => performSearch(1));   // NEW
+    promotionFilterSelect?.addEventListener('change', () => performSearch(1, promotionSearchInput.value)); // [FIX] Truyền query
+    promotionSortSelect?.addEventListener('change', () => performSearch(1, promotionSearchInput.value));   // [FIX] Truyền query
 
 
     function attachPaginationListeners() {
@@ -419,8 +411,9 @@ document.addEventListener('DOMContentLoaded', function () {
             event.preventDefault();
             const url = new URL(link.href);
             const page = url.searchParams.get('page');
+            const currentSearchQuery = promotionSearchInput.value; // [FIX] Lấy query
             if (page) {
-                performSearch(page);
+                performSearch(page, currentSearchQuery); // [FIX] Truyền query
             }
         }
     }
@@ -430,10 +423,15 @@ document.addEventListener('DOMContentLoaded', function () {
      * @param {object} promotion - Đối tượng khuyến mãi trả về từ server.
      */
     function handleUpdateOrToggleSuccess(promotion) {
-        // Re-fetch the current page to ensure correct order and pagination after create/update/toggle
-        // This will also apply current filters/sorts.
-        const currentPage = paginationLinksContainer.querySelector('.page-item.active .page-link')?.textContent || '1';
-        performSearch(parseInt(currentPage, 10)); // Call with current page, search query, filter, and sort
+        // [FIX] Kiểm tra an toàn `paginationLinksContainer` trước khi sử dụng `querySelector`
+        let currentPage = '1';
+        if (paginationLinksContainer) {
+            const activePageLink = paginationLinksContainer.querySelector('.page-item.active .page-link');
+            if (activePageLink) {
+                currentPage = activePageLink.textContent;
+            }
+        }
+        performSearch(parseInt(currentPage, 10), promotionSearchInput.value); // [FIX] Truyền search query
     }
 
     /**
@@ -443,11 +441,6 @@ document.addEventListener('DOMContentLoaded', function () {
     function handleDeleteSuccess(deletedIds) {
         if (!Array.isArray(deletedIds)) return;
 
-        // Note: The `renderPromotionRow` from the previous version is not used here directly.
-        // Instead, a full table refresh via `performSearch` is preferred for robustness
-        // with sorting and filtering in mind.
-        // However, if you want to remove rows without a full refresh,
-        // you can still use the below logic, but ensure re-indexing is handled carefully.
         deletedIds.forEach(id => {
             document.getElementById(`promotion-row-${id}`)?.remove();
             selectedPromotionIds.delete(String(id));
@@ -455,17 +448,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const currentRows = tableBody.querySelectorAll('tr:not(#no-promotions-row)');
         if (currentRows.length === 0) {
-            // If all visible rows are deleted, attempt to load the previous page or page 1.
-            const currentPage = parseInt(paginationLinksContainer.querySelector('.page-item.active .page-link')?.textContent || '1', 10);
+            // [FIX] Kiểm tra an toàn `paginationLinksContainer`
+            const currentPage = parseInt(paginationLinksContainer?.querySelector('.page-item.active .page-link')?.textContent || '1', 10);
             const targetPage = currentPage > 1 ? currentPage - 1 : 1;
-            performSearch(targetPage);
+            performSearch(targetPage, promotionSearchInput.value); // [FIX] Truyền search query
         } else {
-            // If some rows remain, re-index visible rows.
-            // This is a simpler re-indexing, a full `performSearch` would re-fetch and re-index correctly based on the server.
-            // If you keep this client-side re-indexing, ensure it aligns with server-side pagination start index.
-            // For robustness, consider just calling performSearch(currentPage) here as well.
-            const currentPageNum = parseInt(paginationLinksContainer.querySelector('.page-item.active .page-link')?.textContent || '1', 10);
-            const itemsPerPage = 10; // Assuming 10 items per page from your controller
+            // [FIX] Kiểm tra an toàn `paginationLinksContainer`
+            const currentPageNum = parseInt(paginationLinksContainer?.querySelector('.page-item.active .page-link')?.textContent || '1', 10);
+            const itemsPerPage = 10;
             const startIndex = (currentPageNum - 1) * itemsPerPage + 1;
             Array.from(tableBody.children).forEach((row, index) => {
                 const sTTCell = row.querySelector('th[scope="row"]');
@@ -483,9 +473,15 @@ document.addEventListener('DOMContentLoaded', function () {
      * @param {Array<object>} updatedPromotions - Mảng các promotion đã được cập nhật.
      */
     function handleBulkToggleStatusSuccess(updatedPromotions) {
-        // Re-fetch the current page to ensure correct state after bulk toggle
-        const currentPage = paginationLinksContainer.querySelector('.page-item.active .page-link')?.textContent || '1';
-        performSearch(parseInt(currentPage, 10));
+        // [FIX] Kiểm tra an toàn `paginationLinksContainer` trước khi sử dụng `querySelector`
+        let currentPage = '1';
+        if (paginationLinksContainer) {
+            const activePageLink = paginationLinksContainer.querySelector('.page-item.active .page-link');
+            if (activePageLink) {
+                currentPage = activePageLink.textContent;
+            }
+        }
+        performSearch(parseInt(currentPage, 10), promotionSearchInput.value); // [FIX] Truyền search query
         clearSelectedPromotions();
     }
 
@@ -504,23 +500,29 @@ document.addEventListener('DOMContentLoaded', function () {
 
             const formData = new FormData(this);
             form.querySelectorAll('[data-currency-input="true"]').forEach(input => {
-                formData.set(input.name, parseFormattedCurrency(input.value));
+                // [FIX] Đảm bảo parseFormattedCurrency được gọi cho các input tiền tệ
+                if (formData.has(input.name)) {
+                    formData.set(input.name, parseFormattedCurrency(input.value));
+                }
             });
 
             const isDeleteForm = formId === 'deletePromotionForm';
             const isUpdateForm = formId === 'updatePromotionForm';
+            const isBulkDeleteForm = isDeleteForm && form.action.includes('bulk-destroy');
+            const isBulkToggleStatusForm = formId === 'bulkToggleStatusForm';
+
 
             if (isUpdateForm) {
                 formData.append('_method', 'PUT');
-            } else if (isDeleteForm && !form.action.includes('bulk-destroy')) {
+            } else if (isDeleteForm && !isBulkDeleteForm) { // Chỉ cho single delete
                 formData.append('_method', 'DELETE');
             }
 
-            if (isDeleteForm && form.action.includes('bulk-destroy')) {
+            if (isBulkDeleteForm) { // Bulk delete
                 formData.append('ids', JSON.stringify(Array.from(selectedPromotionIds)));
-            } else if (formId === 'bulkToggleStatusForm') {
+            } else if (isBulkToggleStatusForm) { // Bulk toggle status
                 formData.append('ids', JSON.stringify(Array.from(selectedPromotionIds)));
-                // No need to append status as it's part of the form via a select element in the modal
+                // Status value is already part of form data via select element in modal
             }
 
             try {
@@ -535,19 +537,19 @@ document.addEventListener('DOMContentLoaded', function () {
                     showToast(result.message, 'success');
                     modalInstance.hide();
 
-                    if (formId === 'deletePromotionForm') {
-                        const deletedIds = result.deleted_ids || (form.action.includes('bulk-destroy') ? Array.from(selectedPromotionIds) : [parseInt(form.dataset.id, 10)]);
+                    if (isDeleteForm) {
+                        const deletedIds = result.deleted_ids || (isBulkDeleteForm ? Array.from(selectedPromotionIds) : [parseInt(form.dataset.id, 10)]);
                         successCallback(deletedIds);
-                    } else if (formId === 'bulkToggleStatusForm') {
+                    } else if (isBulkToggleStatusForm) {
                         successCallback(result.promotions);
                     } else { // create & update
                         successCallback(result.promotion);
                     }
                 } else if (response.status === 422) {
                     displayValidationErrors(form, result.errors);
-                    showToast('Vui lòng kiểm tra lại thông tin nhập liệu.', 'error');
+                    showToast(result.message || 'Vui lòng kiểm tra lại thông tin nhập liệu.', 'error');
                 } else {
-                    showToast(result.message || 'Đã xảy ra lỗi không xác định.', 'error');
+                    showToast(result.message || 'Đã xảy ra lỗi không xác định. Vui lòng thử lại.', 'error');
                 }
             } catch (error) {
                 console.error('Lỗi Fetch:', error);
@@ -572,16 +574,23 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function updateCheckboxStates() {
         const currentCheckboxes = document.querySelectorAll('.promotion-checkbox');
+        let allChecked = true;
         if (currentCheckboxes.length === 0) {
-            if (selectAllCheckboxes) selectAllCheckboxes.checked = false;
-            return;
+            allChecked = false;
+        } else {
+            currentCheckboxes.forEach(checkbox => {
+                if (selectedPromotionIds.has(checkbox.value)) {
+                    checkbox.checked = true;
+                } else {
+                    checkbox.checked = false;
+                    allChecked = false;
+                }
+            });
         }
-        let allVisibleChecked = true;
-        currentCheckboxes.forEach(checkbox => {
-            checkbox.checked = selectedPromotionIds.has(checkbox.value);
-            if (!checkbox.checked) allVisibleChecked = false;
-        });
-        if (selectAllCheckboxes) selectAllCheckboxes.checked = allVisibleChecked;
+        if (selectAllCheckboxes) {
+            selectAllCheckboxes.checked = allChecked;
+        }
+        updateBulkActionButtons();
     }
 
     function clearSelectedPromotions() {
@@ -591,22 +600,32 @@ document.addEventListener('DOMContentLoaded', function () {
         updateBulkActionButtons();
     }
 
-    selectAllCheckboxes?.addEventListener('change', function () {
-        document.querySelectorAll('.promotion-checkbox').forEach(checkbox => {
-            checkbox.checked = this.checked;
-            if (this.checked) selectedPromotionIds.add(checkbox.value);
-            else selectedPromotionIds.delete(checkbox.value);
+    // Event listener for "select all" checkbox
+    if (selectAllCheckboxes) {
+        selectAllCheckboxes.addEventListener('change', function () {
+            document.querySelectorAll('.promotion-checkbox').forEach(checkbox => {
+                checkbox.checked = this.checked;
+                if (this.checked) {
+                    selectedPromotionIds.add(checkbox.value);
+                } else {
+                    selectedPromotionIds.delete(checkbox.value);
+                }
+            });
+            updateBulkActionButtons();
         });
-        updateBulkActionButtons();
-    });
+    }
 
+    // Event listener for individual promotion checkboxes (using delegation)
     tableBody.addEventListener('change', function (event) {
         const checkbox = event.target.closest('.promotion-checkbox');
         if (checkbox) {
-            if (checkbox.checked) selectedPromotionIds.add(checkbox.value);
-            else selectedPromotionIds.delete(checkbox.value);
+            if (checkbox.checked) {
+                selectedPromotionIds.add(checkbox.value);
+            } else {
+                selectedPromotionIds.delete(checkbox.value);
+            }
             updateBulkActionButtons();
-            // Re-evaluate selectAllCheckboxes state
+            // Update "select all" checkbox state
             const allIndividualCheckboxes = document.querySelectorAll('.promotion-checkbox');
             const checkedIndividualCheckboxes = document.querySelectorAll('.promotion-checkbox:checked');
             if (selectAllCheckboxes) {
@@ -615,37 +634,89 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    bulkDeleteBtn?.addEventListener('click', function () {
-        deleteModalEl.querySelector('#deletePromotionCode').textContent = `${selectedPromotionIds.size} mã đã chọn`;
-        const form = deleteModalEl.querySelector('form');
-        form.action = '/admin/sales/promotions/bulk-destroy';
-        form.removeAttribute('data-id');
-        deleteModal.show();
-    });
+    // Event listener for bulk delete button to set up the modal
+    if (bulkDeleteBtn) {
+        bulkDeleteBtn.addEventListener('click', function () {
+            const count = selectedPromotionIds.size;
+            deleteModalEl.querySelector('#deletePromotionCode').textContent = `${count} mã đã chọn`; // Update modal text
+            const form = deleteModalEl.querySelector('form');
+            form.action = '/admin/sales/promotions/bulk-destroy'; // Set action for bulk delete
+            deleteModal.show();
+        });
+    }
 
-    bulkToggleStatusBtn?.addEventListener('click', () => {
-        bulkToggleStatusModalEl.querySelector('#bulkToggleStatusCount').textContent = selectedPromotionIds.size;
-        bulkToggleStatusModal.show();
-    });
+    // Event listener for bulk toggle status button to set up the modal
+    if (bulkToggleStatusBtn) {
+        bulkToggleStatusBtn.addEventListener('click', function () {
+            const count = selectedPromotionIds.size;
+            bulkToggleStatusModalEl.querySelector('#bulkToggleStatusCount').textContent = count;
+            bulkToggleStatusModal.show();
+        });
+    }
 
-    deleteModalEl.addEventListener('show.bs.modal', function (event) {
-        const button = event.relatedTarget;
-        const form = deleteModalEl.querySelector('form');
-        form.removeAttribute('data-id');
+    // Handle form submission for bulk status toggle
+    const bulkToggleStatusForm = bulkToggleStatusModalEl.querySelector('#bulkToggleStatusForm');
+    if (bulkToggleStatusForm) {
+        bulkToggleStatusForm.addEventListener('submit', async function (event) {
+            event.preventDefault();
+            showAppLoader();
+            clearValidationErrors(bulkToggleStatusForm);
 
-        if (button && button.classList.contains('delete-promotion-btn') && !button.closest('#bulkDeleteBtn')) {
-            const promotionId = button.dataset.id;
-            form.action = button.dataset.deleteUrl;
-            form.dataset.id = promotionId;
-            deleteModalEl.querySelector('#deletePromotionCode').textContent = button.dataset.code;
-        } else if (button && button.id === 'bulkDeleteBtn') {
-            // Bulk delete is already handled by bulkDeleteBtn click listener setting the action and text.
-        }
-    });
+            const formData = new FormData(this);
+            formData.append('ids', JSON.stringify(Array.from(selectedPromotionIds)));
+            // Status value is already part of form data via select element in modal
+
+            try {
+                const response = await fetch(this.action, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json'
+                    },
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    bulkToggleStatusModal.hide();
+                    handleBulkToggleStatusSuccess(result.promotions); // Pass updated promotions
+                    clearSelectedPromotions();
+                } else if (response.status === 422) {
+                    displayValidationErrors(bulkToggleStatusForm, result.errors);
+                    showToast('Vui lòng kiểm tra lại thông tin nhập liệu.', 'error');
+                } else {
+                    showToast(result.message || 'Đã xảy ra lỗi khi cập nhật trạng thái hàng loạt.', 'error');
+                }
+            } catch (error) {
+                console.error('Fetch Error:', error);
+                showToast('Không thể kết nối đến server. Vui lòng thử lại.', 'error');
+            } finally {
+                hideAppLoader();
+            }
+        });
+    }
 
 
     // -----------------------------------------------------------------------------
-    // SECTION 8: KHỞI TẠO
+    // SECTION 8: SEARCH FUNCTIONALITY
+    // -----------------------------------------------------------------------------
+
+    if (promotionSearchInput && promotionSearchBtn) {
+        promotionSearchBtn.addEventListener('click', function () {
+            performSearch(1, promotionSearchInput.value);
+        });
+
+        promotionSearchInput.addEventListener('keypress', function (event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                performSearch(1, promotionSearchInput.value);
+            }
+        });
+    }
+
+    // -----------------------------------------------------------------------------
+    // SECTION 9: KHỞI TẠO VÀ ÁP DỤNG
     // -----------------------------------------------------------------------------
 
     setupAjaxForm('createPromotionForm', createModal, handleUpdateOrToggleSuccess);
@@ -653,14 +724,21 @@ document.addEventListener('DOMContentLoaded', function () {
     setupAjaxForm('deletePromotionForm', deleteModal, handleDeleteSuccess);
     setupAjaxForm('bulkToggleStatusForm', bulkToggleStatusModal, handleBulkToggleStatusSuccess);
 
+
     const currencyInputs = [
-        ...createModalEl.querySelectorAll('#promoMinOrderAmountCreate, #promoFixedDiscountAmountCreate, #promoMaxDiscountAmountCreate'),
-        ...updateModalEl.querySelectorAll('#promoMinOrderAmountUpdate, #promoFixedDiscountAmountUpdate, #promoMaxDiscountAmountUpdate')
+        createModalEl.querySelector('#promoMinOrderAmountCreate'),
+        createModalEl.querySelector('#promoFixedDiscountAmountCreate'),
+        createModalEl.querySelector('#promoMaxDiscountAmountCreate'),
+        updateModalEl.querySelector('#promoMinOrderAmountUpdate'),
+        updateModalEl.querySelector('#promoFixedDiscountAmountUpdate'),
+        updateModalEl.querySelector('#promoMaxDiscountAmountUpdate'),
     ].filter(Boolean);
 
     currencyInputs.forEach(input => {
-        input.setAttribute('data-currency-input', 'true');
-        formatCurrencyInput(input);
+        if (input) {
+            input.setAttribute('data-currency-input', 'true');
+            formatCurrencyInput(input);
+        }
     });
 
     updateBulkActionButtons();
@@ -671,7 +749,7 @@ document.addEventListener('DOMContentLoaded', function () {
     attachPaginationListeners();
 
     // Initial load/search with current filter/sort values (if page reloads with them)
-    performSearch(1); // To ensure filters/sorts are applied on first load if parameters exist in URL
+    performSearch(1, promotionSearchInput.value);
 
     console.log("Module Quản lý Mã Khuyến Mãi đã được khởi tạo thành công.");
 });

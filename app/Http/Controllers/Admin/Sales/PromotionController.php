@@ -126,6 +126,7 @@ class PromotionController extends Controller
             $startIndex = $promotions->firstItem() ? ($promotions->firstItem() - 1) : 0;
 
             foreach ($promotions as $index => $promotion) {
+                // Đảm bảo partial path là đúng: resources/views/admin/sales/promotion/partials/_promotion_table_row.blade.php
                 $tableRowsHtml .= view('admin.sales.promotion.partials._promotion_table_row', [
                     'promotion' => $promotion,
                     'loopIndex' => $index,
@@ -166,8 +167,10 @@ class PromotionController extends Controller
      */
     public function store(Request $request): JsonResponse|RedirectResponse
     {
+        // Bước 1: Chuẩn hóa dữ liệu
         $request->merge(['code' => strtoupper($request->input('code'))]);
 
+        // Bước 2: Kiểm tra dữ liệu
         $rules = [
             'code'              => 'required|string|max:50|unique:promotions,code|uppercase',
             'description'       => 'nullable|string|max:255',
@@ -179,6 +182,7 @@ class PromotionController extends Controller
             'status'            => ['required', Rule::in([Promotion::STATUS_MANUAL_ACTIVE, Promotion::STATUS_MANUAL_INACTIVE])],
         ];
 
+        // Logic validation có điều kiện dựa trên discount_type
         if ($request->input('discount_type') === Promotion::DISCOUNT_TYPE_PERCENTAGE) {
             $rules['discount_percentage'] = 'required|numeric|min:0.01|max:100.00';
             $rules['fixed_discount_amount'] = 'nullable';
@@ -191,6 +195,7 @@ class PromotionController extends Controller
 
         $validatedData = $request->validate($rules);
 
+        // Đặt giá trị null cho các trường không liên quan nếu cần
         if ($validatedData['discount_type'] === Promotion::DISCOUNT_TYPE_FIXED) {
             $validatedData['discount_percentage'] = null;
             $validatedData['max_discount_amount'] = null;
@@ -198,8 +203,11 @@ class PromotionController extends Controller
             $validatedData['fixed_discount_amount'] = null;
         }
 
+
+        // Bước 3: Tạo mới đối tượng và lưu vào DB.
         $promotion = Promotion::create($validatedData);
 
+        // Bước 4: Trả về phản hồi tùy theo loại request.
         if ($request->expectsJson()) {
             return response()->json([
                 'success'   => true,
@@ -221,8 +229,10 @@ class PromotionController extends Controller
      */
     public function update(Request $request, Promotion $promotion): JsonResponse|RedirectResponse
     {
+        // Bước 1: Chuẩn hóa dữ liệu.
         $request->merge(['code' => strtoupper($request->input('code'))]);
 
+        // Bước 2: Kiểm tra dữ liệu.
         $rules = [
             'code'              => ['required', 'string', 'max:50', 'uppercase', Rule::unique('promotions')->ignore($promotion->id)],
             'description'       => 'nullable|string|max:255',
@@ -234,6 +244,7 @@ class PromotionController extends Controller
             'status'            => ['required', Rule::in([Promotion::STATUS_MANUAL_ACTIVE, Promotion::STATUS_MANUAL_INACTIVE])],
         ];
 
+        // Logic validation có điều kiện dựa trên discount_type
         if ($request->input('discount_type') === Promotion::DISCOUNT_TYPE_PERCENTAGE) {
             $rules['discount_percentage'] = 'required|numeric|min:0.01|max:100.00';
             $rules['fixed_discount_amount'] = 'nullable';
@@ -244,8 +255,10 @@ class PromotionController extends Controller
             $rules['max_discount_amount'] = 'nullable';
         }
 
+        // [FIX] Sử dụng validate() thay vì validateWithBag() nếu không có nhiều form cùng tên
         $validatedData = $request->validate($rules);
 
+        // Đặt giá trị null cho các trường không liên quan nếu cần
         if ($validatedData['discount_type'] === Promotion::DISCOUNT_TYPE_FIXED) {
             $validatedData['discount_percentage'] = null;
             $validatedData['max_discount_amount'] = null;
@@ -253,8 +266,10 @@ class PromotionController extends Controller
             $validatedData['fixed_discount_amount'] = null;
         }
 
+        // Bước 3: Cập nhật đối tượng.
         $promotion->update($validatedData);
 
+        // Bước 4: Trả về phản hồi.
         if ($request->expectsJson()) {
             return response()->json([
                 'success'   => true,
@@ -276,6 +291,7 @@ class PromotionController extends Controller
      */
     public function destroy(Request $request, Promotion $promotion): JsonResponse|RedirectResponse
     {
+        // Điều kiện: Chỉ cho phép xóa nếu mã chưa từng được sử dụng.
         if ($promotion->uses_count > 0) {
             $message = 'Mã khuyến mãi này đã được sử dụng và không thể xóa để đảm bảo toàn vẹn dữ liệu.';
             if ($request->expectsJson()) {
@@ -329,7 +345,9 @@ class PromotionController extends Controller
      */
     public function bulkDestroy(Request $request): JsonResponse
     {
-        $request->validate(['ids' => 'required|json']);
+        $request->validate([
+            'ids' => 'required|json', // Expecting a JSON string of IDs
+        ]);
 
         $ids = json_decode($request->input('ids'), true);
 
@@ -340,15 +358,15 @@ class PromotionController extends Controller
         $successfullyDeletedIds = [];
         $errors = [];
 
-        $promotionsToDelete = Promotion::whereIn('id', $ids)->get();
-        $foundIds = $promotionsToDelete->pluck('id')->all();
+        $promotionsToProcess = Promotion::whereIn('id', $ids)->get();
+        // Identify any IDs that were not found in the database
+        $foundIds = $promotionsToProcess->pluck('id')->toArray();
         $notFoundIds = array_diff($ids, $foundIds);
-
         foreach ($notFoundIds as $id) {
-            $errors[] = "Mã với ID '{$id}' không tồn tại.";
+            $errors[] = "Mã khuyến mãi với ID '{$id}' không tồn tại.";
         }
 
-        foreach ($promotionsToDelete as $promotion) {
+        foreach ($promotionsToProcess as $promotion) {
             if ($promotion->uses_count > 0) {
                 $errors[] = "Mã '{$promotion->code}' đã được sử dụng và không thể xóa.";
             } else {
@@ -362,26 +380,40 @@ class PromotionController extends Controller
             }
         }
 
-        $deletedCount = count($successfullyDeletedIds);
-        $message = '';
+        $totalProcessed = count($ids);
+        $totalDeleted = count($successfullyDeletedIds);
+        $totalFailed = count($errors);
 
-        if ($deletedCount > 0) {
-            $message = "Đã xóa thành công {$deletedCount} mã khuyến mãi.";
-            if (!empty($errors)) {
-                $message .= " Lỗi: " . implode(' ', $errors);
-            }
-            return response()->json([
-                'success'     => true,
-                'message'     => $message,
-                'deleted_ids' => $successfullyDeletedIds,
-            ]);
+        $message = "";
+        $success = false;
+
+        if ($totalDeleted > 0) {
+            $success = true;
+            $message = "Đã xóa thành công {$totalDeleted} mã khuyến mãi.";
         }
 
+        if ($totalFailed > 0) {
+            if ($message) $message .= " ";
+            $message .= "Một số lỗi xảy ra: " . implode('; ', $errors);
+        }
+
+        if ($totalDeleted === 0 && $totalFailed === 0 && $totalProcessed > 0) {
+            $message = "Không có mã khuyến mãi nào được xóa hoặc đủ điều kiện xóa.";
+            $success = false; // Still considered a failure if no explicit deletion happened.
+        } else if ($totalProcessed === 0) {
+            $message = "Không có mã nào được chọn.";
+            $success = false;
+        }
+
+
         return response()->json([
-            'success' => false,
-            'message' => "Không có mã nào được xóa. Lỗi: " . implode(' ', $errors),
-        ], 422);
+            'success' => $success,
+            'message' => $message,
+            'deleted_ids' => $successfullyDeletedIds,
+            'errors' => $errors,
+        ], $success ? 200 : 422);
     }
+
 
     /**
      * Bật/tắt trạng thái cài đặt thủ công của nhiều mã khuyến mãi.
@@ -392,7 +424,7 @@ class PromotionController extends Controller
     public function bulkToggleStatus(Request $request): JsonResponse
     {
         $request->validate([
-            'ids' => 'required|json',
+            'ids' => 'required|json', // Expecting a JSON string of IDs
             'status' => ['required', Rule::in([Promotion::STATUS_MANUAL_ACTIVE, Promotion::STATUS_MANUAL_INACTIVE])],
         ]);
 
@@ -403,44 +435,74 @@ class PromotionController extends Controller
             return response()->json(['success' => false, 'message' => 'Dữ liệu ID không hợp lệ.'], 400);
         }
 
-        $updatedCount = 0;
-        $updatedPromotions = [];
+        $successfullyUpdatedIds = [];
+        $alreadyInTargetStateCount = 0;
+        $notFoundCount = 0;
         $errors = [];
 
-        // Lấy các promotion cần cập nhật, chỉ lấy những cái tồn tại
-        $promotionsToUpdate = Promotion::whereIn('id', $ids)->get();
+        // Fetch only promotions that exist within the provided IDs
+        $promotionsToProcess = Promotion::whereIn('id', $ids)->get();
 
-        foreach ($promotionsToUpdate as $promotion) {
-            try {
-                // Chỉ cập nhật nếu trạng thái hiện tại khác trạng thái đích
-                if ($promotion->status !== $targetStatus) {
+        // Identify any IDs that were not found in the database
+        $foundIds = $promotionsToProcess->pluck('id')->toArray();
+        $notFoundIds = array_diff($ids, $foundIds);
+        foreach ($notFoundIds as $id) {
+            $errors[] = "Mã khuyến mãi với ID '{$id}' không tồn tại.";
+        }
+
+        foreach ($promotionsToProcess as $promotion) {
+            if ($promotion->status === $targetStatus) {
+                $alreadyInTargetStateCount++;
+            } else {
+                try {
                     $promotion->status = $targetStatus;
                     $promotion->save();
-                    $updatedCount++;
+                    $successfullyUpdatedIds[] = $promotion->id;
+                } catch (Exception $e) {
+                    Log::error("Lỗi khi cập nhật trạng thái mã khuyến mãi ID {$promotion->id}: " . $e->getMessage());
+                    $errors[] = "Không thể cập nhật trạng thái mã '{$promotion->code}'.";
                 }
-                $updatedPromotions[] = $promotion->refresh(); // Lấy lại thuộc tính sau khi save
-            } catch (Exception $e) {
-                Log::error("Lỗi khi cập nhật trạng thái mã khuyến mãi ID {$promotion->id}: " . $e->getMessage());
-                $errors[] = "Không thể cập nhật trạng thái mã '{$promotion->code}'.";
             }
         }
 
-        if ($updatedCount > 0) {
-            $message = "Đã cập nhật trạng thái thành công cho " . $updatedCount . " mã khuyến mãi.";
-            if (!empty($errors)) {
-                $message .= " Một số mã có lỗi: " . implode(', ', $errors);
-            }
-            return response()->json([
-                'success' => true,
-                'message' => $message,
-                'promotions' => $updatedPromotions,
-            ]);
+        $totalProcessed = count($ids); // Tổng số ID được gửi
+        $totalUpdated = count($successfullyUpdatedIds); // Số lượng mã đã thay đổi trạng thái thành công
+        $totalFailed = count($errors); // Số lượng lỗi không thể xử lý
+
+        $message = "";
+        $success = false;
+
+        if ($totalUpdated > 0) {
+            $success = true;
+            $message = "Đã cập nhật trạng thái thành công cho {$totalUpdated} mã khuyến mãi.";
+        }
+
+        if ($alreadyInTargetStateCount > 0) {
+            if ($message) $message .= " ";
+            $message .= "({$alreadyInTargetStateCount} mã đã ở trạng thái đích).";
+            $success = true; // Vẫn coi là thành công nếu có ít nhất một thay đổi hoặc một số đã ở trạng thái đích.
+        }
+
+        if ($totalFailed > 0) {
+            if ($message) $message .= " ";
+            $message .= "Một số lỗi xảy ra: " . implode('; ', $errors);
+        }
+
+        if ($totalUpdated === 0 && $alreadyInTargetStateCount === 0 && $totalFailed === 0 && $totalProcessed > 0) {
+            // Trường hợp cạnh: IDs hợp lệ nhưng không có gì thay đổi (ví dụ: tất cả đều là ID không hợp lệ hoặc lỗi không được log)
+            $message = "Không có mã khuyến mãi nào được cập nhật hoặc thay đổi trạng thái.";
+            $success = false; // Coi là thất bại hoàn toàn nếu không có cập nhật hoặc mã nào ở trạng thái đích
+        } else if ($totalProcessed === 0) {
+            $message = "Không có mã nào được chọn.";
+            $success = false;
         }
 
         return response()->json([
-            'success' => false,
-            'message' => count($errors) > 0 ? "Không có mã nào được cập nhật. Lỗi: " . implode(', ', $errors) : "Không có mã nào được chọn hoặc các mã đã ở trạng thái đích.",
+            'success' => $success,
+            'message' => $message,
+            'promotions' => Promotion::whereIn('id', $successfullyUpdatedIds)->get(), // Chỉ trả về những mã đã thay đổi
+            'updated_ids' => $successfullyUpdatedIds, // Để JS biết ID nào đã được cập nhật
             'errors' => $errors,
-        ], 422);
+        ], $success ? 200 : 422); // Sử dụng 200 cho thành công/thành công một phần, 422 cho thất bại hoàn toàn.
     }
 }
