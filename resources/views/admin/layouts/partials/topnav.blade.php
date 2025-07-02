@@ -40,7 +40,7 @@
                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdownUser">
                     <li><a class="dropdown-item" href="{{ route('admin.profile.show') }}"><i
                                 class="bi bi-person-circle me-2"></i>Hồ sơ</a></li>
-                    <li><a class="dropdown-item" href="#"><i class="bi bi-gear me-2"></i>Cài đặt</a></li>
+                    {{-- <li><a class="dropdown-item" href="#"><i class="bi bi-gear me-2"></i>Cài đặt</a></li> --}}
                     <li>
                         <hr class="dropdown-divider">
                     </li>

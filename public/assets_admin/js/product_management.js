@@ -311,7 +311,7 @@ function initializeProductsPage() {
         const updateImagesPreview = document.getElementById('productImagesPreviewUpdate');
         if (updateImagesInput && updateImagesPreview) setupImagePreviews(updateImagesInput, updateImagesPreview);
 
-         // Reset password and errors for deletion/bulk modals on show
+        // Reset password and errors for deletion/bulk modals on show
         [bulkDeleteProductsModalEl, bulkForceDeleteProductsModalEl, bulkToggleStatusProductsModalEl, bulkRestoreProductsModalEl].forEach(modalEl => {
             modalEl.addEventListener('show.bs.modal', () => {
                 const passwordInput = modalEl.querySelector('[name="admin_password_confirm_delete"]');
@@ -555,42 +555,39 @@ function initializeProductsPage() {
     }
 
     /**
-     * Cập nhật nội dung bảng và liên kết phân trang.
-     * @param {string} tableRowsHtml - HTML cho các hàng của bảng.
-     * @param {string} paginationLinksHtml - HTML cho các liên kết phân trang.
-     */
+    * Cập nhật nội dung bảng và liên kết phân trang.
+    * @param {string} tableRowsHtml - HTML cho các hàng của bảng.
+    * @param {string} paginationLinksHtml - HTML cho các liên kết phân trang.
+    */
     function updateTableContent(tableRowsHtml, paginationLinksHtml) {
         productTableBody.innerHTML = tableRowsHtml || `
-            <tr id="no-products-row">
-                <td colspan="10" class="text-center">
-                    <div class="alert alert-info mb-0">Không tìm thấy kết quả phù hợp.</div>
-                </td>
-            </tr>`;
+        <tr id="no-products-row">
+            <td colspan="10" class="text-center">
+                <div class="alert alert-info mb-0">Không tìm thấy kết quả phù hợp.</div>
+            </td>
+        </tr>`;
 
         const cardBody = document.querySelector('#adminProductsPage .card-body');
         if (!cardBody) {
             console.error("Card body not found. Cannot update pagination.");
-            // Không return ở đây vì productTableBody đã được cập nhật.
-        } else {
-            // Xóa phần tử phân trang hiện có nếu nó tồn tại
-            let existingPaginationDiv = cardBody.querySelector('#pagination-links');
-            if (existingPaginationDiv) {
-                existingPaginationDiv.remove();
-            }
-
-            // Nếu có HTML phân trang mới, tạo và thêm phần tử mới
-            if (paginationLinksHtml && paginationLinksHtml.trim() !== '') {
-                const tempDiv = document.createElement('div');
-                tempDiv.innerHTML = paginationLinksHtml; // HTML này chứa div#pagination-links
-                const newPaginationDiv = tempDiv.querySelector('#pagination-links'); // Tìm div thực tế bên trong container tạm
-
-                if (newPaginationDiv) {
-                    cardBody.appendChild(newPaginationDiv);
-                } else {
-                    console.warn("Pagination HTML returned by server did not contain #pagination-links div.");
-                }
-            }
+            return; // Exit if the main container isn't there
         }
+
+        // --- START: MODIFICATION ---
+        // Always remove the old pagination container if it exists
+        let existingPaginationDiv = cardBody.querySelector('#pagination-links');
+        if (existingPaginationDiv) {
+            existingPaginationDiv.remove();
+        }
+
+        // If new pagination HTML is provided, create the container and inject the HTML
+        if (paginationLinksHtml && paginationLinksHtml.trim() !== '') {
+            const newPaginationContainer = document.createElement('div');
+            newPaginationContainer.id = 'pagination-links'; // The ID the rest of the script looks for
+            newPaginationContainer.innerHTML = paginationLinksHtml; // The raw HTML from the server
+            cardBody.appendChild(newPaginationContainer);
+        }
+        // --- END: MODIFICATION ---
 
         // Cập nhật biến toàn cục để trỏ đến phần tử mới (hoặc null nếu không có)
         paginationLinksContainer = document.getElementById('pagination-links');
@@ -812,7 +809,7 @@ function initializeProductsPage() {
             if (submitButton) {
                 submitButton.disabled = true;
                 if (formId.includes('ProductsForm')) {
-                     submitButton.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Đang xử lý...`;
+                    submitButton.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Đang xử lý...`;
                 } else {
                     submitButton.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> ${submitButton.textContent}...`;
                 }
@@ -882,7 +879,7 @@ function initializeProductsPage() {
 
                     // For single delete/force-delete/restore, get ID from dataset
                     if (form.dataset.isBulk === 'false' && affectedIdsToPass.length === 0 && form.dataset.productIds) {
-                         try {
+                        try {
                             affectedIdsToPass = JSON.parse(form.dataset.productIds);
                         } catch (e) {
                             console.error("Error parsing single product ID from dataset:", e);

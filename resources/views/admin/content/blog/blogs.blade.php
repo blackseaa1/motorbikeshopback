@@ -47,7 +47,7 @@
                         <table class="table table-hover table-striped align-middle">
                             <thead class="table-light">
                                 <tr>
-                                    <th>ID</th>
+                                    <th>STT</th>
                                     <th>Ảnh</th>
                                     <th>Tiêu đề</th>
                                     <th>Tác giả</th>
@@ -60,7 +60,7 @@
                                 @forelse ($blogs as $blog)
                                     <tr id="blog-row-{{ $blog->id }}"
                                         class="{{ $blog->trashed() ? 'row-trashed' : ($blog->status != 'published' ? 'row-inactive' : '') }}">
-                                        <td>{{ $blog->id }}</td>
+                                        <td>{{ $loop->index + $blogs->firstItem() }}</td>
                                         <td><img src="{{ $blog->image_full_url }}" alt="{{ $blog->title }}"
                                                 class="img-thumbnail"
                                                 style="max-width: 50px; max-height: 50px; object-fit: contain;">

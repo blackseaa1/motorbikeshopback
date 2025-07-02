@@ -108,7 +108,8 @@ class ReportsController extends Controller
     {
         $threshold = $request->input('threshold', 20); // Default threshold
 
-        $lowStockProducts = Product::select('id', 'name', 'stock_quantity', 'price')
+        // Trong phương thức getLowStockProducts()
+        $lowStockProducts = Product::select('id', 'name', 'stock_quantity', 'price', 'category_id', 'brand_id')
             ->with('category', 'brand') // Eager load relationships if needed for display
             ->where('stock_quantity', '<=', $threshold)
             ->orderBy('stock_quantity')
@@ -135,43 +136,66 @@ class ReportsController extends Controller
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\JsonResponse
      */
+
     public function getBestSellingProducts(Request $request)
     {
         $request->validate([
             'start_date' => 'required|date',
             'end_date' => 'required|date|after_or_equal:start_date',
-            'limit' => 'integer|min:1|max:100', // Limit for top products
+            'limit' => 'integer|min:1|max:100',
         ]);
 
         $startDate = Carbon::parse($request->input('start_date'))->startOfDay();
         $endDate = Carbon::parse($request->input('end_date'))->endOfDay();
         $limit = $request->input('limit', 10);
 
-        $bestSellingProducts = Order::join('order_items', 'orders.id', '=', 'order_items.order_id')
-            ->join('products', 'order_items.product_id', '=', 'products.id')
+        // ## Step 1: Get the best-selling product data (IDs and sales figures).
+        // Note: We remove the 'image'/'thumbnail' column from here to avoid errors
+        // and to keep the aggregation query simple and correct.
+        $salesData = Product::join('order_items', 'products.id', '=', 'order_items.product_id')
+            ->join('orders', 'order_items.order_id', '=', 'orders.id')
+            ->leftJoin('categories', 'products.category_id', '=', 'categories.id')
+            ->leftJoin('brands', 'products.brand_id', '=', 'brands.id')
             ->select(
                 'products.id',
                 'products.name',
-                'products.price',
+                'categories.name as category_name',
+                'brands.name as brand_name',
                 DB::raw('SUM(order_items.quantity) as total_quantity_sold'),
                 DB::raw('SUM(order_items.quantity * order_items.price) as total_revenue_generated')
             )
             ->whereBetween('orders.created_at', [$startDate, $endDate])
             ->whereIn('orders.status', [Order::STATUS_COMPLETED, Order::STATUS_DELIVERED])
-            ->groupBy('products.id', 'products.name', 'products.price')
+            ->groupBy('products.id', 'products.name', 'categories.name', 'brands.name')
             ->orderByDesc('total_quantity_sold')
             ->limit($limit)
             ->get();
 
-        $formattedData = $bestSellingProducts->map(function ($product) {
-            // Re-fetch product to get accessors like thumbnail_url, or adjust query to include it
-            $fullProduct = Product::find($product->id);
+        // ## Step 2: Get all the unique product IDs from the sales data.
+        $productIds = $salesData->pluck('id');
+
+        // ## Step 3: Fetch the full Product models for those IDs in a single query.
+        // Eager load any relationships needed for the 'thumbnail_url' accessor to work.
+        // This avoids the N+1 query problem.
+        $products = Product::with('images') // Assuming 'images' is the relationship name
+            ->whereIn('id', $productIds)
+            ->get()
+            ->keyBy('id'); // Key by ID for easy lookup
+
+        // ## Step 4: Combine the sales data with the product model data (which has the thumbnail).
+        $formattedData = $salesData->map(function ($sale) use ($products) {
+            // Find the full product model from the collection we fetched.
+            $product = $products->get($sale->id);
+
             return [
-                'id' => $product->id,
-                'name' => $product->name,
-                'total_quantity_sold' => $product->total_quantity_sold,
-                'total_revenue_generated' => \Illuminate\Support\Number::currency($product->total_revenue_generated, 'VND', 'vi'),
-                'thumbnail_url' => $fullProduct ? $fullProduct->thumbnail_url : 'https://placehold.co/400x400/EFEFEF/AAAAAA&text=Product', // Use accessor
+                'id' => $sale->id,
+                'name' => $sale->name,
+                'category' => $sale->category_name ?? 'N/A',
+                'brand' => $sale->brand_name ?? 'N/A',
+                'total_quantity_sold' => (int)$sale->total_quantity_sold,
+                'total_revenue_generated' => \Illuminate\Support\Number::currency($sale->total_revenue_generated, 'VND', 'vi'),
+                // Use the accessor from the full Product model, with a fallback.
+                'thumbnail_url' => $product ? $product->thumbnail_url : 'https://placehold.co/50x50/grey/white?text=No+Img',
             ];
         });
 

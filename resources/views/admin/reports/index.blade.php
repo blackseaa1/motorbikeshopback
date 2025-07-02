@@ -123,9 +123,9 @@
                     <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">Sản Phẩm Bán Chạy Nhất</h5>
                         <div class="d-flex align-items-center">
-                            <label for="bestSellingStartDate" class="me-2">Từ ngày:</label>
+                            <label for="bestSellingStartDate" class="me-2">Từ tháng</label>
                             <input type="date" id="bestSellingStartDate" class="form-control form-control-sm me-2" value="{{ date('Y-m-01') }}">
-                            <label for="bestSellingEndDate" class="me-2">Đến ngày:</label>
+                            <label for="bestSellingEndDate" class="me-2">Đến tháng</label>
                             <input type="date" id="bestSellingEndDate" class="form-control form-control-sm me-2" value="{{ date('Y-m-t') }}">
                             <label for="bestSellingLimit" class="me-2">Số lượng:</label>
                             <input type="number" id="bestSellingLimit" class="form-control form-control-sm" value="10" min="1" max="100" style="width: 80px;">
