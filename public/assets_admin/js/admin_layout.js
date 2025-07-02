@@ -1,3 +1,5 @@
+// public/assets_admin/js/admin_layout.js
+
 (function () {
     'use strict';
 
@@ -95,12 +97,15 @@
         try {
             const appModalInstance = bootstrap.Modal.getInstance(modalElement) || new bootstrap.Modal(modalElement);
             // Hide other open modals to avoid overlapping backdrops
-            document.querySelectorAll('.modal').forEach(modalEl => {
-                if (modalEl !== modalElement) {
-                    const modalInstance = bootstrap.Modal.getInstance(modalEl);
-                    if (modalInstance) modalInstance.hide();
-                }
-            });
+            // THAY ĐỔI: Không ẩn các modal khác nếu type là 'validation_error'
+            if (type !== 'validation_error') {
+                document.querySelectorAll('.modal').forEach(modalEl => {
+                    if (modalEl !== modalElement) {
+                        const modalInstance = bootstrap.Modal.getInstance(modalEl);
+                        if (modalInstance) modalInstance.hide();
+                    }
+                });
+            }
             appModalInstance.show();
         } catch (e) {
             console.error("Lỗi khi hiển thị Bootstrap modal (#appInfoModal):", e);
@@ -261,13 +266,15 @@
                     if (response.status === 422 && result.errors) {
                         window.displayValidationErrors(form, result.errors); // Use global helper
                         window.showAppInfoModal(result.message || 'Vui lòng kiểm tra lại dữ liệu.', 'validation_error', 'Lỗi Nhập liệu'); // Use global helper
+                        // KHÔNG ĐÓNG MODAL KHI CÓ LỖI VALIDATION (422)
                     } else {
                         throw new Error(result.message || 'Có lỗi không xác định.');
                     }
                     if (errorCallback) errorCallback(result);
-                    return;
+                    return; // DỪNG LẠI Ở ĐÂY NẾU CÓ LỖI
                 }
 
+                // Nếu thành công, đóng modal (chỉ khi có modalId được cung cấp)
                 if (modalId) {
                     const modalEl = document.getElementById(modalId);
                     if (modalEl) {

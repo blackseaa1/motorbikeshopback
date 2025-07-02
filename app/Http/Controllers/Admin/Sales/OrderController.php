@@ -24,6 +24,8 @@ use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Illuminate\Validation\ValidationException;
 use Carbon\Carbon; // Import Carbon for date comparisons
+use Illuminate\Support\Facades\Mail; // Import Mail facade
+use App\Mail\OrderConfirmation; // Import OrderConfirmation Mailable
 
 class OrderController extends Controller
 {
@@ -99,7 +101,7 @@ class OrderController extends Controller
         $provinces = Province::all(); // All provinces for address selection
         $deliveryServices = DeliveryService::all(); // All delivery services
         $promotions = Promotion::all(); // All promotions
-        $paymentMethods = PaymentMethod::all(); // All payment methods
+        $paymentMethods = PaymentMethod::whereIn('code', ['cod', 'bank_transfer'])->get();
 
         // Return the view with the paginated orders and other necessary data
         return view('admin.sales.order.orders', compact(
@@ -166,6 +168,25 @@ class OrderController extends Controller
             }
 
             DB::commit();
+
+            // === START: Thêm logic gửi email xác nhận đơn hàng ===
+            try {
+                // Tải lại các mối quan hệ cần thiết cho email
+                $order->load(['customer', 'province', 'district', 'ward', 'items.product']);
+
+                $customerEmail = $order->customer ? $order->customer->email : $order->guest_email;
+
+                if ($customerEmail) {
+                    Mail::to($customerEmail)->send(new OrderConfirmation($order));
+                    Log::info('Order confirmation email sent by admin to: ' . $customerEmail . ' for order #' . $order->id);
+                } else {
+                    Log::warning('No email address found for order #' . $order->id . ' to send confirmation by admin.');
+                }
+            } catch (\Exception $e) {
+                Log::error('Failed to send order confirmation email by admin for order #' . $order->id . ': ' . $e->getMessage());
+            }
+            // === END: Thêm logic gửi email xác nhận đơn hàng ===
+
             return response()->json(['success' => true, 'message' => 'Tạo đơn hàng thành công!']);
         } catch (\Exception $e) {
             DB::rollBack();

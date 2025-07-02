@@ -31,10 +31,19 @@
                         {{ $product->formatted_price }}
                     </p>
 
+                    {{-- Hiển thị tình trạng số lượng sản phẩm --}}
+                    <div class="mb-2">
+                        @if ($product->stock_quantity > 0)
+                            <span class="badge bg-success">Còn hàng: {{ $product->stock_quantity }}</span>
+                        @else
+                            <span class="badge bg-danger">Hết hàng</span>
+                        @endif
+                    </div>
+
                     <div class="mt-auto d-grid gap-2">
                         {{-- Thêm class "position-relative" và z-index vào đây --}}
                         <button class="btn btn-sm btn-primary add-to-cart-btn position-relative" style="z-index: 2;"
-                            data-product-id="{{ $product->id }}">
+                            data-product-id="{{ $product->id }}" @if ($product->stock_quantity <= 0) disabled @endif>
                             <i class="bi bi-cart-plus"></i> Thêm vào giỏ
                         </button>
                         <a href="{{ route('products.show', ['product' => $product->id]) }}"
