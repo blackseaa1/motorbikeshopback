@@ -347,6 +347,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         });
         // Sales Management
         Route::prefix('sales')->name('sales.')->group(function () {
+            Route::post('orders/calculate-summary', [OrderController::class, 'calculateOrderSummaryApi'])->name('orders.calculate-summary.api'); // <--- Đảm bảo route này nằm ở đây
             // == ROUTES CHO ĐƠN HÀNG (ORDERS) ==
             // Các route tùy chỉnh cho OrderController (ví dụ: AJAX để lấy dữ liệu)
             // Cần đặt các route này TRƯỚC Route::resource nếu có khả năng trùng lặp URL
@@ -357,7 +358,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('orders/get-product-details', [OrderController::class, 'getProductDetails'])->name('orders.getProductDetails');
             Route::get('orders/get-customer-addresses', [OrderController::class, 'getCustomerAddresses'])->name('orders.getCustomerAddresses');
             // THIS IS THE ROUTE TO MOVE - place it here or similar logical spot
-            Route::post('/orders/calculate-summary', [OrderController::class, 'calculateOrderSummaryApi'])->name('orders.calculate-summary.api'); // <--- MOVED AND CORRECTED PATH
+
 
             // == ROUTES CHO KHUYẾN MÃI (PROMOTIONS) ==
             // == ROUTES CHO KHUYẾN MÃI (PROMOTIONS) ==

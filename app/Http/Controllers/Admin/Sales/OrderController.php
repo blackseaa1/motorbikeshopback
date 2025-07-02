@@ -65,7 +65,13 @@ class OrderController extends Controller
         // Tải sẵn dữ liệu cho các modal
         $customers = Customer::where('status', Customer::STATUS_ACTIVE)->orderBy('name')->get(['id', 'name', 'email']);
         $provinces = Province::orderBy('name')->get(['id', 'name']);
-        $deliveryServices = DeliveryService::where('status', DeliveryService::STATUS_ACTIVE)->get(['id', 'name', 'shipping_fee']);
+
+        // SỬA ĐỔI: Đặt shipping_fee thành 0 cho tất cả các dịch vụ vận chuyển
+        $deliveryServices = DeliveryService::where('status', DeliveryService::STATUS_ACTIVE)->get(['id', 'name', 'shipping_fee'])->map(function ($service) {
+            $service->shipping_fee = 0; // Đặt phí vận chuyển là 0
+            return $service;
+        });
+
         // Chỉ lấy phương thức thanh toán COD và Bank Transfer
         $paymentMethods = PaymentMethod::whereIn('code', ['cod', 'bank_transfer'])->where('status', 'active')->get();
         // Promotions are no longer needed here as they are fetched by API for calculation
@@ -113,7 +119,7 @@ class OrderController extends Controller
                 'payment_method_id'   => $validated['payment_method_id'], // Sử dụng payment_method_id từ request
                 'status'              => $validated['status'],
                 'notes'               => $validated['notes'],
-                'delivery_service_id' => $validated['delivery_service_id'],
+                'delivery_service_id' => $calculation['delivery_service_id'], // Sử dụng ID từ tính toán để đảm bảo phí vận chuyển 0
                 'promotion_id'        => $calculation['promotion_id'],
                 'subtotal'            => $calculation['subtotal'],
                 'shipping_fee'        => $calculation['shipping_fee'],
@@ -290,12 +296,13 @@ class OrderController extends Controller
             }
 
             // Tính toán shipping_fee
-            $shippingFee = 0;
+            $shippingFee = 0; // Đặt phí vận chuyển cố định là 0 cho API tính toán
             if ($deliveryServiceId) {
-                $deliveryService = DeliveryService::find($deliveryServiceId);
-                if ($deliveryService) {
-                    $shippingFee = $deliveryService->shipping_fee;
-                }
+                // Mặc dù có deliveryServiceId, chúng ta vẫn đặt phí là 0 theo yêu cầu
+                // $deliveryService = DeliveryService::find($deliveryServiceId);
+                // if ($deliveryService) {
+                //     $shippingFee = $deliveryService->shipping_fee;
+                // }
             }
 
             // Tính toán discount
@@ -420,6 +427,7 @@ class OrderController extends Controller
         $order->guest_email = $validatedData['guest_email'] ?? null;
         $order->province_id = $validatedData['guest_province_id'];
         $order->district_id = $validatedData['guest_district_id'];
+        // SỬA LỖI: Truy cập trực tiếp guest_ward_id
         $order->ward_id = $validatedData['guest_ward_id'];
         $order->shipping_address_line = $validatedData['guest_address_line'];
     }
@@ -439,12 +447,13 @@ class OrderController extends Controller
             }
         }
 
-        $shippingFee = 0;
+        $shippingFee = 0; // Đặt phí vận chuyển cố định là 0 cho logic lưu đơn hàng
         if ($deliveryServiceId) {
-            $deliveryService = DeliveryService::find($deliveryServiceId); // Dùng find thay vì findOrFail để tránh exception nếu ID không tồn tại
-            if ($deliveryService) {
-                $shippingFee = $deliveryService->shipping_fee;
-            }
+            // Mặc dù có deliveryServiceId, chúng ta vẫn đặt phí là 0 theo yêu cầu
+            // $deliveryService = DeliveryService::find($deliveryServiceId);
+            // if ($deliveryService) {
+            //     $shippingFee = $deliveryService->shipping_fee;
+            // }
         }
 
         $discountAmount = 0;
@@ -465,6 +474,7 @@ class OrderController extends Controller
             'discount_amount' => $discountAmount,
             'grand_total' => max(0, $grandTotal), // Đảm bảo tổng cộng không âm
             'promotion_id' => $validPromotionId,
+            'delivery_service_id' => $deliveryServiceId, // Trả về delivery_service_id để lưu vào order
         ];
     }
 

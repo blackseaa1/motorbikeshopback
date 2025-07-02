@@ -55,7 +55,7 @@
                             <div id="guest_customer_block"> {{-- No longer hidden by default, visibility managed by JS --}}
                                 <h5 class="mb-3 mt-4">2. Thông tin giao hàng</h5>
                                 <div class="row">
-                                    <div class="col-md-6 mb-3">
+                                    <div class="col-md-6 mb-3" >
                                         <label for="guest_name" class="form-label">Tên người nhận <span
                                                 class="text-danger">*</span></label>
                                         <input type="text" class="form-control" id="guest_name" name="guest_name">
@@ -240,3 +240,13 @@
         'formIdentifier' => 'createOrderForm'
     ])
 </template>
+    
+    
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const input = document.getElementById('guest_name');
+        input.addEventListener('input', function () {
+            this.value = this.value.replace(/^\s+/, ''); // Xóa khoảng trắng đầu
+        });
+    });
+</script>
