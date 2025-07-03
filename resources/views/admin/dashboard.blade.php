@@ -51,7 +51,7 @@
                             <div>
                                 <h5 class="card-title">Doanh Thu (Tháng)</h5>
                                 {{-- Link to Reports page --}}
-                                <a href="{{ route('admin.reports') }}" class="text-decoration-none text-dark">
+                               <a href="{{ route('admin.reports') }}" class="text-decoration-none text-dark">
                                     <p class="card-text-large">{{ number_format($monthlyRevenue, 0, ',', '.') }}đ</p>
                                 </a>
                             </div>
@@ -108,7 +108,7 @@
                         <div class="card-header">Sản Phẩm Bán Chạy Nhất</div>
                         <ul class="list-group list-group-flush">
                             @forelse($bestSellingProducts as $product)
-                                <li class="list-group-item">
+                                <li class="list-group-item" data-product-id="{{ $product->id }}"> {{-- Thêm data-product-id cho hover --}}
                                     <img src="{{ $product->thumbnail_url }}" alt="{{ $product->name }}"
                                         class="product-thumbnail-img"
                                         onerror="this.src='https://placehold.co/40x40/grey/white?text=Img'">
@@ -175,13 +175,13 @@
                     </thead>
                     <tbody>
                         @forelse($latestProducts as $product)
-                            <tr>
+                            <tr data-product-id="{{ $product->id }}"> {{-- Thêm data-product-id cho hover --}}
                                 <td><input type="checkbox" class="form-check-input"
                                         aria-label="Select {{ $product->name }}"></td>
                                 <td><img src="{{ $product->thumbnail_url }}"
                                         alt="{{ $product->name }}" class="product-thumbnail-img"
                                         onerror="this.src='https://placehold.co/60x60/grey/white?text=Img'"></td>
-                                <td>{{ $product->name }}</td>
+                                <td class="product-name-hover">{{ $product->name }}</td> {{-- Thêm class để dễ dàng chọn --}}
                                 <td>{{ $product->category->name ?? 'N/A' }}</td>
                                 <td>{{ number_format($product->price) }}đ</td>
                                 <td><span class="badge {{ $product->status_badge_class }}">{{ $product->status_text }}</span></td>
@@ -211,4 +211,30 @@
 @push('scripts')
     {{-- Chỉ tải script biểu đồ ở trang này --}}
     <script src="{{ asset('assets_admin/js/dashboard_chart.js') }}"></script>
+    {{-- NEW: Include the product detail hover script for dashboard products --}}
+    <script src="{{ asset('assets_admin/js/reports/product_detail_hover.js') }}"></script>
+    <script>
+        // Initialize hover for best selling products on dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('#chartsAndListsHeading + .row .list-group-item').forEach(item => {
+                const productId = item.dataset.productId;
+                if (productId) {
+                    item.addEventListener('mouseover', (event) => showProductDetailTooltip(productId, event));
+                    item.addEventListener('mouseout', hideProductDetailTooltip);
+                }
+            });
+
+            // Initialize hover for latest products on dashboard
+            document.querySelectorAll('.recent-products-table-wrapper .recent-products-table tbody tr').forEach(row => {
+                const productId = row.dataset.productId;
+                if (productId) {
+                    row.addEventListener('mouseover', (event) => showProductDetailTooltip(productId, event));
+                    row.addEventListener('mouseout', hideProductDetailTooltip);
+                }
+            });
+        });
+    </script>
 @endpush
+
+{{-- NEW: Include the product detail tooltip partial if needed on dashboard --}}
+{{-- @include('admin.reports.partials._product_detail_tooltip') --}} {{-- Chỉ cần include một lần trên index.blade.php chính --}}

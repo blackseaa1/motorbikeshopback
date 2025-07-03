@@ -176,7 +176,9 @@ class CartManager
         }
 
         $promotionInfo = $this->getPromotionInfo();
-        $shippingFee = 0; // Currently hardcoded to 0 for "Miễn phí vận chuyển"
+        $shippingInfo = $this->getShippingInfo();
+        $shippingFee = $shippingInfo['fee'] ?? 0;
+
 
         $discountAmount = 0;
         if ($promotionInfo) {
@@ -202,7 +204,7 @@ class CartManager
             'items' => $this->getItems(),
             'count' => $this->getCartCount(),
             'subtotal' => $subtotal,
-            'shipping_info' => ['id' => null, 'name' => 'Miễn phí vận chuyển', 'fee' => 0],
+            'shipping_info' => $shippingInfo ?? ['id' => null, 'name' => 'Miễn phí vận chuyển', 'fee' => 0], // Sửa đổi mặc định
             'promotion_info' => $promotionInfo,
             'shipping_fee' => $shippingFee,
             'discount_amount' => $discountAmount,
@@ -215,7 +217,11 @@ class CartManager
      */
     public function applyShipping(int $deliveryServiceId): array
     {
-        $shippingInfo = ['id' => $deliveryServiceId, 'name' => 'Miễn phí vận chuyển', 'fee' => 0];
+        $deliveryService = DeliveryService::find($deliveryServiceId);
+        if (!$deliveryService || $deliveryService->status !== 'active') {
+            throw ValidationException::withMessages(['delivery_service_id' => 'Dịch vụ vận chuyển không hợp lệ hoặc không hoạt động.']);
+        }
+        $shippingInfo = ['id' => $deliveryServiceId, 'name' => $deliveryService->name, 'fee' => $deliveryService->fee];
         session([self::SHIPPING_SESSION_KEY => $shippingInfo]);
         return $shippingInfo;
     }
@@ -301,7 +307,7 @@ class CartManager
     /**
      * Helper để lấy số lượng hiện tại của sản phẩm trong giỏ hàng.
      */
-    protected function getQuantityInCart(int $productId): int
+    public function getQuantityInCart(int $productId): int // ĐÃ SỬA TỪ PROTECTED SANG PUBLIC
     {
         if (Auth::guard('customer')->check()) {
             $cartItem = Auth::guard('customer')->user()->cart?->items()->where('product_id', $productId)->first();

@@ -35,8 +35,8 @@ function fetchDailyRevenueData(month, year) {
                     datasets: [{
                         label: 'Doanh Thu (VNĐ)',
                         data: revenues,
-                        backgroundColor: 'rgba(54, 162, 235, 0.6)',
-                        borderColor: 'rgba(54, 162, 235, 1)',
+                        backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
                         borderWidth: 1
                     }]
                 },
@@ -46,25 +46,28 @@ function fetchDailyRevenueData(month, year) {
                     scales: {
                         y: {
                             beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Doanh Thu'
+                            },
                             ticks: {
-                                callback: function(value) {
+                                callback: function (value, index, values) {
                                     return value.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' });
                                 }
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Ngày'
                             }
                         }
                     },
                     plugins: {
                         tooltip: {
                             callbacks: {
-                                label: function(context) {
-                                    let label = context.dataset.label || '';
-                                    if (label) {
-                                        label += ': ';
-                                    }
-                                    if (context.parsed.y !== null) {
-                                        label += context.parsed.y.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' });
-                                    }
-                                    return label;
+                                label: function (context) {
+                                    return context.dataset.label + ': ' + context.parsed.y.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' });
                                 }
                             }
                         }
@@ -76,14 +79,25 @@ function fetchDailyRevenueData(month, year) {
             dailyRevenueTableBody.innerHTML = '';
             if (data.length > 0) {
                 data.forEach(item => {
+                    // Thêm data-date vào hàng để truyền ngày tháng chính xác
                     const row = `
-                        <tr>
+                        <tr data-date="${item.date.split('/').reverse().join('-')}">
                             <td>${item.date}</td>
-                            <td>${item.formatted_revenue}</td>
+                            <td class="revenue-cell" data-date="${item.date.split('/').reverse().join('-')}">${item.formatted_revenue}</td> 
                         </tr>
                     `;
                     dailyRevenueTableBody.insertAdjacentHTML('beforeend', row);
                 });
+
+                // Attach hover listeners to revenue cells
+                dailyRevenueTableBody.querySelectorAll('.revenue-cell').forEach(cell => {
+                    const date = cell.dataset.date;
+                    if (date) {
+                        cell.addEventListener('mouseover', (event) => showTopProductForRevenueTooltip('daily', { date: date }, event));
+                        cell.addEventListener('mouseout', hideProductDetailTooltip);
+                    }
+                });
+
             } else {
                 dailyRevenueTableBody.innerHTML = '<tr><td colspan="2" class="text-center">Không có dữ liệu doanh thu cho tháng này.</td></tr>';
             }

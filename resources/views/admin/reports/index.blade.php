@@ -15,7 +15,8 @@
                     <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">Doanh Thu Theo Ngày (Tháng Hiện Tại)</h5>
                         <div class="d-flex align-items-center">
-                            <select id="dailyRevenueMonthSelect" class="form-select form-select-sm me-2" style="width: auto;">
+                            <select id="dailyRevenueMonthSelect" class="form-select form-select-sm me-2"
+                                style="width: auto;">
                                 @for ($i = 1; $i <= 12; $i++)
                                     <option value="{{ $i }}" {{ date('n') == $i ? 'selected' : '' }}>Tháng {{ $i }}</option>
                                 @endfor
@@ -87,7 +88,8 @@
                         <h5 class="mb-0">Sản Phẩm Sắp Hết Hàng</h5>
                         <div class="d-flex align-items-center">
                             <label for="lowStockThreshold" class="me-2">Ngưỡng tồn kho:</label>
-                            <input type="number" id="lowStockThreshold" class="form-control form-control-sm" value="20" min="1" style="width: 80px;">
+                            <input type="number" id="lowStockThreshold" class="form-control form-control-sm" value="20"
+                                min="1" style="width: 80px;">
                             <button id="applyLowStockThreshold" class="btn btn-sm btn-dark ms-2">Áp dụng</button>
                         </div>
                     </div>
@@ -124,11 +126,14 @@
                         <h5 class="mb-0">Sản Phẩm Bán Chạy Nhất</h5>
                         <div class="d-flex align-items-center">
                             <label for="bestSellingStartDate" class="me-2">Từ tháng</label>
-                            <input type="date" id="bestSellingStartDate" class="form-control form-control-sm me-2" value="{{ date('Y-m-01') }}">
+                            <input type="date" id="bestSellingStartDate" class="form-control form-control-sm me-2"
+                                value="{{ date('Y-m-01') }}">
                             <label for="bestSellingEndDate" class="me-2">Đến tháng</label>
-                            <input type="date" id="bestSellingEndDate" class="form-control form-control-sm me-2" value="{{ date('Y-m-t') }}">
+                            <input type="date" id="bestSellingEndDate" class="form-control form-control-sm me-2"
+                                value="{{ date('Y-m-t') }}">
                             <label for="bestSellingLimit" class="me-2">Số lượng:</label>
-                            <input type="number" id="bestSellingLimit" class="form-control form-control-sm" value="10" min="1" max="100" style="width: 80px;">
+                            <input type="number" id="bestSellingLimit" class="form-control form-control-sm" value="10"
+                                min="1" max="100" style="width: 80px;">
                             <button id="applyBestSellingFilter" class="btn btn-sm btn-light ms-2">Áp dụng</button>
                         </div>
                     </div>
@@ -164,4 +169,10 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
     {{-- Main reports script to load individual report scripts --}}
     <script src="{{ asset('assets_admin/js/reports_main.js') }}"></script>
+    {{-- REMOVED: product_detail_hover.js and order_detail_view.js from here --}}
+    {{-- They are now dynamically loaded by reports_main.js --}}
 @endpush
+
+{{-- Modals and Tooltips --}}
+@include('admin.reports.partials._product_detail_tooltip')
+@include('admin.reports.partials._order_detail_modal')
