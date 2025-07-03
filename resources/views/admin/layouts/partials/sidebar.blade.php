@@ -7,7 +7,7 @@
 <nav class="sidebar" id="sidebar">
     <div class="sidebar-header">
         <div class="logo">
-            <a href="dashboard" style="color:#fff;font-size:20px"><img
+            <a href="{{ route('admin.dashboard') }}" style="color:#fff;font-size:20px"><img
                     src="{{ asset('assets_admin/images/thanhdo_shop_logo.png') }}" alt="Thành Đô Shop Logo"
                     style="width:26%; height: auto;"> Thành Đô Shop</a>
         </div>
