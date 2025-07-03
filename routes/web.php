@@ -335,15 +335,20 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('/update-avatar', 'updateAvatar')->name('updateAvatar');
         });
 
-        // --- Module: Báo cáo (Reports) ---
         Route::get('reports', [ReportsController::class, 'index'])->name('reports');
 
-        // Add new API routes for reports
+        // Các route API cho báo cáo
         Route::prefix('reports/api')->name('reports.api.')->group(function () {
             Route::get('/daily-revenue', [ReportsController::class, 'getDailyRevenue'])->name('dailyRevenue');
             Route::get('/monthly-revenue', [ReportsController::class, 'getMonthlyRevenue'])->name('monthlyRevenue');
             Route::get('/low-stock-products', [ReportsController::class, 'getLowStockProducts'])->name('lowStockProducts');
             Route::get('/best-selling-products', [ReportsController::class, 'getBestSellingProducts'])->name('bestSellingProducts');
+            Route::get('/product-details/{id}', [ReportsController::class, 'getProductDetails'])->name('product_details');
+            Route::get('/orders-by-date', [ReportsController::class, 'getOrdersByDate'])->name('ordersByDate');
+            Route::get('/orders-by-month', [ReportsController::class, 'getOrdersByMonth'])->name('ordersByMonth');
+
+            // NEW: Route to get top selling product for a period
+            Route::get('/top-selling-product-for-period', [ReportsController::class, 'getTopSellingProductForPeriod'])->name('topSellingProductForPeriod');
         });
         // Sales Management
         Route::prefix('sales')->name('sales.')->group(function () {

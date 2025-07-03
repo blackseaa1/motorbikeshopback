@@ -201,4 +201,200 @@ class ReportsController extends Controller
 
         return response()->json($formattedData);
     }
+
+    /**
+     * Get details for a single product.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getProductDetails($id)
+    {
+        $product = Product::with(['category', 'brand', 'images', 'vehicleModels', 'reviews'])
+            ->find($id);
+
+        if (!$product) {
+            return response()->json(['message' => 'Product not found'], 404);
+        }
+
+        // You can customize the data returned here based on what you want to show in the tooltip
+        $formattedProduct = [
+            'id' => $product->id,
+            'name' => $product->name,
+            'description' => $product->description,
+            'price' => $product->formatted_price, // Use accessor
+            'stock_quantity' => $product->stock_quantity,
+            'status_text' => $product->status_text, // Use accessor
+            'category' => $product->category->name ?? 'N/A',
+            'brand' => $product->brand->name ?? 'N/A',
+            'thumbnail_url' => $product->thumbnail_url, // Use accessor
+            'material' => $product->material,
+            'color' => $product->color,
+            'specifications' => $product->specifications,
+            'vehicle_models' => $product->vehicleModels->pluck('name')->toArray(),
+            'reviews_count' => $product->reviews->count(),
+            'average_rating' => round($product->reviews->avg('rating'), 1),
+        ];
+
+        return response()->json($formattedProduct);
+    }
+
+    /**
+     * Get orders for a specific date.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getOrdersByDate(Request $request)
+    {
+        $request->validate([
+            'date' => 'required|date_format:Y-m-d', // Expect YYYY-MM-DD format
+        ]);
+
+        $targetDate = Carbon::parse($request->input('date'));
+
+        // SỬA: Thay đổi 'orderItems.product' thành 'items.product'
+        $orders = Order::with(['customer', 'items.product'])
+            ->whereDate('created_at', $targetDate)
+            ->whereIn('status', [Order::STATUS_COMPLETED, Order::STATUS_DELIVERED])
+            ->orderBy('created_at', 'asc')
+            ->get();
+
+        $formattedOrders = $orders->map(function ($order) {
+            return [
+                'id' => $order->id,
+                'customer_name' => $order->customer_name, // Use accessor
+                'total_price' => $order->formatted_total_price, // Use accessor
+                'status_text' => $order->status_text, // Use accessor
+                'status_badge_class' => $order->status_badge_class, // Use accessor
+                'created_at' => Carbon::parse($order->created_at)->format('H:i:s d/m/Y'),
+                'item_count' => $order->items->count(), // SỬA: dùng $order->items
+                // You can add more detailed order item info if needed for the modal
+                'items' => $order->items->map(function ($item) { // SỬA: dùng $order->items
+                    return [
+                        'product_name' => $item->product->name ?? 'N/A',
+                        'quantity' => $item->quantity,
+                        'price' => \Illuminate\Support\Number::currency($item->price, 'VND', 'vi'),
+                        'total' => \Illuminate\Support\Number::currency($item->quantity * $item->price, 'VND', 'vi'),
+                    ];
+                })
+            ];
+        });
+
+        return response()->json($formattedOrders);
+    }
+
+    /**
+     * Get orders for a specific month and year.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getOrdersByMonth(Request $request)
+    {
+        $request->validate([
+            'month' => 'required|integer|min:1|max:12',
+            'year' => 'required|integer|min:2000|max:' . (Carbon::now()->year + 5),
+        ]);
+
+        $month = $request->input('month');
+        $year = $request->input('year');
+
+        // SỬA: Thay đổi 'orderItems.product' thành 'items.product'
+        $orders = Order::with(['customer', 'items.product'])
+            ->whereYear('created_at', $year)
+            ->whereMonth('created_at', $month)
+            ->whereIn('status', [Order::STATUS_COMPLETED, Order::STATUS_DELIVERED])
+            ->orderBy('created_at', 'asc')
+            ->get();
+
+        $formattedOrders = $orders->map(function ($order) {
+            return [
+                'id' => $order->id,
+                'customer_name' => $order->customer_name, // Use accessor
+                'total_price' => $order->formatted_total_price, // Use accessor
+                'status_text' => $order->status_text, // Use accessor
+                'status_badge_class' => $order->status_badge_class, // Use accessor
+                'created_at' => Carbon::parse($order->created_at)->format('H:i:s d/m/Y'),
+                'item_count' => $order->items->count(), // SỬA: dùng $order->items
+                'items' => $order->items->map(function ($item) { // SỬA: dùng $order->items
+                    return [
+                        'product_name' => $item->product->name ?? 'N/A',
+                        'quantity' => $item->quantity,
+                        'price' => \Illuminate\Support\Number::currency($item->price, 'VND', 'vi'),
+                        'total' => \Illuminate\Support\Number::currency($item->quantity * $item->price, 'VND', 'vi'),
+                    ];
+                })
+            ];
+        });
+
+        return response()->json($formattedOrders);
+    }
+
+    /**
+     * Get the top selling product for a given period (day or month/year).
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getTopSellingProductForPeriod(Request $request)
+    {
+        $request->validate([
+            'date' => 'nullable|date_format:Y-m-d', // For daily revenue
+            'month' => 'nullable|integer|min:1|max:12', // For monthly revenue
+            'year' => 'nullable|integer|min:2000|max:' . (Carbon::now()->year + 5), // For monthly revenue
+        ]);
+
+        $query = Product::join('order_items', 'products.id', '=', 'order_items.product_id')
+            ->join('orders', 'order_items.order_id', '=', 'orders.id')
+            ->whereIn('orders.status', [Order::STATUS_COMPLETED, Order::STATUS_DELIVERED]);
+
+        if ($request->has('date')) {
+            $targetDate = Carbon::parse($request->input('date'));
+            $query->whereDate('orders.created_at', $targetDate);
+        } elseif ($request->has('month') && $request->has('year')) {
+            $month = $request->input('month');
+            $year = $request->input('year');
+            $query->whereYear('orders.created_at', $year)
+                ->whereMonth('orders.created_at', $month);
+        } else {
+            return response()->json(['message' => 'Invalid period specified. Provide date or month/year.'], 400);
+        }
+
+        $topProductData = $query->select(
+            'products.id',
+            'products.name',
+            DB::raw('SUM(order_items.quantity) as total_quantity_sold'),
+            DB::raw('SUM(order_items.quantity * order_items.price) as total_revenue_generated')
+        )
+            ->groupBy('products.id', 'products.name')
+            ->orderByDesc('total_quantity_sold')
+            ->first(); // Get only the top product
+
+        if (!$topProductData) {
+            return response()->json(['message' => 'No top selling product found for this period.'], 404);
+        }
+
+        // Fetch full product model to use accessors (e.g., thumbnail_url, formatted_price)
+        $product = Product::with(['category', 'brand', 'images'])
+            ->find($topProductData->id);
+
+        if (!$product) {
+            return response()->json(['message' => 'Product details not found.'], 404);
+        }
+
+        return response()->json([
+            'id' => $product->id,
+            'name' => $product->name,
+            'total_quantity_sold' => (int)$topProductData->total_quantity_sold,
+            'total_revenue_generated' => \Illuminate\Support\Number::currency($topProductData->total_revenue_generated, 'VND', 'vi'),
+            'price' => $product->formatted_price,
+            'category' => $product->category->name ?? 'N/A',
+            'brand' => $product->brand->name ?? 'N/A',
+            'thumbnail_url' => $product->thumbnail_url,
+            // Add other details you might want to show in the tooltip/modal
+            'stock_quantity' => $product->stock_quantity,
+            'status_text' => $product->status_text,
+        ]);
+    }
 }

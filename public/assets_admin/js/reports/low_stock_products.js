@@ -23,11 +23,12 @@ function fetchLowStockProducts(threshold) {
 
             if (data.length > 0) {
                 data.forEach(product => {
+                    // Thêm data-product-id vào hàng để JavaScript có thể lấy ID sản phẩm
                     const row = `
-                        <tr>
+                        <tr data-product-id="${product.id}">
                             <td>${product.id}</td>
                             <td><img src="${product.thumbnail_url}" alt="${product.name}" class="img-thumbnail" style="width: 50px; height: 50px; object-fit: cover;" onerror="this.src='https://placehold.co/50x50/grey/white?text=No+Img'"></td>
-                            <td>${product.name}</td>
+                            <td class="product-name-hover">${product.name}</td>
                             <td>${product.category}</td>
                             <td>${product.brand}</td>
                             <td><span class="badge bg-warning">${product.stock_quantity}</span></td>
@@ -36,15 +37,25 @@ function fetchLowStockProducts(threshold) {
                     `;
                     lowStockProductsTableBody.insertAdjacentHTML('beforeend', row);
                 });
+
+                // Gắn các trình xử lý sự kiện hover sau khi các hàng được thêm vào DOM
+                lowStockProductsTableBody.querySelectorAll('tr[data-product-id]').forEach(row => {
+                    const productId = row.dataset.productId;
+                    if (productId) {
+                        row.addEventListener('mouseover', (event) => showProductDetailTooltip(productId, event));
+                        row.addEventListener('mouseout', hideProductDetailTooltip);
+                    }
+                });
+
             } else {
-                lowStockProductsTableBody.innerHTML = ''; // Ensure table body is empty
-                lowStockNoData.classList.remove('d-none'); // Show no data message
+                lowStockProductsTableBody.innerHTML = ''; // Đảm bảo thân bảng trống
+                lowStockNoData.classList.remove('d-none'); // Hiển thị thông báo không có dữ liệu
             }
         })
         .catch(error => {
             console.error('Error fetching low stock products:', error);
             lowStockProductsTableBody.innerHTML = '<tr><td colspan="7" class="text-center text-danger">Lỗi khi tải dữ liệu. Vui lòng thử lại.</td></tr>';
-            lowStockNoData.classList.add('d-none'); // Hide no data message on error
+            lowStockNoData.classList.add('d-none'); // Ẩn thông báo không có dữ liệu khi có lỗi
         });
 }
 
@@ -60,10 +71,10 @@ function initializeLowStockProducts() {
         return;
     }
 
-    // Initial load
+    // Tải ban đầu
     fetchLowStockProducts(thresholdInput.value);
 
-    // Event listener for apply button
+    // Trình xử lý sự kiện cho nút áp dụng
     applyButton.addEventListener('click', () => {
         const threshold = thresholdInput.value;
         if (threshold && !isNaN(threshold) && parseInt(threshold) > 0) {

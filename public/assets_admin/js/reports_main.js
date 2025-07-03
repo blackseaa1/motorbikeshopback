@@ -22,7 +22,9 @@ document.addEventListener('DOMContentLoaded', function() {
         loadScript('/assets_admin/js/reports/daily_revenue_chart.js'),
         loadScript('/assets_admin/js/reports/monthly_revenue_chart.js'),
         loadScript('/assets_admin/js/reports/low_stock_products.js'),
-        loadScript('/assets_admin/js/reports/best_selling_products.js')
+        loadScript('/assets_admin/js/reports/best_selling_products.js'),
+        loadScript('/assets_admin/js/reports/product_detail_hover.js'), // For product hover
+        loadScript('/assets_admin/js/reports/order_detail_view.js') // NEW: For order details
     ])
     .then(() => {
         console.log('All report scripts loaded successfully. Initializing reports...');
@@ -39,6 +41,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         if (typeof initializeBestSellingProducts === 'function') {
             initializeBestSellingProducts();
+        }
+        if (typeof initializeOrderDetailsListeners === 'function') { // NEW: Initialize order detail listeners
+            initializeOrderDetailsListeners();
         }
     })
     .catch(error => {

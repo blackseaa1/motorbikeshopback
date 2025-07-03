@@ -21,6 +21,7 @@
     <link rel="stylesheet" href="{{ asset('vendor/common/reset.css') }}">
     <link rel="stylesheet" href="{{ asset('assets_admin/css/style.css') }}">
     <link rel="stylesheet" href="{{ asset('assets_admin/css/print.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets_admin/css/product_tooltip.css') }}">
 
 
     @yield('styles') {{-- Dành cho CSS riêng của từng trang --}}

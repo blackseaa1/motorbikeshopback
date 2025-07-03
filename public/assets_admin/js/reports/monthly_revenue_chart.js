@@ -34,10 +34,10 @@ function fetchMonthlyRevenueData(year) {
                     datasets: [{
                         label: 'Doanh Thu (VNĐ)',
                         data: revenues,
-                        borderColor: 'rgba(75, 192, 192, 1)',
-                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                        tension: 0.3,
-                        fill: true
+                        backgroundColor: 'rgba(153, 102, 255, 0.6)',
+                        borderColor: 'rgba(153, 102, 255, 1)',
+                        borderWidth: 1,
+                        fill: false
                     }]
                 },
                 options: {
@@ -46,10 +46,20 @@ function fetchMonthlyRevenueData(year) {
                     scales: {
                         y: {
                             beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Doanh Thu'
+                            },
                             ticks: {
-                                callback: function(value) {
+                                callback: function(value, index, values) {
                                     return value.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' });
                                 }
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Tháng'
                             }
                         }
                     },
@@ -57,14 +67,7 @@ function fetchMonthlyRevenueData(year) {
                         tooltip: {
                             callbacks: {
                                 label: function(context) {
-                                    let label = context.dataset.label || '';
-                                    if (label) {
-                                        label += ': ';
-                                    }
-                                    if (context.parsed.y !== null) {
-                                        label += context.parsed.y.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' });
-                                    }
-                                    return label;
+                                    return context.dataset.label + ': ' + context.parsed.y.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' });
                                 }
                             }
                         }
@@ -76,14 +79,26 @@ function fetchMonthlyRevenueData(year) {
             monthlyRevenueTableBody.innerHTML = '';
             if (data.length > 0) {
                 data.forEach(item => {
+                    // Thêm data-month và data-year vào hàng
                     const row = `
-                        <tr>
+                        <tr data-month="${item.month.replace('Tháng ', '')}" data-year="${year}">
                             <td>${item.month}</td>
-                            <td>${item.formatted_revenue}</td>
+                            <td class="revenue-cell" data-month="${item.month.replace('Tháng ', '')}" data-year="${year}">${item.formatted_revenue}</td> 
                         </tr>
                     `;
                     monthlyRevenueTableBody.insertAdjacentHTML('beforeend', row);
                 });
+
+                // Attach hover listeners to revenue cells
+                monthlyRevenueTableBody.querySelectorAll('.revenue-cell').forEach(cell => {
+                    const month = cell.dataset.month;
+                    const year = cell.dataset.year;
+                    if (month && year) {
+                        cell.addEventListener('mouseover', (event) => showTopProductForRevenueTooltip('monthly', { month: month, year: year }, event));
+                        cell.addEventListener('mouseout', hideProductDetailTooltip);
+                    }
+                });
+
             } else {
                 monthlyRevenueTableBody.innerHTML = '<tr><td colspan="2" class="text-center">Không có dữ liệu doanh thu cho năm này.</td></tr>';
             }
