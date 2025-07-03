@@ -67,6 +67,7 @@ class PaymentController extends Controller
      * @param \Illuminate\Http\Request $request
      * @return \Illuminate\Http\RedirectResponse
      */
+    // Trong handleMomoCallback
     public function handleMomoCallback(Request $request)
     {
         $momoResponse = $request->all();
@@ -77,37 +78,68 @@ class PaymentController extends Controller
         $originalOrderId = explode('_', $result['order_id'])[0];
         $order = Order::find($originalOrderId);
 
+        Log::info('Momo Callback - Order ID: ' . $originalOrderId . ', Result Success: ' . ($result['success'] ? 'true' : 'false') . ', Order Status before update: ' . ($order ? $order->status : 'N/A'));
+
         $redirectToRoute = Auth::guard('customer')->check() ? 'account.orders.show' : 'guest.order.show';
 
         if ($result['success']) {
-            if ($order) {
-                // IPN is responsible for updating order status. This callback only displays messages.
+            if ($order && $order->status === Order::STATUS_PENDING) {
+                $order->status = Order::STATUS_PROCESSING;
+                $order->save();
+                Log::info('Momo Callback: Payment successful for Order ID ' . $order->id . ', status set to PROCESSING.');
             }
             return redirect()->route($redirectToRoute, $originalOrderId)
                 ->with('success', $result['message']);
         } else {
+            if ($order && $order->status === Order::STATUS_PENDING) {
+                $order->status = Order::STATUS_FAILED;
+                $order->save();
+                Log::warning('Momo Callback: Payment failed for Order ID ' . $order->id . '. Status updated to FAILED. Message: ' . ($result['message'] ?? 'Unknown error'));
+            } else {
+                Log::warning('Momo Callback: Payment failed for Order ID ' . $order->id . '. Status NOT updated to FAILED. Current status: ' . ($order ? $order->status : 'N/A') . '. Message: ' . ($result['message'] ?? 'Unknown error'));
+            }
             return redirect()->route($redirectToRoute, $originalOrderId)
-                ->with('error', 'Không thành công.');
+                ->with('error', $result['message']);
         }
     }
 
-    /**
-     * Handles IPN (Instant Payment Notification) from Momo.
-     *
-     * @param \Illuminate\Http\Request $request
-     * @return \Illuminate\Http\JsonResponse
-     */
+    // Trong handleMomoIpn
     public function handleMomoIpn(Request $request)
     {
+
         $momoResponse = $request->all();
         Log::info('Momo IPN Data: ', $momoResponse);
 
         $result = $this->momoService->handleIpnCallback($momoResponse);
 
-        return response()->json([
-            'status' => $result['status'],
-            'message' => $result['message']
-        ], $result['status']);
+        $orderId = explode('_', $result['order_id'])[0];
+        $order = Order::find($orderId);
+
+        Log::info('Momo IPN - Order ID: ' . $orderId . ', Result Success: ' . ($result['success'] ? 'true' : 'false') . ', Order Status before update: ' . ($order ? $order->status : 'N/A'));
+
+        if ($result['success']) {
+            if ($order) {
+                if ($order->status !== Order::STATUS_PROCESSING && $order->status !== Order::STATUS_COMPLETED) {
+                    $order->status = Order::STATUS_PROCESSING;
+                    $order->save();
+                    Log::info('Momo IPN: Order #' . $order->id . ' status updated to PROCESSING.');
+                } else if ($order->status === Order::STATUS_PROCESSING) {
+                    Log::info('Momo IPN: Order #' . $order->id . ' already in PROCESSING. No action needed.');
+                }
+            } else {
+                Log::warning('Momo IPN: Order not found for ID ' . $orderId);
+            }
+            return response()->json(['RspCode' => '00', 'Message' => 'Confirm Success']);
+        } else {
+            if ($order && $order->status === Order::STATUS_PENDING) {
+                $order->status = Order::STATUS_FAILED;
+                $order->save();
+                Log::warning('Momo IPN: Order #' . $order->id . ' status updated to FAILED. Error: ' . ($result['message'] ?? 'Unknown IPN error'));
+            } else {
+                Log::error('Momo IPN: Payment failed for Order ID ' . $orderId . '. Message: ' . ($result['message'] ?? 'Unknown IPN error') . ' - Order status: ' . ($order ? $order->status : 'N/A'));
+            }
+            return response()->json(['RspCode' => '01', 'Message' => 'Payment Failed']);
+        }
     }
 
     /**
@@ -157,9 +189,9 @@ class PaymentController extends Controller
 
         if ($result['success']) {
             if ($order && $order->status === Order::STATUS_PENDING) {
-                $order->status = Order::STATUS_APPROVED; // Cập nhật trạng thái
+                $order->status = Order::STATUS_PROCESSING; // THAY ĐỔI TỪ APPROVED SANG PROCESSING
                 $order->save();
-                Log::info('VNPAY Callback: Payment successful for Order ID ' . $order->id);
+                Log::info('VNPAY Callback: Payment successful for Order ID ' . $order->id . ', status set to PROCESSING.');
             }
             return redirect()->route($redirectToRoute, $orderId)->with('success', $result['message']);
         } else {
@@ -190,12 +222,13 @@ class PaymentController extends Controller
 
         if ($result['success']) {
             if ($order) {
-                if ($order->status !== Order::STATUS_APPROVED && $order->status !== Order::STATUS_COMPLETED) {
-                    $order->status = Order::STATUS_APPROVED;
+                // Chỉ cập nhật nếu trạng thái hiện tại không phải đã Hoàn thành hoặc Đang xử lý
+                if ($order->status !== Order::STATUS_PROCESSING && $order->status !== Order::STATUS_COMPLETED) {
+                    $order->status = Order::STATUS_PROCESSING; // THAY ĐỔI TỪ APPROVED SANG PROCESSING
                     $order->save();
-                    Log::info('VNPAY IPN: Payment successful for Order ID ' . $order->id);
-                } else if ($order->status === Order::STATUS_APPROVED) {
-                    Log::info('VNPAY IPN: Order ID ' . $order->id . ' already confirmed. No action needed.');
+                    Log::info('VNPAY IPN: Payment successful for Order ID ' . $order->id . ', status set to PROCESSING.');
+                } else if ($order->status === Order::STATUS_PROCESSING) {
+                    Log::info('VNPAY IPN: Order ID ' . $order->id . ' already in PROCESSING. No action needed.');
                 }
             } else {
                 Log::warning('VNPAY IPN: Order not found for ID ' . $orderId);

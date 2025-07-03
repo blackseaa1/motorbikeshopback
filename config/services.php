@@ -38,7 +38,7 @@ return [
         'accessKey' => env('MOMO_ACCESS_KEY', 'klm05TvNBzhg7h7j'),
         'secretKey' => env('MOMO_SECRET_KEY', 'at67qH6mk8w5Y1nAyMoYKMWACiEi2bsa'),
         'endpoint' => env('MOMO_ENDPOINT', 'https://test-payment.momo.vn/v2/gateway/api/create'),
-        'redirectUrl' => env('MOMO_REDIRECT_URL', 'http://127.0.0.1:8000/'),
+        'redirectUrl' => env('MOMO_REDIRECT_URL', 'http://127.0.0.1:8000/payment/momo/callback'),
         'ipnUrl' => env('MOMO_IPN_URL', 'http://127.0.0.1:8000/payment/momo/ipn'),
         'autoCapture' => env('MOMO_AUTO_CAPTURE', true),
         'lang' => env('MOMO_LANG', 'vi'),

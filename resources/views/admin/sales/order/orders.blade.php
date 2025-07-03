@@ -5,14 +5,29 @@
 @section('content')
     {{-- Identifier để JS biết đây là trang quản lý đơn hàng --}}
     <div id="adminOrdersPage">
-        <header class="content-header">
-            <h1><i class="bi bi-receipt-cutoff me-2"></i>Quản lý Đơn Hàng</h1>
+        <div class="content-header">
+            <div class="container-fluid">
+                <div class="row mb-2">
+                    <div class="col-sm-6">
+                        <h1><i class="bi bi-receipt-cutoff me-2"></i>Quản lý Đơn Hàng</h1>
+                    </div>
+                    <div class="col-sm-6">
+                        <ol class="breadcrumb float-sm-end">
+                            <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dashboard</a></li>
+                            <li class="breadcrumb-item">Bán hàng</li>
+                            <li class="breadcrumb-item active">Quản lý Đơn Hàng</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+        </div>
+      
+
             <div class="content-header-actions">
                 <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createOrderModal">
                     <i class="bi bi-plus-circle me-2"></i>Tạo Đơn Hàng Mới
                 </button>
             </div>
-        </header>
 
         <div class="card mt-4 shadow-sm">
             <div class="card-header bg-light">
@@ -165,7 +180,7 @@
     ])
     @include('admin.sales.order.modals.view_order_modal')
     @include('admin.sales.order.modals.update_order_modal', ['orderStatuses' => $orderStatuses, 'deliveryServices' => $deliveryServices])
-            @include('admin.sales.order.modals.delete_order_modal')
+                    @include('admin.sales.order.modals.delete_order_modal')
 
 @endsection
 
