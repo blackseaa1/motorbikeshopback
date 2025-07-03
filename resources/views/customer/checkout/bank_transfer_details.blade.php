@@ -30,6 +30,20 @@
 
                         <hr>
 
+                        {{-- Thẻ hiển thị mã QR --}}
+                        <div class="mb-4">
+                            <h5 class="fw-bold">Quét mã QR để thanh toán:</h5>
+                            {{-- Đảm bảo biến $qrCodeUrl được truyền từ controller hoặc là một tài nguyên tĩnh --}}
+                            {{-- Bạn có thể điều chỉnh kích thước bằng class CSS hoặc style inline --}}
+                            <img src="{{ $qrCodeUrl ?? asset('assets_admin/images/default-qr-code.png') }}"
+                                 alt="Mã QR thanh toán"
+                                 class="img-fluid rounded border p-2"
+                                 style="max-width: 250px; height: auto;">
+                            <p class="mt-2 text-muted">Sử dụng ứng dụng ngân hàng của bạn để quét mã.</p>
+                        </div>
+
+                        <hr>
+
                         <p>Nếu có bất kỳ thắc mắc nào, vui lòng liên hệ với chúng tôi qua điện thoại hoặc email.</p>
                         <a href="{{ route(Auth::guard('customer')->check() ? 'account.orders.show' : 'guest.order.show', $order->id) }}"
                             class="btn btn-primary mt-3">Xem chi tiết đơn hàng</a>

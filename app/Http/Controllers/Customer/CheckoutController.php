@@ -139,6 +139,7 @@ class CheckoutController extends Controller
                 DB::rollBack(); // Hoàn tác giao dịch nếu phương thức thanh toán không hợp lệ.
                 return back()->with('error', 'Phương thức thanh toán không hợp lệ.')->withInput();
             }
+            
 
             // Luôn đặt trạng thái ban đầu là PENDING
             $initialStatus = Order::STATUS_PENDING;
