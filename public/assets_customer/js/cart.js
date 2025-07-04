@@ -1,4 +1,4 @@
-// blackseaa1/motorbikeshop/motorbikeshop-0b35a37b31bf4b9b69dc80f5b881813a9422bec0/public/assets_customer/js/cart.js
+// blackseaa1/motorbikeshop/motorbikeshop-0b27a37b31bf4b9b69dc80f5b881813a9422bec0/public/assets_customer/js/cart.js
 (function () {
     'use strict';
 
@@ -26,27 +26,31 @@
         // Ensure the badge is hidden if actualItemCount is 0, shown otherwise
         countBadge.classList.toggle('d-none', actualItemCount === 0);
 
+
         if (data.items && data.items.length > 0) {
             let itemsHtml = '<ul class="list-group list-group-flush">';
             data.items.forEach(item => {
                 const price = item.product ? Number(item.product.price) : 0;
                 const isQuantityOne = item.quantity === 1; // Check if quantity is 1
+                const productName = item.product?.name || 'Sản phẩm không xác định';
+                const shortName = productName.length > 40 ? productName.substring(0, 27) + '...' : productName;
                 itemsHtml += `
-                    <li class="list-group-item d-flex align-items-center" data-product-id="${item.product_id}">
-                        <img src="${item.product?.thumbnail_url || ''}" alt="${item.product?.name || ''}" class="me-3" style="width: 60px; height: 60px; object-fit: cover;">
-                        <div class="flex-grow-1">
-                            <a href="/products/${item.product_id}" class="fw-bold text-dark text-decoration-none small">${item.product?.name || 'Sản phẩm không xác định'}</a>
-                            <div class="d-flex align-items-center mt-2">
-                                <div class="input-group input-group-sm" style="width: 90px;">
-                                    <button class="btn btn-outline-secondary quantity-decrease" type="button" data-product-id="${item.product_id}" ${isQuantityOne ? 'disabled' : ''}>-</button>
-                                    <input type="number" class="form-control text-center cart-quantity-input" value="${item.quantity}" min="1" aria-label="Số lượng" data-product-id="${item.product_id}">
-                                    <button class="btn btn-outline-secondary quantity-increase" type="button" data-product-id="${item.product_id}">+</button>
-                                </div>
-                                <span class="ms-2 text-muted small">${price.toLocaleString('vi-VN')} ₫</span>
-                            </div>
-                        </div>
-                        <button class="btn btn-sm text-danger remove-from-cart-btn" data-product-id="${item.product_id}" aria-label="Xóa"><i class="bi bi-trash"></i></button>
-                    </li>
+                <li class="list-group-item d-flex align-items-center" data-product-id="${item.product_id}">
+            <img src="${item.product?.thumbnail_url || ''}" alt="${productName}" class="me-3" style="width: 60px; height: 60px; object-fit: cover;">
+            <div class="flex-grow-1">
+                
+                <a href="/products/${item.product_id}" title="${productName}" class="fw-bold text-dark text-decoration-none small">${shortName}</a>
+                <div class="d-flex align-items-center mt-2">
+                    <div class="input-group input-group-sm" style="width: 90px;">
+                        <button class="btn btn-outline-secondary quantity-decrease" type="button" data-product-id="${item.product_id}" ${isQuantityOne ? 'disabled' : ''}>-</button>
+                        <input type="number" class="form-control text-center cart-quantity-input" value="${item.quantity}" min="1" aria-label="Số lượng" data-product-id="${item.product_id}">
+                        <button class="btn btn-outline-secondary quantity-increase" type="button" data-product-id="${item.product_id}">+</button>
+                    </div>
+                    <span class="ms-2 text-muted small">${price.toLocaleString('vi-VN')} ₫</span>
+                </div>
+            </div>
+            <button class="btn btn-sm text-danger remove-from-cart-btn" data-product-id="${item.product_id}" aria-label="Xóa"><i class="bi bi-trash"></i></button>
+        </li>
                 `;
             });
             itemsHtml += '</ul>';
@@ -74,31 +78,35 @@
             data.items.forEach(item => {
                 const price = item.product ? Number(item.product.price) : 0;
                 const isQuantityOne = item.quantity === 1; // Check if quantity is 1
+                const productName = item.product.name;
+                const shortName = productName.length > 40 ? productName.substring(0, 27) + '...' : productName;
+
                 itemsHtml += `
-                    <div class="card mb-3 cart-item" data-product-id="${item.product_id}">
-                        <div class="card-body">
-                            <div class="d-flex align-items-center flex-wrap">
-                                <div class="form-check me-3">
-                                    <input class="form-check-input item-checkbox" type="checkbox" data-product-id="${item.product_id}">
-                                </div>
-                                <img src="${item.product.thumbnail_url}" alt="${item.product.name}" style="width: 100px; height: 100px; object-fit: cover;" class="me-3 mb-2 mb-md-0">
-                                <div class="ms-md-3 me-md-auto flex-grow-1">
-                                    <h5 class="mb-1"><a href="/products/${item.product_id}" class="text-dark text-decoration-none">${item.product.name}</a></h5>
-                                    <p class="mb-1 text-muted">${price.toLocaleString('vi-VN')} ₫</p>
-                                </div>
-                                <div class="d-flex align-items-center mt-2 mt-md-0">
-                                    <div class="input-group input-group-sm" style="width: 120px;">
-                                        <button class="btn btn-outline-secondary quantity-decrease" type="button" data-product-id="${item.product_id}" ${isQuantityOne ? 'disabled' : ''}>-</button>
-                                        <input type="number" class="form-control text-center cart-quantity-input" value="${item.quantity}" min="1" aria-label="Số lượng" data-product-id="${item.product_id}">
-                                        <button class="btn btn-outline-secondary quantity-increase" type="button" data-product-id="${item.product_id}">+</button>
-                                    </div>
-                                    <button class="btn btn-sm btn-outline-danger ms-3 remove-from-cart-btn" data-product-id="${item.product_id}" aria-label="Xóa">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
+                   <div class="card mb-3 cart-item" data-product-id="${item.product_id}">
+            <div class="card-body">
+                <div class="d-flex align-items-center flex-wrap">
+                    <div class="form-check me-3">
+                        <input class="form-check-input item-checkbox" type="checkbox" data-product-id="${item.product_id}">
                     </div>
+                    <img src="${item.product.thumbnail_url}" alt="${productName}" style="width: 100px; height: 100px; object-fit: cover;" class="me-3 mb-2 mb-md-0">
+                    <div class="ms-md-3 me-md-auto flex-grow-1">
+                        
+                        <h5 class="mb-1"><a href="/products/${item.product_id}" title="${productName}" class="text-dark text-decoration-none">${shortName}</a></h5>
+                        <p class="mb-1 text-muted">${price.toLocaleString('vi-VN')} ₫</p>
+                    </div>
+                    <div class="d-flex align-items-center mt-2 mt-md-0">
+                        <div class="input-group input-group-sm" style="width: 120px;">
+                            <button class="btn btn-outline-secondary quantity-decrease" type="button" data-product-id="${item.product_id}" ${isQuantityOne ? 'disabled' : ''}>-</button>
+                            <input type="number" class="form-control text-center cart-quantity-input" value="${item.quantity}" min="1" aria-label="Số lượng" data-product-id="${item.product_id}">
+                            <button class="btn btn-outline-secondary quantity-increase" type="button" data-product-id="${item.product_id}">+</button>
+                        </div>
+                        <button class="btn btn-sm btn-outline-danger ms-3 remove-from-cart-btn" data-product-id="${item.product_id}" aria-label="Xóa">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
                 `;
             });
             itemsContainer.innerHTML = itemsHtml;
@@ -371,7 +379,7 @@
             if (deleteSelectedButton) {
                 e.preventDefault();
                 const selectedProductIds = Array.from(document.querySelectorAll('.item-checkbox:checked'))
-                                            .map(checkbox => checkbox.dataset.productId);
+                    .map(checkbox => checkbox.dataset.productId);
                 if (selectedProductIds.length > 0) {
                     window.showAppConfirmModal(
                         'Bạn có chắc chắn muốn xóa các sản phẩm đã chọn khỏi giỏ hàng?',

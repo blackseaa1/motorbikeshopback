@@ -17,7 +17,7 @@
                             <select class="form-select" id="shipping_address_id" name="shipping_address_id" required>
                                 @forelse($customerAddresses as $address)
                                     <option value="{{ $address->id }}" {{ $address->is_default ? 'selected' : '' }}>
-                                        {{ $address->full_name }} - {{ Str::limit($address->address_line, 40) }}
+                                        {{ $address->full_name }} - {{ Str::limit($address->address_line, 27) }}
                                     </option>
                                 @empty
                                     <option value="">Vui lòng thêm địa chỉ trong sổ địa chỉ</option>
@@ -158,15 +158,17 @@
                             <div class="collapse show" id="orderSummaryCollapse">
                                 <ul class="list-group mb-3">
                                     @foreach($cartDetails['items'] as $item)
-                                        <li class="list-group-item d-flex justify-content-between lh-sm align-items-center">
-                                            <img src="{{ $item->product->thumbnail_url }}" alt="{{ $item->product->name }}"
-                                                class="me-3 rounded" style="width: 60px; height: 60px; object-fit: cover;">
-                                            <div class="flex-grow-1">
-                                                <h6 class="my-0">{{ $item->product->name }}</h6>
-                                                <small class="text-muted">Số lượng: {{ $item->quantity }}</small>
-                                            </div>
-                                            <span class="text-muted">{{ number_format($item->subtotal) }} ₫</span>
-                                        </li>
+                                     <li class="list-group-item d-flex justify-content-between lh-sm align-items-center">
+    <img src="{{ $item->product->thumbnail_url }}" alt="{{ $item->product->name }}"
+         class="me-3 rounded" style="width: 60px; height: 60px; object-fit: cover;">
+    <div class="flex-grow-1" style="min-width: 0; max-width: 55%;">
+        <h6 class="my-0 text-truncate" title="{{ $item->product->name }}">
+            {{ $item->product->name }}
+        </h6>
+        <small class="text-muted">Số lượng: {{ $item->quantity }}</small>
+    </div>
+    <span class="text-muted">{{ number_format($item->subtotal) }} ₫</span>
+</li>
                                     @endforeach
                                 </ul>
                             </div>

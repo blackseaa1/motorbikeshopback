@@ -100,6 +100,7 @@ class CartManager
                 'quantity' => $product->quantity,
                 'subtotal' => $product->subtotal,
                 'product_id' => $product->id,
+                
             ];
         });
     }
