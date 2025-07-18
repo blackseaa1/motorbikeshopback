@@ -36,67 +36,90 @@
 
 ## **Demo một số chức năng**
 
-\<details\>
-\<summary\>\<b\>Giao diện Trang chủ & Trang sản phẩm\</b\>\</summary\>
+## Demo một số chức năng
 
-*Giao diện trang chủ hiển thị các sản phẩm nổi bật và thương hiệu.*
+<details>
+  <summary><strong>Giao diện Trang chủ & Trang sản phẩm</strong></summary>
+  
+  <br>
+  
+  *Giao diện trang chủ hiển thị các sản phẩm nổi bật và thương hiệu.*
+  
+![image](https://github.com/user-attachments/assets/50183215-f2ed-4dd6-bd21-77420e16b291)
 
-*Trang cửa hàng cho phép lọc và tìm kiếm sản phẩm.*
+  
+  *Trang cửa hàng cho phép lọc và tìm kiếm sản phẩm.*
+  
+ ![image](https://github.com/user-attachments/assets/522be514-3a29-44e9-9651-37f58851eae3)
 
-\</details\>
+</details>
 
-\<details\>
-\<summary\>\<b\>Trang quản trị (Admin Dashboard) với Biểu đồ thống kê\</b\>\</summary\>
+<details>
+  <summary><strong>Trang quản trị (Admin Dashboard) với Biểu đồ thống kê</strong></summary>
+  
+  <br>
+  
+  *Dashboard cung cấp cái nhìn tổng quan về hoạt động kinh doanh với các biểu đồ doanh thu và đơn hàng trực quan, sinh động.*
+  
+  ![image](https://github.com/user-attachments/assets/985b2ed6-7924-4d55-b605-8e47077a27d7)
 
-*Dashboard cung cấp cái nhìn tổng quan về hoạt động kinh doanh với các biểu đồ doanh thu và đơn hàng trực quan, sinh động.*
+</details>
 
-\</details\>
+<details>
+  <summary><strong>Chức năng Quản lý Sản phẩm & Đơn hàng</strong></summary>
+  
+  <br>
+  
+  *Giao diện cho phép Admin xem, lọc và thực hiện các thao tác quản lý sản phẩm.*
 
-\<details\>
-\<summary\>\<b\>Chức năng Quản lý Sản phẩm & Đơn hàng\</b\>\</summary\>
+  ![image](https://github.com/user-attachments/assets/9b5df84e-4e61-4b39-86b6-7a8a76946a4e)
 
-*Giao diện cho phép Admin xem, lọc và thực hiện các thao tác quản lý sản phẩm.*
+  *Giao diện cho phép Admin xem và cập nhật trạng thái của tất cả các đơn hàng.*
 
-*Giao diện cho phép Admin xem và cập nhật trạng thái của tất cả các đơn hàng.*
+  ![image](https://github.com/user-attachments/assets/d281f909-75b1-409d-8703-c5faa4966a25)
 
-\</details\>
+</details>
 
 ## **Công nghệ sử dụng**
+## Công nghệ sử dụng
 
-\<details\>
-\<summary\>\<b\>Back-End\</b\>\</summary\>
-\<ul\>
-\<li\>\<a href="[https://www.php.net/](https://www.php.net/)"\>PHP 8.2+\</a\>\</li\>
-\<li\>\<a href="[https://laravel.com/](https://laravel.com/)"\>Laravel 11\</a\>\</li\>
-\<li\>\<a href="[https://www.mysql.com/](https://www.mysql.com/)"\>MySQL\</a\>\</li\>
-\<li\>\<a href="[https://www.sqlite.org/index.html](https://www.sqlite.org/index.html)"\>SQLite\</a\>\</li\>
-\<li\>\<a href="[https://www.microsoft.com/en-us/sql-server](https://www.microsoft.com/en-us/sql-server)"\>MS SQL Server\</a\>\</li\>
-\</ul\>
-\</details\>
+<details>
+  <summary><strong>Back-End</strong></summary>
+  
+  <br>
+  
+  <ul>
+    <li><a href="https://www.php.net/">PHP 8.2+</a></li>
+    <li><a href="https://laravel.com/">Laravel 12</a></li>
+    <li><a href="https://www.mysql.com/">MySQL</a></li>
+  </ul>
+</details>
 
-\<details\>
-\<summary\>\<b\>Front-End\</b\>\</summary\>
-\<ul\>
-\<li\>\<a href="[https://developer.mozilla.org/en-US/docs/Web/JavaScript](https://developer.mozilla.org/en-US/docs/Web/JavaScript)"\>JavaScript (ES6)\</a\>\</li\>
-\<li\>\<a href="[https://reactjs.org/](https://reactjs.org/)"\>React.js\</a\>\</li\>
-\<li\>\<a href="[https://jquery.com/](https://jquery.com/)"\>jQuery\</a\> & \<a href="[https://developer.mozilla.org/en-US/docs/Web/API/AJAX\_API](https://www.google.com/search?q=https://developer.mozilla.org/en-US/docs/Web/API/AJAX_API)"\>AJAX\</a\>\</li\>
-\<li\>\<a href="[https://www.chartjs.org/](https://www.chartjs.org/)"\>Chart.js\</a\>\</li\>
-\<li\>\<a href="[https://developer.mozilla.org/en-US/docs/Web/Guide/HTML/HTML5](https://developer.mozilla.org/en-US/docs/Web/Guide/HTML/HTML5)"\>HTML5\</a\> / \<a href="[https://developer.mozilla.org/en-US/docs/Web/CSS](https://developer.mozilla.org/en-US/docs/Web/CSS)"\>CSS3\</a\>\</li\>
-\<li\>\<a href="[https://getbootstrap.com/](https://getbootstrap.com/)"\>Bootstrap 5\</a\>\</li\>
-\<li\>\<a href="[https://tailwindcss.com/](https://tailwindcss.com/)"\>Tailwind CSS\</a\>\</li\>
-\</ul\>
-\</details\>
+<details>
+  <summary><strong>Front-End</strong></summary>
+  
+  <br>
+  
+  <ul>
+    <li><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript">JavaScript (ES6)</a></li>
+    <li><a href="https://jquery.com/">jQuery</a> & <a href="https://developer.mozilla.org/en-US/docs/Web/API/AJAX_API">AJAX</a></li>
+    <li><a href="https://www.chartjs.org/">Chart.js</a></li>
+    <li><a href="https://getbootstrap.com/">Bootstrap 5</a></li>
+  </ul>
+</details>
 
-\<details\>
-\<summary\>\<b\>Tools & Environment\</b\>\</summary\>
-\<ul\>
-\<li\>\<a href="[https://git-scm.com/](https://git-scm.com/)"\>Git\</a\> & \<a href="[https://github.com](https://github.com)"\>GitHub\</a\>\</li\>
-\<li\>\<a href="[https://code.visualstudio.com/](https://code.visualstudio.com/)"\>Visual Studio Code\</a\>\</li\>
-\<li\>\<a href="[https://www.apachefriends.org/](https://www.apachefriends.org/)"\>XAMPP\</a\> (Apache)\</li\>
-\<li\>\<a href="[https://www.figma.com/](https://www.figma.com/)"\>Figma\</a\>\</li\>
-\</ul\>
-\</details\>
-
+<details>
+  <summary><strong>Tools & Environment</strong></summary>
+  
+  <br>
+  
+  <ul>
+    <li><a href="https://git-scm.com/">Git</a> & <a href="https://github.com">GitHub</a></li>
+    <li><a href="https://code.visualstudio.com/">Visual Studio Code</a></li>
+    <li><a href="https://www.apachefriends.org/">XAMPP</a> (Apache)</li>
+    <li><a href="https://www.figma.com/">Figma</a></li>
+  </ul>
+</details>
 ## **Hướng dẫn cài đặt**
 
 Để chạy dự án này trên máy tính của bạn, hãy làm theo các bước sau:
