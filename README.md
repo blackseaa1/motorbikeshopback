@@ -1,41 +1,32 @@
-Chào bạn, tôi đã tham khảo file `README.md` mẫu bạn cung cấp và hiểu rằng bạn muốn có một file README chuyên nghiệp, có cấu trúc rõ ràng cho dự án `motorbikeshop` của mình.
-
-Dưới đây là nội dung README đã được viết lại hoàn toàn, bạn chỉ cần sao chép và dán vào file `README.md` trên GitHub của bạn.
-
------
-
-# Website Thương mại điện tử - Cửa hàng Phụ kiện Xe máy
+# **Website Thương mại điện tử - Cửa hàng Phụ kiện Xe máy**
 
 [](https://www.php.net/)
 [](https://laravel.com/)
 [](https://www.mysql.com/)
 [](https://reactjs.org/)
-[](https://opensource.org/licenses/MIT)
 
 Đây là dự án tốt nghiệp xây dựng một website thương mại điện tử hoàn chỉnh bằng Laravel Framework. Hệ thống bao gồm đầy đủ chức năng cho cả khách hàng mua sắm và trang quản trị toàn diện cho chủ cửa hàng, cho phép quản lý sản phẩm, đơn hàng, khách hàng và xem các báo cáo thống kê.
 
-## Mục lục
+## **Mục lục**
 
-  - [Tính năng nổi bật](https://www.google.com/search?q=%23t%C3%ADnh-n%C4%83ng-n%E1%BB%95i-b%E1%BA%ADt)
-  - [Công nghệ sử dụng](https://www.google.com/search?q=%23c%C3%B4ng-ngh%E1%BB%87-s%E1%BB%AD-d%E1%BB%A5ng)
-  - [Hướng dẫn cài đặt](https://www.google.com/search?q=%23h%C6%B0%E1%BB%9Bng-d%E1%BA%ABn-c%C3%A0i-%C4%91%E1%BA%B7t)
-  - [Cách sử dụng](https://www.google.com/search?q=%23c%C3%A1ch-s%E1%BB%AD-d%E1%BB%A5ng)
-  - [Đóng góp](https://www.google.com/search?q=%23%C4%91%C3%B3ng-g%C3%B3p)
-  - [Giấy phép](https://www.google.com/search?q=%23gi%E1%BA%A5y-ph%C3%A9p)
-  - [Liên hệ](https://www.google.com/search?q=%23li%C3%AAn-h%E1%BB%87)
+  - Tính năng nổi bật.
+  - Demo một số chức năng.
+  - Công nghệ sử dụng.
+  - Hướng dẫn cài đặt.
+  - Liên hệ.
 
-## Tính năng nổi bật
+## **Tính năng nổi bật**
 
-### Dành cho Khách hàng
+### **Dành cho Khách hàng**
 
   - **Duyệt và tìm kiếm sản phẩm:** Giao diện thân thiện, tìm kiếm nhanh và bộ lọc sản phẩm thông minh.
-  - **Quản lý giỏ hàng:** Thêm, sửa, xóa sản phẩm trong giỏ hàng một cách linh hoạt.
+  - **Quản lý giỏ hàng:** Thêm, sửa, xóa sản phẩm trong giỏ hàng một cách linh hoạt bằng AJAX.
   - **Quy trình thanh toán:** Quy trình đặt hàng đơn giản cho cả khách vãng lai và thành viên.
   - **Thanh toán đa dạng:** Hỗ trợ thanh toán khi nhận hàng (COD) và các cổng thanh toán online như VNPay, MoMo.
   - **Tài khoản người dùng:** Đăng ký, đăng nhập, quản lý thông tin cá nhân và xem lại lịch sử đơn hàng.
   - **Đánh giá sản phẩm:** Cho phép người dùng đã mua hàng để lại đánh giá và xếp hạng.
 
-### Dành cho Quản trị viên (Admin)
+### **Dành cho Quản trị viên (Admin)**
 
   - **Dashboard:** Bảng điều khiển trực quan với các biểu đồ thống kê doanh thu, đơn hàng (sử dụng Chart.js).
   - **Quản lý Sản phẩm:** Giao diện CRUD (Thêm/Sửa/Xóa/Xem) cho sản phẩm, danh mục và thương hiệu.
@@ -43,7 +34,34 @@ Dưới đây là nội dung README đã được viết lại hoàn toàn, bạ
   - **Quản lý Khách hàng:** Xem thông tin và lịch sử mua hàng của khách hàng.
   - **Quản lý Khuyến mãi:** Tạo và quản lý các mã giảm giá với nhiều điều kiện áp dụng.
 
-## Công nghệ sử dụng
+## **Demo một số chức năng**
+
+\<details\>
+\<summary\>\<b\>Giao diện Trang chủ & Trang sản phẩm\</b\>\</summary\>
+
+*Giao diện trang chủ hiển thị các sản phẩm nổi bật và thương hiệu.*
+
+*Trang cửa hàng cho phép lọc và tìm kiếm sản phẩm.*
+
+\</details\>
+
+\<details\>
+\<summary\>\<b\>Trang quản trị (Admin Dashboard) với Biểu đồ thống kê\</b\>\</summary\>
+
+*Dashboard cung cấp cái nhìn tổng quan về hoạt động kinh doanh với các biểu đồ doanh thu và đơn hàng trực quan, sinh động.*
+
+\</details\>
+
+\<details\>
+\<summary\>\<b\>Chức năng Quản lý Sản phẩm & Đơn hàng\</b\>\</summary\>
+
+*Giao diện cho phép Admin xem, lọc và thực hiện các thao tác quản lý sản phẩm.*
+
+*Giao diện cho phép Admin xem và cập nhật trạng thái của tất cả các đơn hàng.*
+
+\</details\>
+
+## **Công nghệ sử dụng**
 
 \<details\>
 \<summary\>\<b\>Back-End\</b\>\</summary\>
@@ -79,7 +97,7 @@ Dưới đây là nội dung README đã được viết lại hoàn toàn, bạ
 \</ul\>
 \</details\>
 
-## Hướng dẫn cài đặt
+## **Hướng dẫn cài đặt**
 
 Để chạy dự án này trên máy tính của bạn, hãy làm theo các bước sau:
 
@@ -104,11 +122,11 @@ Dưới đây là nội dung README đã được viết lại hoàn toàn, bạ
 
 4.  **Tạo file môi trường**
 
-      * Sao chép file `.env.example` thành `.env`.
+      - Sao chép file `.env.example` thành `.env`.
         ```sh
         cp .env.example .env
         ```
-      * Mở file `.env` và cấu hình thông tin kết nối cơ sở dữ liệu của bạn (`DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`).
+      - Mở file `.env` và cấu hình thông tin kết nối cơ sở dữ liệu của bạn (`DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`).
 
 5.  **Tạo khóa ứng dụng**
 
@@ -118,43 +136,31 @@ Dưới đây là nội dung README đã được viết lại hoàn toàn, bạ
 
 6.  **Chạy Migrations và Seeders**
 
-      * Chạy migrations để tạo các bảng trong cơ sở dữ liệu.
+      - Chạy migrations để tạo các bảng trong cơ sở dữ liệu.
         ```sh
         php artisan migrate
         ```
-      * (Tùy chọn) Chạy seeders để thêm dữ liệu mẫu.
+      - (Tùy chọn) Chạy seeders để thêm dữ liệu mẫu.
         ```sh
         php artisan db:seed
         ```
 
-## Cách sử dụng
+7.  **Khởi động môi trường phát triển**
 
-1.  **Khởi động server phát triển**
     ```sh
+    # Chạy server back-end
     php artisan serve
-    ```
-2.  **Biên dịch tài nguyên Front-end**
-    ```sh
+
+    # Biên dịch tài nguyên front-end và theo dõi thay đổi
     npm run dev
     ```
-3.  Mở trình duyệt và truy cập vào `http://127.0.0.1:8000`.
 
-## Đóng góp
+8.  **Truy cập ứng dụng**
 
-Mọi đóng góp để cải thiện dự án này đều được hoan nghênh. Vui lòng tuân thủ các bước sau:
+      - Mở trình duyệt và truy cập vào `http://127.0.0.1:8000`.
 
-1.  Fork dự án này.
-2.  Tạo một nhánh mới (`git checkout -b feature/AmazingFeature`).
-3.  Commit các thay đổi của bạn (`git commit -m 'Add some AmazingFeature'`).
-4.  Push lên nhánh của bạn (`git push origin feature/AmazingFeature`).
-5.  Mở một Pull Request.
+## **Liên hệ**
 
-## Giấy phép
-
-Dự án này được cấp phép theo **Giấy phép MIT**. Xem file `LICENSE` để biết thêm chi tiết.
-
-## Liên hệ
-
-Đặng Hữu Hải - [Email của bạn] - [Link LinkedIn của bạn (nếu có)]
+Đặng Hữu Hải - [haidh.dev@gmail.com] - 0332734377
 
 Project Link: [https://github.com/blackseaa1/motorbikeshop](https://github.com/blackseaa1/motorbikeshop)
