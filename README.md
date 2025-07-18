@@ -80,7 +80,7 @@
 
 </details>
 
-## **Công nghệ sử dụng**
+
 ## Công nghệ sử dụng
 
 <details>
